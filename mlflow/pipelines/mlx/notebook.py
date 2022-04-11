@@ -50,9 +50,9 @@ class MLX:
     def _get_bazel_output_path(self, target):
         return os.path.join(self.working_dir, "bazel-bin", target)
 
-    def preprocess(self):
+    def split(self):
         self._sync()
-        self._run_bazel_build("//:preprocess")
+        self._run_bazel_build("//:split")
 
         train_df = pd.read_parquet(self._get_bazel_output_path("train.parquet"))
         test_df = pd.read_parquet(self._get_bazel_output_path("test.parquet"))

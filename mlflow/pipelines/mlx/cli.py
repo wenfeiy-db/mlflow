@@ -8,7 +8,7 @@ import click
 import pandas as pd
 import numpy as np
 
-from mlx.preprocess_step import preprocess_step
+from mlx.split_step import split_step
 from mlx.transform_step import transform_step
 from mlx.train_step import train_step
 from mlx.evaluate_step import evaluate_step
@@ -45,7 +45,7 @@ def _maybe_open(path):
 def cli():
     pass
 
-cli.add_command(preprocess_step)
+cli.add_command(split_step)
 
 cli.add_command(transform_step)
 
@@ -53,22 +53,22 @@ cli.add_command(train_step)
 
 cli.add_command(evaluate_step)
 
-@cli.command(help='Preprocess input data')
-def preprocess():
-    # _run_bazel_build("//:preprocess")
-    _run_make("preprocess")
+@cli.command(help='split input data')
+def split():
+    # _run_bazel_build("//:split")
+    _run_make("split")
 
     print("== Showing summary of input data ==\n")
     # _maybe_open("bazel-bin/summary.html")
-    _maybe_open("preprocess_summary.html")
+    _maybe_open("split_summary.html")
 
     print("Split data into train/test sets")
 
     print("== Summary of train data ==\n")
-    print(pd.read_parquet("preprocess_train.parquet").describe())
+    print(pd.read_parquet("split_train.parquet").describe())
 
     print("== Summary of test data ==\n")
-    print(pd.read_parquet("preprocess_test.parquet").describe())
+    print(pd.read_parquet("split_test.parquet").describe())
 
 
 @cli.command(help="Transform features")

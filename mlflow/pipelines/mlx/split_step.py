@@ -10,7 +10,7 @@ import click
 @click.option("--summary-path", help="Path to the summary file")
 @click.option('--train-path', help='Output path of training data')
 @click.option('--test-path', help='Output path of test data')
-def preprocess_step(input_path, summary_path, train_path, test_path):
+def split_step(input_path, summary_path, train_path, test_path):
     df = pd.read_parquet(input_path)
 
     profile = ProfileReport(df, title="Summary of Input Dataset", minimal=True)
@@ -29,4 +29,4 @@ def preprocess_step(input_path, summary_path, train_path, test_path):
     test.to_parquet(test_path)
 
 if __name__ == "__main__":
-    preprocess_step()
+    split_step()

@@ -36,7 +36,7 @@ Run `notebooks/jupyter.ipynb` under the current Python environment.
 cd demo
 mlx --help
 mlx dag
-mlx preprocess
+mlx split
 mlx transform
 mlx train
 mlx evaluate

@@ -15,7 +15,7 @@ mlx.help()
 
 # COMMAND ----------
 
-mlx.preprocess()
+mlx.split()
 
 # COMMAND ----------
 
