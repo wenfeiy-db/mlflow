@@ -37,8 +37,9 @@ cd demo
 mlx --help
 mlx dag
 mlx preprocess
+mlx transform
 mlx train
-mlx explain
+mlx evaluate
 ```
 
 Check MLflow UI
@@ -51,7 +52,7 @@ mlflow ui
 Modify `train.py` and run
 
 ```
-mlx explain
+mlx evaluate
 ```
 
 ## Apparent gaps

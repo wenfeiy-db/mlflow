@@ -11,7 +11,7 @@ import numpy as np
 from mlx.preprocess_step import preprocess_step
 from mlx.transform_step import transform_step
 from mlx.train_step import train_step
-from mlx.explain_step import explain_step
+from mlx.evaluate_step import evaluate_step
 
 _bazel = "bazelisk"
 
@@ -51,7 +51,7 @@ cli.add_command(transform_step)
 
 cli.add_command(train_step)
 
-cli.add_command(explain_step)
+cli.add_command(evaluate_step)
 
 @cli.command(help='Preprocess input data')
 def preprocess():
@@ -88,13 +88,13 @@ def train():
     # print("== Trained a model at pipeline.pkl ==\n")
     print("== Trained a model at train_pipeline.pkl ==\n")
 
-@cli.command(help='Explain a model')
-def explain():
-    # _run_bazel_build("//:explain")
-    _run_make("explain")
+@cli.command(help='evaluate a model')
+def evaluate():
+    # _run_bazel_build("//:evaluate")
+    _run_make("evaluate")
     print("== Created the model card ==\n")
-    # _maybe_open("bazel-bin/explain_explanations.html")
-    _maybe_open("explain_explanations.html")
+    # _maybe_open("bazel-bin/evaluate_explanations.html")
+    _maybe_open("evaluate_results.html")
 
 @cli.command(help='Clean')
 def clean():

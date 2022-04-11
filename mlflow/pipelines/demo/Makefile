@@ -33,19 +33,19 @@ train: $(train_objects)
 		--pipeline-path $*_pipeline.pkl \
 		--run-path $*_run_id
 
-explain_objects = explain_explanations.html
+evaluate_objects = evaluate_results.html
 
-explain: $(explain_objects)
+evaluate: $(evaluate_objects)
 
-%_explanations.html: train_pipeline.pkl preprocess_train.parquet train_run_id
-	mlx explain-step \
+%_results.html: train_pipeline.pkl preprocess_train.parquet train_run_id
+	mlx evaluate-step \
 		--pipeline-path train_pipeline.pkl \
 		--tracking-uri file:/tmp/mlruns \
 		--run-id train_run_id \
 		--train-path preprocess_train.parquet \
-		--explain-path $*_explanations.html
+		--evaluate-path $*_results.html
 
-run: $(preprocess_objects) $(transform_objects) $(train_objects) $(explain_objects)
+run: $(preprocess_objects) $(transform_objects) $(train_objects) $(evaluate_objects)
 
 clean:
-	rm -rf $(preprocess_objects) $(transform_objects) $(train_objects) $(explain_objects)
+	rm -rf $(preprocess_objects) $(transform_objects) $(train_objects) $(evaluate_objects)

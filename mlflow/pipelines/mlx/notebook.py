@@ -86,11 +86,11 @@ class MLX:
         set_config(display="diagram")
         display(pipeline)
 
-    def explain(self):
+    def evaluate(self):
         self._sync()
-        self._run_bazel_build("//:explain")
+        self._run_bazel_build("//:evaluate")
 
-        display(HTML(filename=self._get_bazel_output_path("explain.html")))
+        display(HTML(filename=self._get_bazel_output_path("evaluate.html")))
 
     def clean(self):
         self._sync()

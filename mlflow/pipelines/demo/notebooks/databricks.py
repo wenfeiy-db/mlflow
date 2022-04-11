@@ -27,7 +27,7 @@ mlx.train()
 
 # COMMAND ----------
 
-mlx.explain()
+mlx.evaluate()
 
 # COMMAND ----------
 
