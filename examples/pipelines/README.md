@@ -1,24 +1,4 @@
-# MLX Demo
-
-## Setup
-
-### Install bazelisk and graphviz
-
-```
-brew install bazelisk
-brew install graphviz
-```
-
-### Install MLX demo
-
-Use conda or virtualenv to create and activate a Python 3.8 environment.
-Then run the following:
-
-```
-git clone https://github.com/databricks/mlx.git
-cd mlx
-pip install .
-```
+# MLflow Pipelines Demo
 
 ### Play with the demo
 
@@ -34,12 +14,12 @@ Run `notebooks/jupyter.ipynb` under the current Python environment.
 
 ```
 cd demo
-mlx --help
-mlx dag
-mlx split
-mlx transform
-mlx train
-mlx evaluate
+mlflow pipelines --help
+mlflow pipelines dag
+mlflow pipelines split
+mlflow pipelines transform
+mlflow pipelines train
+mlflow pipelines evaluate
 ```
 
 Check MLflow UI
@@ -52,7 +32,7 @@ mlflow ui
 Modify `train.py` and run
 
 ```
-mlx evaluate
+mlflow pipelines evaluate
 ```
 
 ## Apparent gaps
