@@ -25,7 +25,6 @@ def run_transform_step(train_data_path, transformer_config_path, transformer_out
     X = df.drop(columns=['price'])
     y = df['price']
 
-    print("FEATURES", X)
     features = transformer.fit_transform(X)
 
     with open(transformer_output_path, 'wb') as f:

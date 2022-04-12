@@ -24,7 +24,7 @@ evaluate_objects = evaluate_worst_training_examples.parquet evaluate_metrics.jso
 evaluate: $(evaluate_objects)
 
 %_worst_training_examples.parquet %_metrics.json %_explanations.html: train_pipeline.pkl split_train.parquet train_run_id
-	python -c "from mlflow.pipelines.evaluate_step import run_evaluate_step; run_evaluate_step(pipeline_path='train_pipeline.pkl', tracking_uri='file:/tmp/mlruns', run_id_path='train_run_id', train_data_path='split_train.parquet', test_data_path='split_test.parquet', evaluation_output_path='$*_explanations.html', metrics_output_path='$*_metrics.json', worst_train_examples_output_path='$*_worst_training_examples.parquet')"
+	python -c "from mlflow.pipelines.evaluate_step import run_evaluate_step; run_evaluate_step(pipeline_path='train_pipeline.pkl', tracking_uri='file:/tmp/mlruns', run_id_path='train_run_id', train_data_path='split_train.parquet', test_data_path='split_test.parquet', explanations_output_path='$*_explanations.html', metrics_output_path='$*_metrics.json', worst_train_examples_output_path='$*_worst_training_examples.parquet')"
 
 clean:
 	rm -rf $(split_objects) $(transform_objects) $(train_objects) $(evaluate_objects)

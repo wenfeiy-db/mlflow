@@ -85,7 +85,10 @@ def evaluate():
     _run_make("evaluate")
 
     print("== Created the model card ==\n")
-    _maybe_open("evaluate_results.html")
+    _maybe_open("evaluate_explanations.html")
+
+    print("== Produced evaluation metrics ==\n")
+    _maybe_open("evaluate_metrics.json")
 
 @commands.command(help='Clean')
 def clean():

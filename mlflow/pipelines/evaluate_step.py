@@ -89,7 +89,7 @@ def run_evaluate_step(pipeline_path, tracking_uri, run_id_path, train_data_path,
 
     train_data = pd.read_parquet(train_data_path)
     test_data = pd.read_parquet(test_data_path)
-    X_train = train_data_path.drop(columns=['price'])
+    X_train = train_data.drop(columns=['price'])
     
     with open(run_id_path, 'r') as f:
         run_id = f.read()
