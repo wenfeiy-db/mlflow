@@ -12,23 +12,21 @@ import mlflow
 
 from sklearn.pipeline import make_pipeline
 
-@click.command()
-@click.option('--input-path', help='Path to input data')
-@click.option("--train-config", help="Path to train config")
-@click.option('--transformer-path', help='Output path of transformer')
-@click.option('--tracking-uri', help='MLflow tracking URI')
-@click.option('--pipeline-path', help='Output path to the fitted pipeline')
-@click.option('--run-path', help='Output path for run')
-def train_step(input_path, train_config, transformer_path, tracking_uri, pipeline_path, run_path):
+def run_train_step(transformed_train_data_path, train_config_path, transformer_path, tracking_uri, pipeline_output_path, run_id_output_path):
     """
-    Transform data using a transformer method.
+    :param transformed_train_data_path: Path to transformed training data
+    :param train_config: Path to training configuration yaml
+    :param transformer: Path to transformer from `transform` step
+    :param tracking_uri: The MLflow Tracking URI
+    :param pipeline_output_path: Output path of [<transformer>, <trained_model>] pipeline
+    :param run_id_output_path: Output path of file containing MLflow Run ID
     """
     sys.path.append(os.curdir)
-    module_name, method_name = yaml.load(open(train_config, "r")).get("train_method").rsplit('.', 1)
+    module_name, method_name = yaml.load(open(train_config_path, "r")).get("train_method").rsplit('.', 1)
     train_fn = getattr(importlib.import_module(module_name), method_name)
     model = train_fn()
 
-    df = pd.read_parquet(input_path)
+    df = pd.read_parquet(transformed_train_data_path)
 
     X = df["features"]
     y = df["target"]
@@ -48,12 +46,9 @@ def train_step(input_path, train_config, transformer_path, tracking_uri, pipelin
 
         pipeline = make_pipeline(transformer, model)
         mlflow.sklearn.log_model(pipeline, "model")
-    
-        with open(run_path, "w") as f:
+
+        with open(run_id_output_path, "w") as f:
             f.write(run.info.run_id)
 
-    with open(pipeline_path, 'wb') as f:
+    with open(pipeline_output_path, 'wb') as f:
         cloudpickle.dump(pipeline, f)
-
-if __name__ == "__main__":
-    train_step()

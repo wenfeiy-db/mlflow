@@ -9,6 +9,7 @@ from click import UsageError
 import mlflow.db
 import mlflow.experiments
 import mlflow.deployments.cli
+import mlflow.pipelines.cli
 import mlflow.projects as projects
 import mlflow.runs
 import mlflow.store.artifact.cli
@@ -497,6 +498,7 @@ cli.add_command(mlflow.experiments.commands)
 cli.add_command(mlflow.store.artifact.cli.commands)
 cli.add_command(mlflow.runs.commands)
 cli.add_command(mlflow.db.commands)
+cli.add_command(mlflow.pipelines.cli.commands)
 
 try:
     # pylint: disable=unused-import

@@ -5,12 +5,13 @@ from pandas_profiling import ProfileReport
 import click
 
 
-@click.command()
-@click.option('--input-path', help='Path to input data')
-@click.option("--summary-path", help="Path to the summary file")
-@click.option('--train-path', help='Output path of training data')
-@click.option('--test-path', help='Output path of test data')
-def split_step(input_path, summary_path, train_path, test_path):
+def run_split_step(input_path, summary_path, train_output_path, test_output_path):
+    """
+    :param input_path: Path to input data
+    :param summary_path: Path to summary file
+    :param train_output_path: Output path of training data
+    :param test_output_path: Output path of test data
+    """
     df = pd.read_parquet(input_path)
 
     profile = ProfileReport(df, title="Summary of Input Dataset", minimal=True)
@@ -25,8 +26,5 @@ def split_step(input_path, summary_path, train_path, test_path):
     train = df[is_train]
     test = df[~is_train]
 
-    train.to_parquet(train_path)
-    test.to_parquet(test_path)
-
-if __name__ == "__main__":
-    split_step()
+    train.to_parquet(train_output_path)
+    test.to_parquet(test_output_path)

@@ -6,33 +6,30 @@ import importlib
 import os
 import yaml
 
-@click.command()
-@click.option('--input-path', help='Path to input data')
-@click.option("--transformer-config", help="Path to the transformer config")
-@click.option('--transformer-path', help='Output path of transformer')
-@click.option('--transformed-path', help='Output path to transformed data')
-def transform_step(input_path, transformer_config, transformer_path, transformed_path):
+
+def run_transform_step(train_data_path, transformer_config_path, transformer_output_path, transformed_data_output_path):
     """
-    Transform data using a transformer method.
+    :param train_data_path: Path to training data
+    :param transformer_config_path: Path to the transformer configuration yaml
+    :param transformer_output_path: Output path of the transformer
+    :param transformed_data_output_path: Output path of transformed data
     """
     sys.path.append(os.curdir)
-    module_name, method_name = yaml.safe_load(open(transformer_config, "r")).get("transformer_method").rsplit('.', 1)
+    module_name, method_name = yaml.safe_load(open(transformer_config_path, "r")).get("transformer_method").rsplit('.', 1)
     transformer_fn = getattr(importlib.import_module(module_name), method_name)
     transformer = transformer_fn()
 
-    df = pd.read_parquet(input_path)
+    df = pd.read_parquet(train_data_path)
 
     # TODO: load from conf
     X = df.drop(columns=['price'])
     y = df['price']
 
+    print("FEATURES", X)
     features = transformer.fit_transform(X)
 
-    with open(transformer_path, 'wb') as f:
+    with open(transformer_output_path, 'wb') as f:
         cloudpickle.dump(transformer, f)
 
     transformed = pd.DataFrame(data={"features": list(features), "target": y})
-    transformed.to_parquet(transformed_path)
-
-if __name__ == "__main__":
-    transform_step()
+    transformed.to_parquet(transformed_data_output_path)
