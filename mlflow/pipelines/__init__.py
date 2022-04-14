@@ -1,3 +1,7 @@
+"""
+Fill out help string later
+"""
+
 import sys
 import shutil
 import subprocess
@@ -92,7 +96,7 @@ def inspect():
 def _run_in_subprocess_and_stream_results(command):
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
     for c in iter(lambda: process.stdout.read(1), b''):
-        sys.stdout.buffer.write(c)
+        sys.stdout.write(c.decode(sys.stdout.encoding))
 
     process.wait()
 
