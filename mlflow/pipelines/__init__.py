@@ -11,12 +11,14 @@ def ingest():
     """
     Ingest data
     """
+    _enter_repository_root()
     _run_ingest(reingest=True)
 
 def split():
     """
     Split data
     """
+    _enter_repository_root()
     _run_ingest(reingest=False)
     _run_make("split")
 
@@ -36,6 +38,7 @@ def transform():
     """
     Transform features
     """
+    _enter_repository_root()
     _run_ingest(reingest=False)
     _run_make("transform")
 
@@ -49,6 +52,7 @@ def train():
     """
     Train a model
     """
+    _enter_repository_root()
     _run_ingest(reingest=False)
     _run_make("train")
 
@@ -59,6 +63,7 @@ def evaluate():
     """
     Evaluate a model (explanations included)
     """
+    _enter_repository_root()
     _run_ingest(reingest=False)
     _run_make("evaluate")
 
@@ -73,6 +78,7 @@ def clean():
     """
     Clean
     """
+    _enter_repository_root()
     _run_make("clean")
 
 
@@ -114,4 +120,9 @@ def _run_ingest(reingest=False):
     pass
 
 
-def _get_repository_root(
+def _enter_repository_root():
+    # Replace with gitpython later if necessary / possible, since this is
+    # already an MLflow dependency
+    # TODO: Figure out if this works on Databricks
+    repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode("utf-8").rstrip("\n")
+    os.chdir(repo_root)
