@@ -127,6 +127,6 @@ def _run_ingest(reingest=False):
 def _enter_repository_root():
     # Replace with gitpython later if necessary / possible, since this is
     # already an MLflow dependency
-    # TODO: Figure out if this works on Databricks
+    # TODO: Figure out how to do this on Databricks
     repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode("utf-8").rstrip("\n")
     os.chdir(repo_root)
