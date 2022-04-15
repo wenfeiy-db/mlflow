@@ -10,9 +10,6 @@ import shutil
 import subprocess
 import sys
 
-import pandas as pd
-import numpy as np
-
 import mlflow.utils.databricks_utils as databricks_utils
 from mlflow.utils.rest_utils import http_request
 
@@ -29,6 +26,8 @@ def split():
     """
     Split data
     """
+    import pandas as pd
+
     _enter_repository_root()
     _run_ingest(reingest=False)
     _run_make("split")
@@ -49,6 +48,9 @@ def transform():
     """
     Transform features
     """
+    import numpy as np
+    import pandas as pd
+
     _enter_repository_root()
     _run_ingest(reingest=False)
     _run_make("transform")
