@@ -38,8 +38,6 @@ def clean_up_pipeline():
 
 @pytest.mark.usefixtures("enter_pipeline_example_directory", "clean_up_pipeline")
 def test_pipelines_api_flow_completes_successfully():
-    print(os.getcwd())
-    print(os.listdir())
     mlflow.pipelines.clean()
     mlflow.pipelines.evaluate()
 
@@ -53,8 +51,6 @@ def test_pipelines_api_flow_completes_successfully():
 
 @pytest.mark.usefixtures("enter_pipeline_example_directory", "clean_up_pipeline")
 def test_pipelines_cli_flow_completes_successfully():
-    print(os.getcwd())
-    print(os.listdir())
     CliRunner().invoke(pipelines_cli.clean)
     CliRunner().invoke(pipelines_cli.evaluate)
 
