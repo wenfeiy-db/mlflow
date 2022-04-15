@@ -315,6 +315,30 @@ jobs:
           export MLFLOW_HOME=$(pwd)
           pytest tests/models --large
 
+  # Temporarily create a separate job for MLflow pipelines to facilitate
+  # ease of debugging while quickly iterating on the implementation
+  pipelines:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-python
+        with:
+          python-version: "3.7"
+      - uses: actions/setup-java@v3
+        with:
+          java-version: 11
+          distribution: 'adopt'
+      - name: Install dependencies
+        env:
+          INSTALL_SMALL_PYTHON_DEPS: true
+          INSTALL_LARGE_PYTHON_DEPS: false
+        run: |
+          source ./dev/install-common-deps.sh
+      - name: Run tests
+        run: |
+          export MLFLOW_HOME=$(pwd)
+          pytest tests/pipelines
+
   sagemaker:
     runs-on: ubuntu-latest
     steps:
