@@ -24,6 +24,7 @@ def ingest():
     _enter_repository_root()
     _run_ingest(reingest=True)
 
+
 def split():
     """
     Split data
@@ -101,7 +102,7 @@ def inspect():
 
 def _run_in_subprocess_and_stream_results(command):
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
-    for c in iter(lambda: process.stdout.read(1), b''):
+    for c in iter(lambda: process.stdout.read(1), b""):
         sys.stdout.write(c.decode(sys.stdout.encoding))
 
     process.wait()
@@ -137,7 +138,11 @@ def _enter_repository_root():
     else:
         # Replace with gitpython later if necessary / possible, since this is
         # already an MLflow dependency
-        repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode("utf-8").rstrip("\n")
+        repo_root = (
+            subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
+            .decode("utf-8")
+            .rstrip("\n")
+        )
 
     os.chdir(repo_root)
 
@@ -159,4 +164,4 @@ def _get_databricks_repo_root_path(repo_notebook_id):
     # Remove the relative path of the current notebook from the absolute path to obtain the repo
     # root path. Then, prepend `/Workspace` because repos are mounted to the `/Workspaces`
     # directory on the cluster filesystem
-    return "/Workspace" + absolute_path[:-1 * len(relative_path)]
+    return "/Workspace" + absolute_path[: -1 * len(relative_path)]

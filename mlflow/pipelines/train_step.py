@@ -12,7 +12,15 @@ import mlflow
 
 from sklearn.pipeline import make_pipeline
 
-def run_train_step(transformed_train_data_path, train_config_path, transformer_path, tracking_uri, pipeline_output_path, run_id_output_path):
+
+def run_train_step(
+    transformed_train_data_path,
+    train_config_path,
+    transformer_path,
+    tracking_uri,
+    pipeline_output_path,
+    run_id_output_path,
+):
     """
     :param transformed_train_data_path: Path to transformed training data
     :param train_config: Path to training configuration yaml
@@ -22,7 +30,9 @@ def run_train_step(transformed_train_data_path, train_config_path, transformer_p
     :param run_id_output_path: Output path of file containing MLflow Run ID
     """
     sys.path.append(os.curdir)
-    module_name, method_name = yaml.load(open(train_config_path, "r")).get("train_method").rsplit('.', 1)
+    module_name, method_name = (
+        yaml.load(open(train_config_path, "r")).get("train_method").rsplit(".", 1)
+    )
     train_fn = getattr(importlib.import_module(module_name), method_name)
     model = train_fn()
 
@@ -50,5 +60,5 @@ def run_train_step(transformed_train_data_path, train_config_path, transformer_p
         with open(run_id_output_path, "w") as f:
             f.write(run.info.run_id)
 
-    with open(pipeline_output_path, 'wb') as f:
+    with open(pipeline_output_path, "wb") as f:
         cloudpickle.dump(pipeline, f)
