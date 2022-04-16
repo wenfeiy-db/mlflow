@@ -365,11 +365,7 @@ jobs:
         # env:
         #   SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
-          Import-Module ~\Documents\WindowsPowerShell\Modules\posh-git\posh-git
-          Set-Alias ssh-agent "$env:ProgramFiles\git\usr\bin\ssh-agent.exe"
-          Set-Alias ssh-add "$env:ProgramFiles\git\usr\bin\ssh-add.exe"
-          Start-SshAgent -Quiet
-          start-ssh-agent.cmd
+          eval `ssh-agent.exe`
           ssh-add - <<< "${{ secrets.REPO_PRIVATE_SSH_KEY }}"
           # git config --global core.sshCommand "'C:\Windows\System32\OpenSSH\ssh.exe'"
           git submodule update --init
