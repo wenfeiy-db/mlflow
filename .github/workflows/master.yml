@@ -331,6 +331,7 @@ jobs:
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
+          git config --global core.sshCommand "'C:\Windows\System32\OpenSSH\ssh.exe'"
           git submodule update --init
       - uses: ./.github/actions/setup-python
         with:
