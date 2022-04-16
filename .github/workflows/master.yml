@@ -366,9 +366,6 @@ jobs:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
           git submodule update --init
-      - uses: ./.github/actions/setup-python
-        with:
-          python-version: "3.7"
       - name: Install python dependencies
         run: |
           pip install -r requirements/small-requirements.txt
