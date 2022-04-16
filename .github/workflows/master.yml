@@ -367,6 +367,7 @@ jobs:
         run: |
           eval `ssh-agent.exe`
           ssh-add - <<< "${{ secrets.REPO_PRIVATE_SSH_KEY }}"
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
           # git config --global core.sshCommand "'C:\Windows\System32\OpenSSH\ssh.exe'"
           git submodule update --init
       - name: Install python dependencies
