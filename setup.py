@@ -74,6 +74,8 @@ CORE_REQUIREMENTS = SKINNY_REQUIREMENTS + [
     "numpy",
     "scipy",
     "pandas",
+    # Required for MLflow Pipelines
+    "pandas-profiling",
     "prometheus-flask-exporter",
     "querystring_parser",
     # Pin sqlparse for: https://github.com/mlflow/mlflow/issues/3433
