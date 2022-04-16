@@ -320,7 +320,7 @@ jobs:
   pipelines:
     runs-on: ubuntu-latest
     steps:
-      # - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       #   with:
       #     submodules: "true"
       #     ssh-key: ${{ secrets.REPO_PRIVATE_SSH_KEY }}
@@ -337,7 +337,8 @@ jobs:
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
-          git clone git@github.com:databricks/mlflow-pipelines-example-private
+          git submodule update --init
+          # git clone git@github.com:databricks/mlflow-pipelines-example-private
       - uses: ./.github/actions/setup-python
         with:
           python-version: "3.7"
