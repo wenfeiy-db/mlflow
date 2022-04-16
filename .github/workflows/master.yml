@@ -355,17 +355,19 @@ jobs:
       - uses: actions/setup-python@v3
         with:
           python-version: "3.7"
-      - name: Set up mlflow-pipelines-example-private submodule deploy key
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-        run: |
-            ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-            ssh-add - <<< "${{ secrets.REPO_PRIVATE_SSH_KEY }}"
+      # - name: Set up mlflow-pipelines-example-private submodule deploy key
+      #   env:
+      #     SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+      #   run: |
+      #       ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+      #       ssh-add - <<< "${{ secrets.REPO_PRIVATE_SSH_KEY }}"
       - name: Initialize submodules
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
-          git config --global core.sshCommand "'C:\Windows\System32\OpenSSH\ssh.exe'"
+          start-ssh-agent.cmd
+          ssh-add - <<< "${{ secrets.REPO_PRIVATE_SSH_KEY }}"
+          # git config --global core.sshCommand "'C:\Windows\System32\OpenSSH\ssh.exe'"
           git submodule update --init
       - name: Install python dependencies
         run: |
