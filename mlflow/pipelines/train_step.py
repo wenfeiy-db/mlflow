@@ -30,9 +30,10 @@ def run_train_step(
     :param run_id_output_path: Output path of file containing MLflow Run ID
     """
     sys.path.append(os.curdir)
-    module_name, method_name = (
-        yaml.load(open(train_config_path, "r")).get("train_method").rsplit(".", 1)
-    )
+    with open(train_config_path, "r") as f:
+        module_name, method_name = (
+            yaml.safe_load(f).get("train_method").rsplit(".", 1)
+        )
     train_fn = getattr(importlib.import_module(module_name), method_name)
     model = train_fn()
 
