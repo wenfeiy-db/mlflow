@@ -151,8 +151,10 @@ def _enter_repository_root():
     while curr_dir_path != root_dir_path:
         pipeline_yaml_path_to_check = curr_dir_path / "pipeline.yaml"
         if pipeline_yaml_path_to_check.exists():
-            os.chdir(pipeline_yaml_path_to_check)
+            os.chdir(curr_dir_path)
             return
+        else:
+            curr_dir_path = curr_dir_path.parent
 
     raise MlflowException("Failed to find pipeline.yaml!")
 
