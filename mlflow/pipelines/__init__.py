@@ -7,11 +7,13 @@ Fill out help string later
 import json
 import logging
 import os
+import pathlib
 import shutil
 import subprocess
 import sys
 
 import mlflow.utils.databricks_utils as databricks_utils
+from mlflow.exceptions import MlflowException
 from mlflow.utils.rest_utils import http_request
 
 _logger = logging.getLogger(__name__)
@@ -137,19 +139,36 @@ def _run_ingest(reingest=False):  # pylint: disable=unused-argument
 
 
 def _enter_repository_root():
-    # TODO: Figure out how to do this in Databricks Jobs (notebook ID isn't available)
-    if databricks_utils.is_in_databricks_repo_notebook():
-        repo_root = _get_databricks_repo_root_path(databricks_utils.get_notebook_id())
-    else:
-        # Replace with gitpython later if necessary / possible, since this is
-        # already an MLflow dependency
-        repo_root = (
-            subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
-            .decode("utf-8")
-            .rstrip("\n")
-        )
+    # In the release version of MLflow Pipelines, each pipeline will be its own git repository.
+    # To improve develop. To improve developer velocity for now, we choose to treat a pipeline as
+    # a directory, which may be a subdirectory of a git repo. The logic for resolving the
+    # repository root for development purposes finds the first `pipeline.yaml` file by traversing
+    # up the directory tree, while the release version will find the pipeline repository root
+    # (commented out below)
+    curr_dir_path = pathlib.Path.cwd()
+    root_dir_path = pathlib.Path(curr_dir_path.root)
 
-    os.chdir(repo_root)
+    while curr_dir_path != root_dir_path:
+        pipeline_yaml_path_to_check = curr_dir_path / "pipeline.yaml"
+        if pipeline_yaml_path_to_check.exists():
+             os.chdir(pipeline_yaml_path_to_check)
+             return
+
+    raise MlflowException("Failed to find pipeline.yaml!")
+
+    # TODO: Figure out how to do this in Databricks Jobs (notebook ID isn't available)
+    # if databricks_utils.is_in_databricks_repo_notebook():
+    #     repo_root = _get_databricks_repo_root_path(databricks_utils.get_notebook_id())
+    # else:
+    #     # Replace with gitpython later if necessary / possible, since this is
+    #     # already an MLflow dependency
+    #     repo_root = (
+    #         subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
+    #         .decode("utf-8")
+    #         .rstrip("\n")
+    #     )
+    #
+    # os.chdir(repo_root)
 
 
 def _get_databricks_repo_root_path(repo_notebook_id):
