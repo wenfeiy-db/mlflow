@@ -1,6 +1,5 @@
 import sys
 import cloudpickle
-import click
 import pandas as pd
 import importlib
 import os

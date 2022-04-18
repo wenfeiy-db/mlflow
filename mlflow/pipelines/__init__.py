@@ -5,6 +5,7 @@ Fill out help string later
 """
 
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -12,6 +13,8 @@ import sys
 
 import mlflow.utils.databricks_utils as databricks_utils
 from mlflow.utils.rest_utils import http_request
+
+_logger = logging.getLogger(__name__)
 
 
 def ingest():
@@ -32,16 +35,16 @@ def split():
     _run_ingest(reingest=False)
     _run_make("split")
 
-    print("== Showing summary of input data ==\n")
+    _logger.info("== Showing summary of input data ==\n")
     _maybe_open("split_summary.html")
 
-    print("Split data into train/test sets")
+    _logger.info("Split data into train/test sets")
 
-    print("== Summary of train data ==\n")
-    print(pd.read_parquet("split_train.parquet").describe())
+    _logger.info("== Summary of train data ==\n")
+    _logger.info(pd.read_parquet("split_train.parquet").describe())
 
-    print("== Summary of test data ==\n")
-    print(pd.read_parquet("split_test.parquet").describe())
+    _logger.info("== Summary of test data ==\n")
+    _logger.info(pd.read_parquet("split_test.parquet").describe())
 
 
 def transform():
@@ -55,10 +58,10 @@ def transform():
     _run_ingest(reingest=False)
     _run_make("transform")
 
-    print("== Summary of transformed features ==\n")
+    _logger.info("== Summary of transformed features ==\n")
     df = pd.read_parquet("transform_train_transformed.parquet")
     X = np.vstack(df["features"])
-    print(pd.DataFrame(X).describe())
+    _logger.info(pd.DataFrame(X).describe())
 
 
 def train():
@@ -69,7 +72,7 @@ def train():
     _run_ingest(reingest=False)
     _run_make("train")
 
-    print("== Trained a model at train_pipeline.pkl ==\n")
+    _logger.info("== Trained a model at train_pipeline.pkl ==\n")
 
 
 def evaluate():
@@ -80,10 +83,10 @@ def evaluate():
     _run_ingest(reingest=False)
     _run_make("evaluate")
 
-    print("== Created the model card ==\n")
+    _logger.info("== Created the model card ==\n")
     _maybe_open("evaluate_explanations.html")
 
-    print("== Produced evaluation metrics ==\n")
+    _logger.info("== Produced evaluation metrics ==\n")
     _maybe_open("evaluate_metrics.json")
 
 
@@ -120,12 +123,12 @@ def _run_make(rule_name):
 def _maybe_open(path):
     assert os.path.exists(path), f"{path} does not exist"
     if shutil.which("open") is not None:
-        subprocess.run(["open", path])
+        subprocess.run(["open", path], check=True)
     else:
-        print(f"Please open {path} manually.")
+        _logger.info(f"Please open {path} manually.")
 
 
-def _run_ingest(reingest=False):
+def _run_ingest(reingest=False):  # pylint: disable=unused-argument
     """
     :param reingest: If `True`, reingest data even if it has already been ingested previously.
                      If `False`, only ingest data even it has not previously been ingested.
