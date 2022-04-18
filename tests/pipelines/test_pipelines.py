@@ -7,6 +7,7 @@ from click.testing import CliRunner
 import mlflow.pipelines
 import mlflow.pipelines.cli as pipelines_cli
 
+PIPELINE_EXAMPLE_PATH_ENV_VAR = "PIPELINE_EXAMPLE_PATH"
 PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT = "examples/pipelines/example_pipeline"
 
 
@@ -14,14 +15,17 @@ PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT = "examples/pipelines/example_pipeline"
 def enter_pipeline_example_directory():
     og_dir = os.getcwd()
     try:
-        mlflow_repo_root_path = (
-            subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
-            .decode("utf-8")
-            .rstrip("\n")
-        )
-        pipeline_example_path = os.path.join(
-            mlflow_repo_root_path, PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT
-        )
+        pipeline_example_path = os.environ.get(PIPELINE_EXAMPLE_PATH_ENV_VAR)
+        if pipeline_example_path is None:
+            mlflow_repo_root_path = (
+                subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
+                .decode("utf-8")
+                .rstrip("\n")
+            )
+            pipeline_example_path = os.path.join(
+                mlflow_repo_root_path, PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT
+            )
+        print(f"Changing directory to pipeline example path: {pipeline_example_path}")
         os.chdir(pipeline_example_path)
         yield
     finally:
