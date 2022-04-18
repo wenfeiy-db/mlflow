@@ -1,4 +1,3 @@
-import sys
 import json
 
 import cloudpickle
@@ -6,7 +5,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import shap
 from matplotlib import rcParams
-from pandas_profiling import ProfileReport
 from sklearn.metrics import mean_squared_error
 
 import mlflow

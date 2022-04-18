@@ -1,8 +1,5 @@
-import sys
-
 import pandas as pd
 from pandas_profiling import ProfileReport
-import click
 
 
 def run_split_step(input_path, summary_path, train_output_path, test_output_path):

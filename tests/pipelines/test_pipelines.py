@@ -27,7 +27,6 @@ def enter_pipeline_example_directory():
             pipeline_example_path = os.path.join(
                 mlflow_repo_root_path, PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT
             )
-        print(f"Changing directory to pipeline example path: {pipeline_example_path}")
         os.chdir(pipeline_example_path)
         yield
     finally:

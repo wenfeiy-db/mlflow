@@ -123,12 +123,12 @@ def _run_make(rule_name):
 def _maybe_open(path):
     assert os.path.exists(path), f"{path} does not exist"
     if shutil.which("open") is not None:
-        subprocess.run(["open", path])
+        subprocess.run(["open", path], check=True)
     else:
         _logger.info(f"Please open {path} manually.")
 
 
-def _run_ingest(reingest=False):
+def _run_ingest(reingest=False):  # pylint: disable=unused-argument
     """
     :param reingest: If `True`, reingest data even if it has already been ingested previously.
                      If `False`, only ingest data even it has not previously been ingested.
