@@ -7,8 +7,6 @@ from click.testing import CliRunner
 import mlflow.pipelines
 import mlflow.pipelines.cli as pipelines_cli
 
-# Important: This environment variable is used by CI in the MLflow Pipelines Example repo to specify
-# the location of the pipeline to test. Do not remove this variable, and ensure that it's respected
 PIPELINE_EXAMPLE_PATH_ENV_VAR = "PIPELINE_EXAMPLE_PATH"
 PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT = "examples/pipelines/example_pipeline"
 

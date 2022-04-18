@@ -321,17 +321,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up mlflow-pipelines-example-private submodule deploy key
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-        run: |
-            ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-            ssh-add - <<< "${{ secrets.REPO_PRIVATE_SSH_KEY }}"
-      - name: Initialize submodules
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-        run: |
-          git submodule update --init
+      # - name: Set up mlflow-pipelines-example-private submodule deploy key
+      #   env:
+      #     SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+      #   run: |
+      #       ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+      #       ssh-add - <<< "${{ secrets.REPO_PRIVATE_SSH_KEY }}"
+      # - name: Initialize submodules
+      #   env:
+      #     SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+      #   run: |
+      #     git submodule update --init
       - uses: ./.github/actions/setup-python
         with:
           python-version: "3.7"
@@ -355,17 +355,17 @@ jobs:
       - uses: actions/setup-python@v3
         with:
           python-version: "3.7"
-      - name: Initialize submodules
-        run: |
-          # Start Windows SSH agent and add private deploy key for
-          # mlflow-pipelines-example-private submodule
-          eval `ssh-agent.exe`
-          ssh-add - <<< "${{ secrets.REPO_PRIVATE_SSH_KEY }}"
-          # Add github.com to known hosts
-          mkdir -p ~/.ssh
-          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
-          # Initialize submodules
-          git submodule update --init
+      # - name: Initialize submodules
+      #   run: |
+      #     # Start Windows SSH agent and add private deploy key for
+      #     # mlflow-pipelines-example-private submodule
+      #     eval `ssh-agent.exe`
+      #     ssh-add - <<< "${{ secrets.REPO_PRIVATE_SSH_KEY }}"
+      #     # Add github.com to known hosts
+      #     mkdir -p ~/.ssh
+      #     ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
+      #     # Initialize submodules
+      #     git submodule update --init
       - name: Install python dependencies
         run: |
           pip install -r requirements/small-requirements.txt
