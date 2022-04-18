@@ -1,16 +1,16 @@
 import os
+import pathlib
 import subprocess
 
 import pytest
 from click.testing import CliRunner
 
+import mlflow
 import mlflow.pipelines
 import mlflow.pipelines.cli as pipelines_cli
 
-# Important: This environment variable is used by CI in the MLflow Pipelines Example repo to specify
-# the location of the pipeline to test. Do not remove this variable, and ensure that it's respected
 PIPELINE_EXAMPLE_PATH_ENV_VAR = "PIPELINE_EXAMPLE_PATH"
-PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT = "examples/pipelines/example_pipeline"
+PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT = "examples/pipelines/sklearn_regression"
 
 
 @pytest.fixture
@@ -19,13 +19,9 @@ def enter_pipeline_example_directory():
     try:
         pipeline_example_path = os.environ.get(PIPELINE_EXAMPLE_PATH_ENV_VAR)
         if pipeline_example_path is None:
-            mlflow_repo_root_path = (
-                subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
-                .decode("utf-8")
-                .rstrip("\n")
-            )
-            pipeline_example_path = os.path.join(
-                mlflow_repo_root_path, PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT
+            mlflow_repo_root_directory = pathlib.Path(mlflow.__file__).parent.parent
+            pipeline_example_path = (
+                mlflow_repo_root_directory / PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT
             )
         os.chdir(pipeline_example_path)
         yield
