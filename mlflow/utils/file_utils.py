@@ -8,7 +8,6 @@ import sys
 import tarfile
 import tempfile
 import stat
-import jinja2
 import pathlib
 
 import urllib.parse
@@ -207,6 +206,7 @@ def render_and_read_yaml(template_root, template_name, context_root, context_nam
     :param context_name: Name of the context file
     :return: Data in yaml file as dictionary
     """
+    import jinja2
     template_path = os.path.join(template_root, template_name)
     context_path = os.path.join(context_root, context_name)
 
