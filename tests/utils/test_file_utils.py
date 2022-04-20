@@ -99,7 +99,7 @@ test_2: {{ TEST_VAR_1 }}
     context_yaml_file = random_file("yaml")
     file_utils.write_yaml(str(tmpdir), context_yaml_file, {"TEST_VAR_1": 3})
 
-    with pytest.raises(ValueError, match=f"Duplicate 'steps' key found"):
+    with pytest.raises(ValueError, match="Duplicate 'steps' key found"):
         file_utils.render_and_read_yaml(tmpdir, template_yaml_file, tmpdir, context_yaml_file)
 
 

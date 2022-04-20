@@ -207,6 +207,7 @@ def render_and_read_yaml(template_root, template_name, context_root, context_nam
     :return: Data in yaml file as dictionary
     """
     import jinja2
+
     template_path = os.path.join(template_root, template_name)
     context_path = os.path.join(context_root, context_name)
 
