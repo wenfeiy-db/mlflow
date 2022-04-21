@@ -28,6 +28,7 @@ from mlflow.entities import FileInfo
 from mlflow.exceptions import MissingConfigException
 from mlflow.utils.rest_utils import cloud_storage_http_request, augmented_raise_for_status
 from mlflow.utils.process import cache_return_value_per_process
+from mlflow.utils import merge_dicts
 
 ENCODING = "utf-8"
 
@@ -185,7 +186,7 @@ def read_yaml(root, file_name):
         raise e
 
 
-class UniqueKeyLoader(yaml.SafeLoader):
+class UniqueKeyLoader(YamlSafeLoader):
     def construct_mapping(self, node, deep=False):
         mapping = set()
         for key_node, _ in node.value:
@@ -196,48 +197,32 @@ class UniqueKeyLoader(yaml.SafeLoader):
         return super().construct_mapping(node, deep)
 
 
-def render_and_read_yaml(template_root, template_name, context_root, context_name):
+def render_and_merge_yaml(root, template_name, context_name):
     """
-    Renders a Jinja2-templated YAML file, read it, and return as dictionary.
+    Renders a Jinja2-templated YAML file based on a YAML context file, merge them, and return
+    result as a dictionary.
 
-    :param template_root: Root directory of the template file
+    :param root: Root directory of the YAML files
     :param template_name: Name of the template file
-    :param context_root: Root directory of the context file
     :param context_name: Name of the context file
     :return: Data in yaml file as dictionary
     """
     import jinja2
 
-    template_path = os.path.join(template_root, template_name)
-    context_path = os.path.join(context_root, context_name)
+    template_path = os.path.join(root, template_name)
+    context_path = os.path.join(root, context_name)
 
     for path in (template_path, context_path):
         if not pathlib.Path(path).is_file():
             raise MissingConfigException("Yaml file '%s' does not exist." % path)
 
     with codecs.open(context_path, mode="r", encoding=ENCODING) as context_file:
-        context = yaml.load(context_file, Loader=UniqueKeyLoader)
+        context_dict = yaml.load(context_file, Loader=UniqueKeyLoader)
 
-        j2_env = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(template_root, encoding=ENCODING)
-        )
-        source = j2_env.get_template(template_name).render(context)
-        return yaml.load(source, Loader=UniqueKeyLoader)
-
-
-def check_yaml_equivalence(yaml_1_root, yaml_1_name, yaml_2_root, yaml_2_name):
-    """
-    Check if two yaml files are equivalent.
-
-    :param yaml_1_root: Root directory of YAML file 1
-    :param yaml_1_name: Name of YAML file 1
-    :param yaml_2_root: Root directory of YAML file 2
-    :param yaml_2_name: Name of YAML file 2
-    :return: True if equivalent, False otherwise
-    """
-    yaml_1 = read_yaml(yaml_1_root, yaml_1_name)
-    yaml_2 = read_yaml(yaml_2_root, yaml_2_name)
-    return yaml_1 == yaml_2
+    j2_env = jinja2.Environment(loader=jinja2.FileSystemLoader(root, encoding=ENCODING))
+    source = j2_env.get_template(template_name).render(context_dict)
+    rendered_template_dict = yaml.load(source, Loader=UniqueKeyLoader)
+    return merge_dicts(context_dict, rendered_template_dict)
 
 
 class TempDir:

@@ -56,27 +56,31 @@ def test_yaml_read_and_write(tmpdir):
     assert "more_text" not in file_utils.read_yaml(temp_dir, yaml_file)
 
 
-def test_render_and_read_yaml(tmpdir):
+def test_render_and_merge_yaml(tmpdir):
     template_yaml_file = random_file("yaml")
     with open(tmpdir / template_yaml_file, "w") as f:
         f.write(
-            """steps:
-  preprocess:
-    train_ratio: {{ MY_TRAIN_RATIO|default(0.5) }}
-    experiment:
-      tracking_uri: {{ MY_MLFLOW_SERVER|default("https://localhost:5000") }}
-test_1: [1, 2, 3]
-test_2: {{ TEST_VAR_1 }}
-test_3: {{ TEST_VAR_2 }}
-"""
+            """
+            steps:
+              preprocess:
+                train_ratio: {{ MY_TRAIN_RATIO|default(0.5) }}
+                experiment:
+                  tracking_uri: {{ MY_MLFLOW_SERVER|default("https://localhost:5000") }}
+            test_1: [1, 2, 3]
+            test_2: {{ TEST_VAR_1 }}
+            test_3: {{ TEST_VAR_2 }}
+            """
         )
 
     data = {"MY_MLFLOW_SERVER": "./mlruns", "TEST_VAR_1": ["a", 1.2], "TEST_VAR_2": {"a": 2}}
     context_yaml_file = random_file("yaml")
     file_utils.write_yaml(str(tmpdir), context_yaml_file, data)
 
-    result = file_utils.render_and_read_yaml(tmpdir, template_yaml_file, tmpdir, context_yaml_file)
+    result = file_utils.render_and_merge_yaml(tmpdir, template_yaml_file, context_yaml_file)
     expected = {
+        "MY_MLFLOW_SERVER": "./mlruns",
+        "TEST_VAR_1": ["a", 1.2],
+        "TEST_VAR_2": {"a": 2},
         "steps": {"preprocess": {"train_ratio": 0.5, "experiment": {"tracking_uri": "./mlruns"}}},
         "test_1": [1, 2, 3],
         "test_2": ["a", 1.2],
@@ -86,24 +90,25 @@ test_3: {{ TEST_VAR_2 }}
     assert result == expected
 
 
-def test_render_and_read_yaml_raise_on_duplicate_keys(tmpdir):
+def test_render_and_merge_yaml_raise_on_duplicate_keys(tmpdir):
     template_yaml_file = random_file("yaml")
     with open(tmpdir / template_yaml_file, "w") as f:
         f.write(
-            """steps: 1
-steps: 2
-test_2: {{ TEST_VAR_1 }}
-    """
+            """
+            steps: 1
+            steps: 2
+            test_2: {{ TEST_VAR_1 }}
+            """
         )
 
     context_yaml_file = random_file("yaml")
     file_utils.write_yaml(str(tmpdir), context_yaml_file, {"TEST_VAR_1": 3})
 
     with pytest.raises(ValueError, match="Duplicate 'steps' key found"):
-        file_utils.render_and_read_yaml(tmpdir, template_yaml_file, tmpdir, context_yaml_file)
+        file_utils.render_and_merge_yaml(tmpdir, template_yaml_file, context_yaml_file)
 
 
-def test_render_and_read_yaml_raise_on_non_existent_yamls(tmpdir):
+def test_render_and_merge_yaml_raise_on_non_existent_yamls(tmpdir):
     template_yaml_file = random_file("yaml")
     with open(tmpdir / template_yaml_file, "w") as f:
         f.write("""test_1: {{ TEST_VAR_1 }}""")
@@ -112,37 +117,11 @@ def test_render_and_read_yaml_raise_on_non_existent_yamls(tmpdir):
     file_utils.write_yaml(str(tmpdir), context_yaml_file, {"TEST_VAR_1": 3})
 
     with pytest.raises(MissingConfigException, match="does not exist"):
-        file_utils.render_and_read_yaml(tmpdir, "invalid_name", tmpdir, context_yaml_file)
+        file_utils.render_and_merge_yaml(tmpdir, "invalid_name", context_yaml_file)
     with pytest.raises(MissingConfigException, match="does not exist"):
-        file_utils.render_and_read_yaml(
-            "invalid_path", template_yaml_file, tmpdir, context_yaml_file
-        )
+        file_utils.render_and_merge_yaml("invalid_path", template_yaml_file, context_yaml_file)
     with pytest.raises(MissingConfigException, match="does not exist"):
-        file_utils.render_and_read_yaml(tmpdir, template_yaml_file, tmpdir, "invalid_name")
-    with pytest.raises(MissingConfigException, match="does not exist"):
-        file_utils.render_and_read_yaml(
-            tmpdir, template_yaml_file, "invalid_path", context_yaml_file
-        )
-
-
-def test_check_yaml_equivalence(tmpdir):
-    data_1 = {
-        "int_arr": [1, 2, 3],
-        "data": {"bricks": {"rocks"}, "lake": "house", "arr": [0.1, 0.3]},
-    }
-    yaml_1 = random_file("yaml")
-    yaml_1_dup = random_file("yaml")
-    file_utils.write_yaml(str(tmpdir), yaml_1, data_1)
-    file_utils.write_yaml(str(tmpdir), yaml_1_dup, data_1)
-    assert file_utils.check_yaml_equivalence(tmpdir, yaml_1, tmpdir, yaml_1_dup)
-
-    data_2 = {
-        "int_arr": [1, 2, 3],
-        "data": {"bricks": {"rocks"}, "lake": "house", "arr": [0.3, 0.3]},
-    }
-    yaml_2 = random_file("yaml")
-    file_utils.write_yaml(str(tmpdir), yaml_2, data_2)
-    assert not file_utils.check_yaml_equivalence(tmpdir, yaml_1, tmpdir, yaml_2)
+        file_utils.render_and_merge_yaml(tmpdir, template_yaml_file, "invalid_name")
 
 
 def test_yaml_write_sorting(tmpdir):

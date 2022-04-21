@@ -71,7 +71,7 @@ def test_merge_dicts():
     assert merge_dicts(dict_a, dict_b) == expected_ab
 
     dict_c = {"a": 10}
-    with pytest.raises(ValueError, match="must not share duplicate keys"):
+    with pytest.raises(ValueError, match="contains duplicate keys"):
         merge_dicts(dict_a, dict_c)
 
     expected_ac = {"a": 10, "b": {"c": {"d": [1, 2, 3]}}, "k": "hello"}

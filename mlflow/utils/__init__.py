@@ -134,8 +134,9 @@ def merge_dicts(dict_a, dict_b, raise_on_duplicates=True):
                                 `dict_a`.
     :return: A merged dictionary.
     """
-    if raise_on_duplicates and len(dict_a.keys() & dict_b.keys()) > 0:
-        raise ValueError("The two dictionaries must not share duplicate keys")
+    duplicate_keys = dict_a.keys() & dict_b.keys()
+    if raise_on_duplicates and len(duplicate_keys) > 0:
+        raise ValueError(f"The two merging dictionaries contains duplicate keys: {duplicate_keys}.")
     return {**dict_a, **dict_b}
 
 
