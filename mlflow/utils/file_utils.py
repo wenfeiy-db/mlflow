@@ -222,7 +222,7 @@ def render_and_merge_yaml(root, template_name, context_name):
     j2_env = jinja2.Environment(loader=jinja2.FileSystemLoader(root, encoding=ENCODING))
     source = j2_env.get_template(template_name).render(context_dict)
     rendered_template_dict = yaml.load(source, Loader=UniqueKeyLoader)
-    return merge_dicts(context_dict, rendered_template_dict)
+    return merge_dicts(rendered_template_dict, context_dict)
 
 
 class TempDir:
