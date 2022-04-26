@@ -191,15 +191,15 @@ transform_objects = steps/transform/outputs/transformer.pkl steps/transform/outp
 
 transform: $(transform_objects)
 
-steps/%/outputs/transformer.pkl steps/%/outputs/train_transformed.parquet: {prp}/steps/transform.py {prp}/steps/transformer_config.yaml steps/split/outputs/train.parquet transform/conf.yaml
-	python -c "from mlflow.pipelines.transform_step import run_transform_step; run_transform_step(train_data_path='steps/split/outputs/train.parquet', transformer_config_path='{prp}/steps/transformer_config.yaml', transformer_output_path='steps/$*/outputs/transformer.pkl', transformed_data_output_path='steps/$*/outputs/train_transformed.parquet', step_config_path='transform/conf.yaml')"
+steps/%/outputs/transformer.pkl steps/%/outputs/train_transformed.parquet: {prp}/steps/transform.py {prp}/steps/transformer_config.yaml steps/split/outputs/train.parquet steps/transform/conf.yaml
+	python -c "from mlflow.pipelines.transform_step import run_transform_step; run_transform_step(train_data_path='steps/split/outputs/train.parquet', transformer_config_path='{prp}/steps/transformer_config.yaml', transformer_output_path='steps/$*/outputs/transformer.pkl', transformed_data_output_path='steps/$*/outputs/train_transformed.parquet', step_config_path='steps/transform/conf.yaml')"
 
 train_objects = steps/train/outputs/pipeline.pkl steps/train/outputs/run_id
 
 train: $(train_objects)
 
-steps/%/outputs/pipeline.pkl steps/%/outputs/run_id: {prp}/steps/train.py {prp}/steps/train_config.yaml steps/transform/outputs/train_transformed.parquet steps/transform/outputs/transformer.pkl train/conf.yaml
-	python -c "from mlflow.pipelines.train_step import run_train_step; run_train_step(transformed_train_data_path='steps/transform/outputs/train_transformed.parquet', train_config_path='{prp}/steps/train_config.yaml', transformer_path='steps/transform/outputs/transformer.pkl', tracking_uri='file:/tmp/mlruns', pipeline_output_path='steps/$*/outputs/pipeline.pkl', run_id_output_path='steps/$*/outputs/run_id', step_config_path='train/conf.yaml')"
+steps/%/outputs/pipeline.pkl steps/%/outputs/run_id: {prp}/steps/train.py {prp}/steps/train_config.yaml steps/transform/outputs/train_transformed.parquet steps/transform/outputs/transformer.pkl steps/train/conf.yaml
+	python -c "from mlflow.pipelines.train_step import run_train_step; run_train_step(transformed_train_data_path='steps/transform/outputs/train_transformed.parquet', train_config_path='{prp}/steps/train_config.yaml', transformer_path='steps/transform/outputs/transformer.pkl', tracking_uri='file:/tmp/mlruns', pipeline_output_path='steps/$*/outputs/pipeline.pkl', run_id_output_path='steps/$*/outputs/run_id', step_config_path='steps/train/conf.yaml')"
 
 evaluate_objects = steps/evaluate/outputs/worst_training_examples.parquet steps/evaluate/outputs/metrics.json steps/evaluate/outputs/explanations.html
 
