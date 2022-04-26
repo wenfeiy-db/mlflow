@@ -25,5 +25,3 @@ def run_split_step(input_path, summary_path, train_output_path, test_output_path
 
     train.to_parquet(train_output_path)
     test.to_parquet(test_output_path)
-
-    print("PATHS", summary_path, train_output_path, test_output_path)

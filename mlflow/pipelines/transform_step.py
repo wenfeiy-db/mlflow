@@ -2,7 +2,6 @@ import sys
 import cloudpickle
 import pandas as pd
 import importlib
-import os
 import yaml
 
 
@@ -15,12 +14,12 @@ def run_transform_step(
     :param transformer_output_path: Output path of the transformer
     :param transformed_data_output_path: Output path of transformed data
     :param step_config_path: Path to the internal transformer step configuration yaml
-                             (TODO: Unify `transformer_config_path and step_config_path)
+                             (TODO: Unify `transformer_config_path` and `step_config_path`)
     """
     with open(step_config_path, "r") as f:
         step_config = yaml.safe_load(f)
-        pipeline_root = step_config["pipeline_root"]
-
+    
+    pipeline_root = step_config["pipeline_root"]
     sys.path.append(pipeline_root)
     module_name, method_name = (
         yaml.safe_load(open(transformer_config_path, "r")).get("transformer_method").rsplit(".", 1)
