@@ -10,6 +10,7 @@ import tempfile
 import stat
 import pathlib
 from contextlib import contextmanager
+from typing import Union
 
 import urllib.parse
 import urllib.request
@@ -256,7 +257,7 @@ class TempDir:
 
 
 @contextmanager
-def chdir(directory_path):
+def chdir(directory_path: Union[str, pathlib.Path]):
     """
     Context manager that sets the specified directory as the working directory before executing the
     code it encloses and returns to the previous working directory after execution completes.

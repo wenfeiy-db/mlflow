@@ -7,6 +7,7 @@ import shutil
 import pytest
 import tarfile
 import stat
+import pathlib
 
 from mlflow.exceptions import MissingConfigException
 from mlflow.utils import file_utils
@@ -15,6 +16,7 @@ from mlflow.utils.file_utils import (
     _copy_file_or_tree,
     TempDir,
     _handle_readonly_on_windows,
+    chdir,
 )
 from tests.projects.utils import TEST_PROJECT_DIR
 
@@ -263,3 +265,19 @@ def test_handle_readonly_on_windows(tmpdir):
         (exc.type, exc.value, exc.traceback),
     )
     assert not os.path.exists(tmp_path)
+
+
+def test_chdir_behaves_as_expected(tmp_path):
+    curr_dir = pathlib.Path.cwd()
+    assert curr_dir != tmp_path
+
+    with chdir(tmp_path):
+        assert pathlib.Path.cwd() == tmp_path
+
+    assert pathlib.Path.cwd() == curr_dir
+
+    with pytest.raises(Exception), chdir(tmp_path):
+        assert pathlib.Path.cwd() == curr_dir
+        raise Exception("Failure")
+
+    assert pathlib.Path.cwd() == curr_dir
