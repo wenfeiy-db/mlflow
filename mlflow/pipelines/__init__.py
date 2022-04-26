@@ -15,8 +15,11 @@ import sys
 import mlflow.utils.databricks_utils as databricks_utils
 from mlflow.exceptions import MlflowException
 from mlflow.utils.rest_utils import http_request
+from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 
 _logger = logging.getLogger(__name__)
+# Pass pipeline_root and pipeline config here instead of {}
+ingestStep = IngestStep.from_pipeline_config({}, "")
 
 
 def ingest():
@@ -98,6 +101,7 @@ def clean():
     """
     _enter_repository_root()
     _run_make("clean")
+    ingestStep.clean()
 
 
 def inspect():
@@ -135,6 +139,7 @@ def _run_ingest(reingest=False):  # pylint: disable=unused-argument
     :param reingest: If `True`, reingest data even if it has already been ingested previously.
                      If `False`, only ingest data even it has not previously been ingested.
     """
+    ingestStep.run("")
     pass
 
 
