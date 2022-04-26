@@ -112,7 +112,7 @@ def _run_step(step_name):
         pipeline_root_path=pipeline_root_path,
         pipeline_name=pipeline_name,
         pipeline_steps=["ingest", "split", "transform", "train", "evaluate"],
-        target_step=step_name
+        target_step=step_name,
     )
 
 

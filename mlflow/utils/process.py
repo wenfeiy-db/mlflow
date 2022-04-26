@@ -85,7 +85,7 @@ def _exec_cmd(
         return process
 
     if stream_stdout:
-        for output_char in iter(lambda: process.stdout.read(1), ''):
+        for output_char in iter(lambda: process.stdout.read(1), ""):
             sys.stdout.write(output_char)
 
     stdout, stderr = process.communicate()

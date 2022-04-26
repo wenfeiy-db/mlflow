@@ -8,22 +8,32 @@ _STEP_OUTPUTS_SUBDIRECTORY_NAME = "outputs"
 _STEP_CONF_YAML_NAME = "conf.yaml"
 
 
-def run_step(pipeline_root_path: str, pipeline_name: str, pipeline_steps: list[str], target_step: str) -> str:
+def run_step(
+    pipeline_root_path: str, pipeline_name: str, pipeline_steps: list[str], target_step: str
+) -> str:
     """
     Runs the specified step in the specified pipeline, as well as all dependent steps.
 
     :param pipeline_root_path: The absolute path of the pipeline root directory on the local
                                filesystem.
-    :param pipeline_name: The name of the pipeline. 
+    :param pipeline_name: The name of the pipeline.
     :param pipeline_steps: A list of names of all the steps contained in the specified pipeline.
     :param target_step: The name of the step to run.
     :return: The absolute path of the step's execution outputs on the local filesystem.
     """
-    execution_dir_path = _get_or_create_execution_directory(pipeline_root_path, pipeline_name, pipeline_steps)
-    _write_updated_step_confs(pipeline_root_path=pipeline_root_path, pipeline_steps=pipeline_steps, execution_directory_path=execution_dir_path)
+    execution_dir_path = _get_or_create_execution_directory(
+        pipeline_root_path, pipeline_name, pipeline_steps
+    )
+    _write_updated_step_confs(
+        pipeline_root_path=pipeline_root_path,
+        pipeline_steps=pipeline_steps,
+        execution_directory_path=execution_dir_path,
+    )
     with chdir(execution_dir_path):
         _run_make(target_step)
-    return _get_step_output_directory_path(execution_directory_path=execution_dir_path, step_name=target_step)
+    return _get_step_output_directory_path(
+        execution_directory_path=execution_dir_path, step_name=target_step
+    )
 
 
 def clean_execution_state(pipeline_name: str) -> None:
@@ -32,14 +42,16 @@ def clean_execution_state(pipeline_name: str) -> None:
     on the local filesystem. This method does *not* remove other execution results, such as content
     logged to MLflow Tracking.
 
-    :param pipeline_name: The name of the pipeline. 
+    :param pipeline_name: The name of the pipeline.
     """
     execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
     with chdir(execution_dir_path):
         _run_make("clean")
 
 
-def _get_or_create_execution_directory(pipeline_root_path: str, pipeline_name: str, pipeline_steps: list[str]) -> str:
+def _get_or_create_execution_directory(
+    pipeline_root_path: str, pipeline_name: str, pipeline_steps: list[str]
+) -> str:
     """
     Obtains the path of the execution directory on the local filesystem corresponding to the
     specified pipeline, creating the execution directory and its required contents if they do
@@ -47,8 +59,8 @@ def _get_or_create_execution_directory(pipeline_root_path: str, pipeline_name: s
 
     :param pipeline_root_path: The absolute path of the pipeline root directory on the local
                                filesystem.
-    :param pipeline_name: The name of the pipeline. 
-    :param pipeline_steps: A list of names of all the steps contained in the specified pipeline. 
+    :param pipeline_name: The name of the pipeline.
+    :param pipeline_steps: A list of names of all the steps contained in the specified pipeline.
     :return: The absolute path of the execution directory on the local filesystem for the specified
              pipeline.
     """
@@ -63,7 +75,9 @@ def _get_or_create_execution_directory(pipeline_root_path: str, pipeline_name: s
     return execution_dir_path
 
 
-def _write_updated_step_confs(pipeline_root_path: str, pipeline_steps: list[str], execution_directory_path: str) -> None:
+def _write_updated_step_confs(
+    pipeline_root_path: str, pipeline_steps: list[str], execution_directory_path: str
+) -> None:
     """
     Compares the in-memory configuration state of the specified pipeline steps with step-specific
     internal configuration files written by prior executions. If updates are found, writes updated
@@ -72,7 +86,7 @@ def _write_updated_step_confs(pipeline_root_path: str, pipeline_steps: list[str]
 
     :param pipeline_root_path: The absolute path of the pipeline root directory on the local
                                filesystem.
-    :param pipeline_steps: A list of names of all the steps contained in the specified pipeline. 
+    :param pipeline_steps: A list of names of all the steps contained in the specified pipeline.
     :param execution_directory_path: The absolute path of the execution directory on the local
                                      filesystem for the specified pipeline. Configuration files are
                                      written to step-specific subdirectories of this execution
@@ -92,7 +106,13 @@ def _write_updated_step_confs(pipeline_root_path: str, pipeline_steps: list[str]
         }
 
         if prev_step_conf != step_conf:
-            write_yaml(root=step_subdir_path, file_name=_STEP_CONF_YAML_NAME, data=step_conf, overwrite=True, sort_keys=True)
+            write_yaml(
+                root=step_subdir_path,
+                file_name=_STEP_CONF_YAML_NAME,
+                data=step_conf,
+                overwrite=True,
+                sort_keys=True,
+            )
 
 
 def _get_execution_directory_path(pipeline_name: str) -> str:
@@ -121,7 +141,9 @@ def _get_step_output_directory_path(execution_directory_path: str, step_name: st
     :return The absolute path of the local filesystem directory containing outputs for the specified
             step.
     """
-    return os.path.abspath(os.path.join(execution_directory_path, step_name, _STEP_OUTPUTS_SUBDIRECTORY_NAME))
+    return os.path.abspath(
+        os.path.join(execution_directory_path, step_name, _STEP_OUTPUTS_SUBDIRECTORY_NAME)
+    )
 
 
 def _run_make(rule_name: str) -> None:

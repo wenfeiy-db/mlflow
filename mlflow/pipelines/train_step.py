@@ -33,7 +33,7 @@ def run_train_step(
     """
     with open(step_config_path, "r") as f:
         step_config = yaml.safe_load(f)
-    
+
     pipeline_root = step_config["pipeline_root"]
 
     sys.path.append(pipeline_root)

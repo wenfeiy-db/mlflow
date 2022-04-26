@@ -6,7 +6,11 @@ import yaml
 
 
 def run_transform_step(
-    train_data_path, transformer_config_path, transformer_output_path, transformed_data_output_path, step_config_path
+    train_data_path,
+    transformer_config_path,
+    transformer_output_path,
+    transformed_data_output_path,
+    step_config_path,
 ):
     """
     :param train_data_path: Path to training data
@@ -18,7 +22,7 @@ def run_transform_step(
     """
     with open(step_config_path, "r") as f:
         step_config = yaml.safe_load(f)
-    
+
     pipeline_root = step_config["pipeline_root"]
     sys.path.append(pipeline_root)
     module_name, method_name = (
