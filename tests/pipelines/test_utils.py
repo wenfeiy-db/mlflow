@@ -10,7 +10,9 @@ from mlflow.utils.file_utils import chdir
 from tests.pipelines.helper_functions import enter_pipeline_example_directory
 
 
-def test_get_pipeline_root_path_returns_correctly_when_inside_pipeline_directory(enter_pipeline_example_directory):
+def test_get_pipeline_root_path_returns_correctly_when_inside_pipeline_directory(
+    enter_pipeline_example_directory,
+):
     pipeline_root_path = enter_pipeline_example_directory
     get_pipeline_root_path() == pipeline_root_path
     os.chdir(pathlib.Path.cwd() / "notebooks")
@@ -22,7 +24,9 @@ def test_get_pipeline_root_path_throws_outside_pipeline_directory(tmp_path):
         get_pipeline_root_path()
 
 
-def test_get_pipeline_name_returns_correctly_for_valid_pipeline_directory(enter_pipeline_example_directory, tmp_path):
+def test_get_pipeline_name_returns_correctly_for_valid_pipeline_directory(
+    enter_pipeline_example_directory, tmp_path
+):
     pipeline_root_path = enter_pipeline_example_directory
     assert pathlib.Path.cwd() == pipeline_root_path
     assert get_pipeline_name() == "sklearn_regression"

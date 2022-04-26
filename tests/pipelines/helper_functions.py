@@ -23,5 +23,3 @@ def enter_pipeline_example_directory():
         yield pipeline_example_path
     finally:
         os.chdir(og_dir)
-
-
