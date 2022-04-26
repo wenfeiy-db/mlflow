@@ -276,8 +276,8 @@ def test_chdir_behaves_as_expected(tmp_path):
 
     assert pathlib.Path.cwd() == curr_dir
 
-    with pytest.raises(Exception), chdir(tmp_path):
-        assert pathlib.Path.cwd() == curr_dir
+    with pytest.raises(Exception, match="Failure"), chdir(tmp_path):
+        assert pathlib.Path.cwd() == tmp_path
         raise Exception("Failure")
 
     assert pathlib.Path.cwd() == curr_dir
