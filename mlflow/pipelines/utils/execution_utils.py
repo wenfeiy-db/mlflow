@@ -6,6 +6,7 @@ from mlflow.utils.process import _exec_cmd
 
 
 _MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR = "MLFLOW_PIPELINES_EXECUTION_DIRECTORY"
+_STEPS_SUBDIRECTORY_NAME = "steps"
 _STEP_OUTPUTS_SUBDIRECTORY_NAME = "outputs"
 _STEP_CONF_YAML_NAME = "conf.yaml"
 
@@ -95,8 +96,8 @@ def _write_updated_step_confs(
                                      directory.
     """
     for step_name in pipeline_steps:
-        step_subdir_path = os.path.join(execution_directory_path, step_name)
-        step_conf_path = os.path.join(execution_directory_path, step_name, _STEP_CONF_YAML_NAME)
+        step_subdir_path = os.path.join(execution_directory_path, _STEPS_SUBDIRECTORY_NAME, step_name)
+        step_conf_path = os.path.join(step_subdir_path, _STEP_CONF_YAML_NAME)
         if os.path.exists(step_conf_path):
             prev_step_conf = read_yaml(root=step_subdir_path, file_name=_STEP_CONF_YAML_NAME)
         else:
@@ -144,7 +145,7 @@ def _get_step_output_directory_path(execution_directory_path: str, step_name: st
             step.
     """
     return os.path.abspath(
-        os.path.join(execution_directory_path, step_name, _STEP_OUTPUTS_SUBDIRECTORY_NAME)
+        os.path.join(execution_directory_path, _STEPS_SUBDIRECTORY_NAME, step_name, _STEP_OUTPUTS_SUBDIRECTORY_NAME)
     )
 
 
@@ -179,33 +180,33 @@ def _create_makefile(pipeline_root_path, execution_directory_path) -> None:
 # that need to be formatted (substituted) with the pipeline root directory in order to produce a
 # valid Makefile
 _MAKEFILE_FORMAT_STRING = """\
-split_objects = split/outputs/train.parquet split/outputs/test.parquet split/outputs/summary.html
+split_objects = steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/split/outputs/summary.html
 
 split: $(split_objects)
 
-%/outputs/train.parquet %/outputs/test.parquet %/outputs/summary.html: {prp}/datasets/autos.parquet
-	python -c "from mlflow.pipelines.split_step import run_split_step; run_split_step(input_path='{prp}/datasets/autos.parquet', summary_path='$*/outputs/summary.html', train_output_path='$*/outputs/train.parquet', test_output_path='$*/outputs/test.parquet')"
+steps/%/outputs/train.parquet steps/%/outputs/test.parquet steps/%/outputs/summary.html: {prp}/datasets/autos.parquet
+	python -c "from mlflow.pipelines.split_step import run_split_step; run_split_step(input_path='{prp}/datasets/autos.parquet', summary_path='steps/$*/outputs/summary.html', train_output_path='steps/$*/outputs/train.parquet', test_output_path='steps/$*/outputs/test.parquet')"
 
-transform_objects = transform/outputs/transformer.pkl transform/outputs/train_transformed.parquet
+transform_objects = steps/transform/outputs/transformer.pkl steps/transform/outputs/train_transformed.parquet
 
 transform: $(transform_objects)
 
-%/outputs/transformer.pkl %/outputs/train_transformed.parquet: {prp}/steps/transform.py {prp}/steps/transformer_config.yaml split/outputs/train.parquet transform/conf.yaml
-	python -c "from mlflow.pipelines.transform_step import run_transform_step; run_transform_step(train_data_path='split/outputs/train.parquet', transformer_config_path='{prp}/steps/transformer_config.yaml', transformer_output_path='$*/outputs/transformer.pkl', transformed_data_output_path='$*/outputs/train_transformed.parquet', step_config_path='transform/conf.yaml')"
+steps/%/outputs/transformer.pkl steps/%/outputs/train_transformed.parquet: {prp}/steps/transform.py {prp}/steps/transformer_config.yaml steps/split/outputs/train.parquet transform/conf.yaml
+	python -c "from mlflow.pipelines.transform_step import run_transform_step; run_transform_step(train_data_path='steps/split/outputs/train.parquet', transformer_config_path='{prp}/steps/transformer_config.yaml', transformer_output_path='steps/$*/outputs/transformer.pkl', transformed_data_output_path='steps/$*/outputs/train_transformed.parquet', step_config_path='transform/conf.yaml')"
 
-train_objects = train/outputs/pipeline.pkl train/outputs/run_id
+train_objects = steps/train/outputs/pipeline.pkl steps/train/outputs/run_id
 
 train: $(train_objects)
 
-%/outputs/pipeline.pkl %/outputs/run_id: {prp}/steps/train.py {prp}/steps/train_config.yaml transform/outputs/train_transformed.parquet transform/outputs/transformer.pkl train/conf.yaml
-	python -c "from mlflow.pipelines.train_step import run_train_step; run_train_step(transformed_train_data_path='transform/outputs/train_transformed.parquet', train_config_path='{prp}/steps/train_config.yaml', transformer_path='transform/outputs/transformer.pkl', tracking_uri='file:/tmp/mlruns', pipeline_output_path='$*/outputs/pipeline.pkl', run_id_output_path='$*/outputs/run_id', step_config_path='train/conf.yaml')"
+steps/%/outputs/pipeline.pkl steps/%/outputs/run_id: {prp}/steps/train.py {prp}/steps/train_config.yaml steps/transform/outputs/train_transformed.parquet steps/transform/outputs/transformer.pkl train/conf.yaml
+	python -c "from mlflow.pipelines.train_step import run_train_step; run_train_step(transformed_train_data_path='steps/transform/outputs/train_transformed.parquet', train_config_path='{prp}/steps/train_config.yaml', transformer_path='steps/transform/outputs/transformer.pkl', tracking_uri='file:/tmp/mlruns', pipeline_output_path='steps/$*/outputs/pipeline.pkl', run_id_output_path='steps/$*/outputs/run_id', step_config_path='train/conf.yaml')"
 
-evaluate_objects = evaluate/outputs/worst_training_examples.parquet evaluate/outputs/metrics.json evaluate/outputs/explanations.html
+evaluate_objects = steps/evaluate/outputs/worst_training_examples.parquet steps/evaluate/outputs/metrics.json steps/evaluate/outputs/explanations.html
 
 evaluate: $(evaluate_objects)
 
-%/outputs/worst_training_examples.parquet %/outputs/metrics.json %/outputs/explanations.html: train/outputs/pipeline.pkl split/outputs/train.parquet split/outputs/test.parquet train/outputs/run_id
-	python -c "from mlflow.pipelines.evaluate_step import run_evaluate_step; run_evaluate_step(pipeline_path='train/outputs/pipeline.pkl', tracking_uri='file:/tmp/mlruns', run_id_path='train/outputs/run_id', train_data_path='split/outputs/train.parquet', test_data_path='split/outputs/test.parquet', explanations_output_path='$*/outputs/explanations.html', metrics_output_path='$*/outputs/metrics.json', worst_train_examples_output_path='$*/outputs/worst_training_examples.parquet')"
+steps/%/outputs/worst_training_examples.parquet steps/%/outputs/metrics.json steps/%/outputs/explanations.html: steps/train/outputs/pipeline.pkl steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/train/outputs/run_id
+	python -c "from mlflow.pipelines.evaluate_step import run_evaluate_step; run_evaluate_step(pipeline_path='steps/train/outputs/pipeline.pkl', tracking_uri='file:/tmp/mlruns', run_id_path='steps/train/outputs/run_id', train_data_path='steps/split/outputs/train.parquet', test_data_path='steps/split/outputs/test.parquet', explanations_output_path='steps/$*/outputs/explanations.html', metrics_output_path='steps/$*/outputs/metrics.json', worst_train_examples_output_path='steps/$*/outputs/worst_training_examples.parquet')"
 
 clean:
 	rm -rf $(split_objects) $(transform_objects) $(train_objects) $(evaluate_objects)
