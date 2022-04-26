@@ -4,13 +4,10 @@ MLflow Pipelines
 Fill out help string later
 """
 
-import json
 import logging
 import os
-import pathlib
 import shutil
 import subprocess
-import sys
 
 from mlflow.pipelines.utils import get_pipeline_root_path, get_pipeline_name
 from mlflow.pipelines.utils.execution_utils import run_step, clean_execution_state
@@ -102,6 +99,13 @@ def inspect():
 
 
 def _run_step(step_name):
+    """
+    Runs the specified step in the current pipeline, where the current pipeline is determined by
+    the current working directory.
+
+    :param target_step: The name of the step to run.
+    :return: The absolute path of the step's execution outputs on the local filesystem.
+    """
     pipeline_root_path = get_pipeline_root_path()
     pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root_path)
     return run_step(

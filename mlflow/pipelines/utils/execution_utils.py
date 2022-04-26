@@ -8,21 +8,50 @@ _STEP_OUTPUTS_SUBDIRECTORY_NAME = "outputs"
 _STEP_CONF_YAML_NAME = "conf.yaml"
 
 
-def run_step(pipeline_root_path, pipeline_name, pipeline_steps, target_step):
+def run_step(pipeline_root_path: str, pipeline_name: str, pipeline_steps: list[str], target_step: str) -> str:
+    """
+    Runs the specified step in the specified pipeline, as well as all dependent steps.
+
+    :param pipeline_root_path: The absolute path of the pipeline root directory on the local
+                               filesystem.
+    :param pipeline_name: The name of the pipeline. 
+    :param pipeline_steps: A list of names of all the steps contained in the specified pipeline.
+    :param target_step: The name of the step to run.
+    :return: The absolute path of the step's execution outputs on the local filesystem.
+    """
     execution_dir_path = _get_or_create_execution_directory(pipeline_root_path, pipeline_name, pipeline_steps)
-    _write_updated_step_confs(execution_directory_path=execution_dir_path, pipeline_root_path=pipeline_root_path, pipeline_steps=pipeline_steps)
+    _write_updated_step_confs(pipeline_root_path=pipeline_root_path, pipeline_steps=pipeline_steps, execution_directory_path=execution_dir_path)
     with chdir(execution_dir_path):
         _run_make(target_step)
     return _get_step_output_directory_path(execution_directory_path=execution_dir_path, step_name=target_step)
 
 
-def clean_execution_state(pipeline_name):
+def clean_execution_state(pipeline_name: str) -> None:
+    """
+    Removes all execution state for the specified pipeline from the associated execution directory
+    on the local filesystem. This method does *not* remove other execution results, such as content
+    logged to MLflow Tracking.
+
+    :param pipeline_name: The name of the pipeline. 
+    """
     execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
     with chdir(execution_dir_path):
         _run_make("clean")
 
 
-def _get_or_create_execution_directory(pipeline_root_path, pipeline_name, pipeline_steps):
+def _get_or_create_execution_directory(pipeline_root_path: str, pipeline_name: str, pipeline_steps: list[str]) -> str:
+    """
+    Obtains the path of the execution directory on the local filesystem corresponding to the
+    specified pipeline, creating the execution directory and its required contents if they do
+    not already exist.
+
+    :param pipeline_root_path: The absolute path of the pipeline root directory on the local
+                               filesystem.
+    :param pipeline_name: The name of the pipeline. 
+    :param pipeline_steps: A list of names of all the steps contained in the specified pipeline. 
+    :return: The absolute path of the execution directory on the local filesystem for the specified
+             pipeline.
+    """
     execution_dir_path = _get_execution_directory_path(pipeline_name)
 
     os.makedirs(execution_dir_path, exist_ok=True)
@@ -34,7 +63,21 @@ def _get_or_create_execution_directory(pipeline_root_path, pipeline_name, pipeli
     return execution_dir_path
 
 
-def _write_updated_step_confs(execution_directory_path, pipeline_root_path, pipeline_steps):
+def _write_updated_step_confs(pipeline_root_path: str, pipeline_steps: list[str], execution_directory_path: str) -> None:
+    """
+    Compares the in-memory configuration state of the specified pipeline steps with step-specific
+    internal configuration files written by prior executions. If updates are found, writes updated
+    state to the corresponding files. If no updates are found, configuration state is not
+    rewritten.
+
+    :param pipeline_root_path: The absolute path of the pipeline root directory on the local
+                               filesystem.
+    :param pipeline_steps: A list of names of all the steps contained in the specified pipeline. 
+    :param execution_directory_path: The absolute path of the execution directory on the local
+                                     filesystem for the specified pipeline. Configuration files are
+                                     written to step-specific subdirectories of this execution
+                                     directory.
+    """
     for step_name in pipeline_steps:
         step_subdir_path = os.path.join(execution_directory_path, step_name)
         step_conf_path = os.path.join(execution_directory_path, step_name, _STEP_CONF_YAML_NAME)
@@ -52,27 +95,65 @@ def _write_updated_step_confs(execution_directory_path, pipeline_root_path, pipe
             write_yaml(root=step_subdir_path, file_name=_STEP_CONF_YAML_NAME, data=step_conf, overwrite=True, sort_keys=True)
 
 
-def _get_execution_directory_path(pipeline_name):
-    return (
+def _get_execution_directory_path(pipeline_name: str) -> str:
+    """
+    Obtains the path of the execution directory on the local filesystem corresponding to the
+    specified pipeline, which may or may not exist.
+
+    :param pipeline_name: The name of the pipeline for which to obtain the associated execution
+                          directory path.
+    """
+    return os.path.abspath(
         os.environ.get(_MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR)
         or os.path.join(os.path.expanduser("~"), ".mlflow", "pipelines", pipeline_name)
     )
 
 
-def _get_step_output_directory_path(execution_directory_path, step_name):
+def _get_step_output_directory_path(execution_directory_path: str, step_name: str) -> str:
+    """
+    Obtains the path of the local filesystem directory containing outputs for the specified step,
+    which may or may not exist.
+
+    :param execution_directory_path: The absolute path of the execution directory on the local
+                                     filesystem for the relevant pipeline. The Makefile is created
+                                     in this directory.
+    :param step_name: The name of the pipeline step for which to obtain the output directory path.
+    :return The absolute path of the local filesystem directory containing outputs for the specified
+            step.
+    """
     return os.path.abspath(os.path.join(execution_directory_path, step_name, _STEP_OUTPUTS_SUBDIRECTORY_NAME))
 
 
-def _run_make(rule_name):
-    _exec_cmd(["make", rule_name], stream_output=True, synchronous=True)
+def _run_make(rule_name: str) -> None:
+    """
+    Runs the specified rule with Make. This method assumes that a Makefile named `Makefile` exists
+    in the current working directory.
+
+    :param rule_name: The name of the Make rule to run.
+    """
+    _exec_cmd(["make", "-f", "Makefile", rule_name], stream_stdout=True, synchronous=True)
 
 
-def _create_makefile(pipeline_root_path, execution_directory_path):
+def _create_makefile(pipeline_root_path, execution_directory_path) -> None:
+    """
+    Creates a Makefile with a set of relevant MLflow Pipelines targets for the specified pipeline,
+    overwriting the preexisting Makefile if one exists. The Makefile is created in the specified
+    execution directory.
+
+    :param pipeline_root_path: The absolute path of the pipeline root directory on the local
+                               filesystem.
+    :param execution_directory_path: The absolute path of the execution directory on the local
+                                     filesystem for the specified pipeline. The Makefile is created
+                                     in this directory.
+    """
     makefile_path = os.path.join(execution_directory_path, "Makefile")
     with open(makefile_path, "w") as f:
         f.write(_MAKEFILE_FORMAT_STRING.format(prp=os.path.abspath(pipeline_root_path)))
 
 
+# Makefile contents for cache-aware pipeline execution. These contents include variable placeholders
+# that need to be formatted (substituted) with the pipeline root directory in order to produce a
+# valid Makefile
 _MAKEFILE_FORMAT_STRING = """\
 split_objects = split/outputs/train.parquet split/outputs/test.parquet split/outputs/summary.html
 

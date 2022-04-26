@@ -257,6 +257,13 @@ class TempDir:
 
 @contextmanager
 def chdir(directory_path):
+    """
+    Context manager that sets the specified directory as the working directory before executing the
+    code it encloses and returns to the previous working directory after execution completes.
+
+    :param directory_path: The path of the desired working directory to set. This path must exist
+                           before `chdir` is called.
+    """
     curr_dir = os.getcwd()
     try:
         os.chdir(directory_path)
