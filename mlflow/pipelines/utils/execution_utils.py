@@ -1,4 +1,6 @@
 import os
+from typing import List
+
 from mlflow.utils.file_utils import chdir, read_yaml, write_yaml
 from mlflow.utils.process import _exec_cmd
 
@@ -9,7 +11,7 @@ _STEP_CONF_YAML_NAME = "conf.yaml"
 
 
 def run_step(
-    pipeline_root_path: str, pipeline_name: str, pipeline_steps: list[str], target_step: str
+    pipeline_root_path: str, pipeline_name: str, pipeline_steps: List[str], target_step: str
 ) -> str:
     """
     Runs the specified step in the specified pipeline, as well as all dependent steps.
@@ -50,7 +52,7 @@ def clean_execution_state(pipeline_name: str) -> None:
 
 
 def _get_or_create_execution_directory(
-    pipeline_root_path: str, pipeline_name: str, pipeline_steps: list[str]
+    pipeline_root_path: str, pipeline_name: str, pipeline_steps: List[str]
 ) -> str:
     """
     Obtains the path of the execution directory on the local filesystem corresponding to the
@@ -76,7 +78,7 @@ def _get_or_create_execution_directory(
 
 
 def _write_updated_step_confs(
-    pipeline_root_path: str, pipeline_steps: list[str], execution_directory_path: str
+    pipeline_root_path: str, pipeline_steps: List[str], execution_directory_path: str
 ) -> None:
     """
     Compares the in-memory configuration state of the specified pipeline steps with step-specific

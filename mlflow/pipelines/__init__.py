@@ -98,7 +98,7 @@ def inspect():
     raise NotImplementedError
 
 
-def _run_step(step_name):
+def _run_step(step_name: str) -> str:
     """
     Runs the specified step in the current pipeline, where the current pipeline is determined by
     the current working directory.
