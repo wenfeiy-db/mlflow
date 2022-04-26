@@ -96,7 +96,9 @@ def _write_updated_step_confs(
                                      directory.
     """
     for step_name in pipeline_steps:
-        step_subdir_path = os.path.join(execution_directory_path, _STEPS_SUBDIRECTORY_NAME, step_name)
+        step_subdir_path = os.path.join(
+            execution_directory_path, _STEPS_SUBDIRECTORY_NAME, step_name
+        )
         step_conf_path = os.path.join(step_subdir_path, _STEP_CONF_YAML_NAME)
         if os.path.exists(step_conf_path):
             prev_step_conf = read_yaml(root=step_subdir_path, file_name=_STEP_CONF_YAML_NAME)
@@ -145,7 +147,12 @@ def _get_step_output_directory_path(execution_directory_path: str, step_name: st
             step.
     """
     return os.path.abspath(
-        os.path.join(execution_directory_path, _STEPS_SUBDIRECTORY_NAME, step_name, _STEP_OUTPUTS_SUBDIRECTORY_NAME)
+        os.path.join(
+            execution_directory_path,
+            _STEPS_SUBDIRECTORY_NAME,
+            step_name,
+            _STEP_OUTPUTS_SUBDIRECTORY_NAME,
+        )
     )
 
 

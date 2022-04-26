@@ -71,13 +71,14 @@ def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_d
     cli_env = {}
     if custom_execution_directory is not None:
         cli_env["MLFLOW_PIPELINES_EXECUTION_DIRECTORY"] = str(custom_execution_directory)
-    
+
     expected_execution_directory_location = (
-        pathlib.Path(custom_execution_directory) if custom_execution_directory
+        pathlib.Path(custom_execution_directory)
+        if custom_execution_directory
         else pathlib.Path.home() / ".mlflow" / "pipelines" / "sklearn_regression"
     )
 
-    # Run the full pipeline and verify that outputs for each step were written to the expected 
+    # Run the full pipeline and verify that outputs for each step were written to the expected
     # execution directory locations
     CliRunner().invoke(cli=pipelines_cli.evaluate, env=cli_env)
     assert (expected_execution_directory_location / "Makefile").exists()
@@ -89,7 +90,7 @@ def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_d
         # TODO: Assert that the ingest step has outputs once ingest execution has been implemented
         assert first_output is not None or step_name == "ingest"
 
-    # Clean the pipeline and verify that all step outputs have been removed 
+    # Clean the pipeline and verify that all step outputs have been removed
     CliRunner().invoke(cli=pipelines_cli.clean, env=cli_env)
     for step_name in ["ingest", "split", "train", "transform", "evaluate"]:
         step_outputs_path = expected_execution_directory_location / "steps" / step_name / "outputs"
