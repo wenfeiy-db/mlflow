@@ -9,6 +9,7 @@ import tarfile
 import tempfile
 import stat
 import pathlib
+from contextlib import contextmanager
 
 import urllib.parse
 import urllib.request
@@ -252,6 +253,16 @@ class TempDir:
 
     def path(self, *path):
         return os.path.join("./", *path) if self._chdr else os.path.join(self._path, *path)
+
+
+@contextmanager
+def chdir(directory_path):
+    curr_dir = os.getcwd()
+    try:
+        os.chdir(directory_path)
+        yield
+    finally:
+        os.chdir(curr_dir)
 
 
 def read_file_lines(parent_path, file_name):
