@@ -164,7 +164,12 @@ def _run_make(execution_directory_path, rule_name: str) -> None:
                                      in this directory.
     :param rule_name: The name of the Make rule to run.
     """
-    _exec_cmd(["make", "-f", "Makefile", rule_name], stream_stdout=True, synchronous=True, cwd=execution_directory_path)
+    _exec_cmd(
+        ["make", "-f", "Makefile", rule_name],
+        stream_stdout=True,
+        synchronous=True,
+        cwd=execution_directory_path,
+    )
 
 
 def _create_makefile(pipeline_root_path, execution_directory_path) -> None:
