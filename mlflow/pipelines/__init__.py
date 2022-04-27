@@ -11,8 +11,11 @@ import subprocess
 
 from mlflow.pipelines.utils import get_pipeline_root_path, get_pipeline_name
 from mlflow.pipelines.utils.execution_utils import run_step, clean_execution_state
+from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 
 _logger = logging.getLogger(__name__)
+# Pass pipeline_root and pipeline config here instead of {}
+ingestStep = IngestStep.from_pipeline_config({}, "")
 
 
 def ingest():
@@ -89,6 +92,7 @@ def clean():
     """
     pipeline_name = get_pipeline_name()
     clean_execution_state(pipeline_name=pipeline_name)
+    ingestStep.clean()
 
 
 def inspect():
@@ -129,4 +133,5 @@ def _run_ingest(reingest=False):  # pylint: disable=unused-argument
     :param reingest: If `True`, reingest data even if it has already been ingested previously.
                      If `False`, only ingest data even it has not previously been ingested.
     """
+    ingestStep.run("")
     pass

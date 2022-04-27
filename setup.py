@@ -74,8 +74,6 @@ CORE_REQUIREMENTS = SKINNY_REQUIREMENTS + [
     "numpy",
     "scipy",
     "pandas",
-    # Required for MLflow Pipelines
-    "pandas-profiling",
     "prometheus-flask-exporter",
     "querystring_parser",
     "jinja2",
@@ -84,6 +82,9 @@ CORE_REQUIREMENTS = SKINNY_REQUIREMENTS + [
     # Required to run the MLflow server against SQL-backed storage
     "sqlalchemy",
     "waitress; platform_system == 'Windows'",
+    # Required for MLflow Pipelines
+    "pandas-profiling",
+    "pyarrow",
 ]
 
 _is_mlflow_skinny = bool(os.environ.get(_MLFLOW_SKINNY_ENV_VAR))
