@@ -1,10 +1,10 @@
 import jinja2
 import pprint
 import os
-import html
 from jinja2 import meta
 from io import StringIO
 from IPython.display import HTML, display
+import ipywidgets as widgets
 from markdown import markdown as md_to_html
 
 
@@ -20,6 +20,7 @@ class BaseCard:
 
         self._context = {}
         self._string_builder = StringIO()
+        self._pandas_profiles = []
 
     def add_markdown(self, name, markdown):
         if name not in self._variables:
@@ -30,50 +31,7 @@ class BaseCard:
         return self
 
     def add_pandas_profile(self, name, profile):
-        if name not in self._variables:
-            raise ValueError(
-                f"{name} is not a valid Pandas profile variable found in template "
-                f"'{self.template_name}'"
-            )
-
-        self._context[name] = (
-            "<iframe srcdoc='"
-            + html.escape(profile.to_html())
-            + "' width='100%' height='500' frameborder='0'></iframe>"
-        )
-
-        # WIP: Shadow DOM implementation, require sophisticated escaping.
-        # html_lines = profile.to_html().split('\n')
-
-        # # Replacements are to fix: Uncaught SyntaxError: Octal escape sequences errors
-        # html_lines = [
-        #     "\"" + html.escape(line.replace("\\","\\\\").replace("`",  '\\`')) + "\""
-        #     for line in html_lines
-        # ]
-        # innerHTML = "[" + ", ".join(html_lines) + "].join('\\n')"
-
-        # # Uncaught DOMException: Failed to execute 'define' on 'CustomElementRegistry'
-        # # the tag must be all lower case and contain at least one dash
-        # tag_name = name.lower().replace("_", "-")
-
-        # self._context[name] = f'''
-        # <script>
-        #     function decodeHtml(html) {{
-        #         var txt = document.createElement("textarea");
-        #         txt.innerHTML = html;
-        #         return txt.value;
-        #     }}
-        #     (function () {{
-        #         customElements.define('{tag_name}', class extends HTMLElement {{
-        #             connectedCallback() {{
-        #                 const shadow = this.attachShadow({{mode: 'closed'}});
-        #                 shadow.innerHTML = decodeHtml({innerHTML});
-        #             }}
-        #         }});
-        #     }})();
-        # </script>
-        # <{tag_name}></{tag_name}>
-        # '''
+        self._pandas_profiles.append((name, profile))
         return self
 
     def add_artifact(self, name, artifact):
@@ -95,8 +53,29 @@ class BaseCard:
     def to_text(self):
         return self._string_builder.getvalue()
 
-    def display(self):
-        display(HTML(self.to_html()))
+    def display(self, group_pandas_profiles=True):
+        if len(self._pandas_profiles) == 0:
+            display(widgets.HTML(self.to_html()))
+        else:
+            tab = widgets.Tab()
+            if group_pandas_profiles:
+                pandas_profiles_tab = widgets.Tab()
+                pandas_profiles_tab.children = [profile.widgets for _, profile in self._pandas_profiles]
+                pandas_profiles_titles = [name for name, _ in self._pandas_profiles]
+                for i in range(len(pandas_profiles_tab.children)):
+                    pandas_profiles_tab.set_title(i, pandas_profiles_titles[i])
+
+                tab.children = [widgets.HTML(self.to_html()), pandas_profiles_tab]
+                titles = ["Main", "Pandas Profiles"]
+                for i in range(len(tab.children)):
+                    tab.set_title(i, titles[i])
+            else:
+                tab.children = [widgets.HTML(self.to_html())] + [profile.widgets for _, profile in self._pandas_profiles]
+                titles = ["Main"] + [f"{name} Profile" for name, _ in self._pandas_profiles]
+                for i in range(len(tab.children)):
+                    tab.set_title(i, titles[i])
+            display(tab)
+
 
 
 class IngestCard(BaseCard):
