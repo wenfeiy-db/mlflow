@@ -49,7 +49,7 @@ def _exec_cmd(
                         instance, If False, does not wait for the command to complete and return
                         a Popen instance, and ignore the `throw_on_error` argument.
     :param stream_stdout: If True, stream the command's stdout to `sys.stdout` during execution.
-                          If False, do not stream the commands stdout to `sys.stdout`.
+                          If False, do not stream the command's stdout to `sys.stdout`.
     :param kwargs: Keyword arguments (except `text`) passed to `subprocess.Popen`.
     :return:  If synchronous is True, return a `subprocess.CompletedProcess` instance,
               otherwise return a Popen instance.
