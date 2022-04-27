@@ -7,8 +7,8 @@ from mlflow.exceptions import MlflowException
 from mlflow.pipelines.utils import get_pipeline_root_path, get_pipeline_name
 
 from tests.pipelines.helper_functions import (
-    enter_pipeline_example_directory,
-)  # pylint: disable=unused-import
+    enter_pipeline_example_directory,  # pylint: disable=unused-import
+)
 from tests.pipelines.helper_functions import chdir
 
 

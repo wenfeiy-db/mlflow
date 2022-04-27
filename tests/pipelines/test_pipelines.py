@@ -8,8 +8,8 @@ import mlflow.pipelines
 import mlflow.pipelines.cli as pipelines_cli
 
 from tests.pipelines.helper_functions import (
-    enter_pipeline_example_directory,
-)  # pylint: disable=unused-import
+    enter_pipeline_example_directory,  # pylint: disable=unused-import
+)
 
 
 @pytest.fixture
