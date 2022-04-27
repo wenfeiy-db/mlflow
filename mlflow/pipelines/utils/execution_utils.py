@@ -11,7 +11,7 @@ _STEP_OUTPUTS_SUBDIRECTORY_NAME = "outputs"
 _STEP_CONF_YAML_NAME = "conf.yaml"
 
 
-def run_step(
+def run_pipeline_step(
     pipeline_root_path: str, pipeline_name: str, pipeline_steps: List[str], target_step: str
 ) -> str:
     """
@@ -47,7 +47,8 @@ def clean_execution_state(pipeline_name: str) -> None:
     :param pipeline_name: The name of the pipeline.
     """
     execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
-    _run_make(execution_directory_path=execution_dir_path, rule_name="clean")
+    if os.path.exists(execution_dir_path):
+        _run_make(execution_directory_path=execution_dir_path, rule_name="clean")
 
 
 def _get_or_create_execution_directory(
