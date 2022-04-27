@@ -15,9 +15,7 @@ def enter_pipeline_example_directory():
     pipeline_example_path = os.environ.get(PIPELINE_EXAMPLE_PATH_ENV_VAR)
     if pipeline_example_path is None:
         mlflow_repo_root_directory = pathlib.Path(mlflow.__file__).parent.parent
-        pipeline_example_path = (
-            mlflow_repo_root_directory / PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT
-        )
+        pipeline_example_path = mlflow_repo_root_directory / PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT
 
     with chdir(pipeline_example_path):
         yield pipeline_example_path
@@ -31,4 +29,3 @@ def chdir(directory_path):
         yield
     finally:
         os.chdir(og_dir)
-
