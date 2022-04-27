@@ -1,8 +1,10 @@
 import pytest
+import sys
 import uuid
-
-from mlflow.utils.process import cache_return_value_per_process
+from io import StringIO
 from multiprocessing import Process, Queue
+
+from mlflow.utils.process import cache_return_value_per_process, _exec_cmd
 
 
 @cache_return_value_per_process
@@ -61,3 +63,19 @@ def test_cache_return_value_per_process():
     child_proc.start()
     child_proc.join()
     assert queue.get(), "Testing inside child process failed."
+
+
+def test_exec_cmd_streams_to_stdout_correctly_when_configured():
+    og_sys_stdout = sys.stdout
+    try:
+        sys.stdout = StringIO()
+        _exec_cmd(["echo", "some test subprocess output"], stream_stdout=True)
+        sys.stdout.seek(0)
+        assert sys.stdout.read().rstrip("\n") == "some test subprocess output"
+
+        sys.stdout = StringIO()
+        _exec_cmd(["echo", "some test subprocess output"], stream_stdout=False)
+        sys.stdout.seek(0)
+        assert sys.stdout.read() == ""
+    finally:
+        sys.stdout = og_sys_stdout
