@@ -1,23 +1,13 @@
 import os
 import pathlib
-from contextlib import contextmanager
 
 import pytest
 
 from mlflow.exceptions import MlflowException
 from mlflow.pipelines.utils import get_pipeline_root_path, get_pipeline_name
 
-from tests.pipelines.helper_functions import enter_pipeline_example_directory
-
-
-@contextmanager
-def chdir(directory_path):
-    curr_dir = os.getcwd()
-    try:
-        os.chdir(directory_path)
-        yield
-    finally:
-        os.chdir(curr_dir)
+from tests.pipelines.helper_functions import enter_pipeline_example_directory  # pylint: disable=unused-import
+from tests.pipelines.helper_functions import chdir
 
 
 def test_get_pipeline_root_path_returns_correctly_when_inside_pipeline_directory(
