@@ -1,7 +1,7 @@
 import os
 from typing import List
 
-from mlflow.utils.file_utils import chdir, read_yaml, write_yaml
+from mlflow.utils.file_utils import read_yaml, write_yaml
 from mlflow.utils.process import _exec_cmd
 
 
@@ -32,8 +32,7 @@ def run_step(
         pipeline_steps=pipeline_steps,
         execution_directory_path=execution_dir_path,
     )
-    with chdir(execution_dir_path):
-        _run_make(target_step)
+    _run_make(execution_directory_path=execution_dir_path, rule_name=target_step)
     return _get_step_output_directory_path(
         execution_directory_path=execution_dir_path, step_name=target_step
     )
@@ -48,8 +47,7 @@ def clean_execution_state(pipeline_name: str) -> None:
     :param pipeline_name: The name of the pipeline.
     """
     execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
-    with chdir(execution_dir_path):
-        _run_make("clean")
+    _run_make(execution_directory_path=execution_dir_path, rule_name="clean")
 
 
 def _get_or_create_execution_directory(
@@ -156,14 +154,17 @@ def _get_step_output_directory_path(execution_directory_path: str, step_name: st
     )
 
 
-def _run_make(rule_name: str) -> None:
+def _run_make(execution_directory_path, rule_name: str) -> None:
     """
-    Runs the specified rule with Make. This method assumes that a Makefile named `Makefile` exists
-    in the current working directory.
+    Runs the specified pipeline rule with Make. This method assumes that a Makefile named `Makefile`
+    exists in the specified execution directory.
 
+    :param execution_directory_path: The absolute path of the execution directory on the local
+                                     filesystem for the relevant pipeline. The Makefile is created
+                                     in this directory.
     :param rule_name: The name of the Make rule to run.
     """
-    _exec_cmd(["make", "-f", "Makefile", rule_name], stream_stdout=True, synchronous=True)
+    _exec_cmd(["make", "-f", "Makefile", rule_name], stream_stdout=True, synchronous=True, cwd=execution_directory_path)
 
 
 def _create_makefile(pipeline_root_path, execution_directory_path) -> None:

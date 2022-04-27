@@ -9,8 +9,6 @@ import tarfile
 import tempfile
 import stat
 import pathlib
-from contextlib import contextmanager
-from typing import Union
 
 import urllib.parse
 import urllib.request
@@ -227,6 +225,36 @@ def render_and_merge_yaml(root, template_name, context_name):
     return merge_dicts(rendered_template_dict, context_dict)
 
 
+def read_parquet_as_pandas_df(data_parquet_path: str):
+    """
+    Deserialize and load the specified parquet file as a Pandas DataFrame.
+
+    :param data_parquet_path: String, path object (implementing os.PathLike[str]),
+    or file-like object implementing a binary read() function. The string
+    could be a URL. Valid URL schemes include http, ftp, s3, gs, and file.
+    For file URLs, a host is expected. A local file could
+    be: file://localhost/path/to/table.parquet. A file URL can also be a path to a
+    directory that contains multiple partitioned parquet files. Pyarrow
+    support paths to directories as well as file URLs. A directory
+    path could be: file://localhost/path/to/tables or s3://bucket/partition_dir.
+    :return: pandas dataframe
+    """
+    import pandas as pd
+
+    return pd.read_parquet(data_parquet_path, engine="pyarrow")
+
+
+def write_pandas_df_as_parquet(df, data_parquet_path: str):
+    """
+    Write a DataFrame to the binary parquet format.
+
+    :param df: pandas data frame.
+    :param data_parquet_path: String, path object (implementing os.PathLike[str]),
+    or file-like object implementing a binary write() function.
+    """
+    df.to_parquet(data_parquet_path, engine="pyarrow")
+
+
 class TempDir:
     def __init__(self, chdr=False, remove_on_exit=True):
         self._dir = None
@@ -254,23 +282,6 @@ class TempDir:
 
     def path(self, *path):
         return os.path.join("./", *path) if self._chdr else os.path.join(self._path, *path)
-
-
-@contextmanager
-def chdir(directory_path: Union[str, pathlib.Path]):
-    """
-    Context manager that sets the specified directory as the working directory before executing the
-    code it encloses and returns to the previous working directory after execution completes.
-
-    :param directory_path: The path of the desired working directory to set. This path must exist
-                           before `chdir` is called.
-    """
-    curr_dir = os.getcwd()
-    try:
-        os.chdir(directory_path)
-        yield
-    finally:
-        os.chdir(curr_dir)
 
 
 def read_file_lines(parent_path, file_name):
