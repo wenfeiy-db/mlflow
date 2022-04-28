@@ -58,26 +58,12 @@ class BaseCard:
             display(widgets.HTML(self.to_html()))
         else:
             tab = widgets.Tab()
-            if group_pandas_profiles:
-                pandas_profiles_tab = widgets.Tab()
-                pandas_profiles_tab.children = [
-                    profile.widgets for _, profile in self._pandas_profiles
-                ]
-                pandas_profiles_titles = [name for name, _ in self._pandas_profiles]
-                for i in range(len(pandas_profiles_tab.children)):
-                    pandas_profiles_tab.set_title(i, pandas_profiles_titles[i])
-
-                tab.children = [widgets.HTML(self.to_html()), pandas_profiles_tab]
-                titles = ["Main", "Pandas Profiles"]
-                for i in range(len(tab.children)):
-                    tab.set_title(i, titles[i])
-            else:
-                tab.children = [widgets.HTML(self.to_html())] + [
-                    profile.widgets for _, profile in self._pandas_profiles
-                ]
-                titles = ["Main"] + [f"{name} Profile" for name, _ in self._pandas_profiles]
-                for i in range(len(tab.children)):
-                    tab.set_title(i, titles[i])
+            tab.children = [widgets.HTML(self.to_html())] + [
+                profile.widgets for _, profile in self._pandas_profiles
+            ]
+            titles = ["Summary"] + [name for name, _ in self._pandas_profiles]
+            for i in range(len(tab.children)):
+                tab.set_title(i, titles[i])
             display(tab)
 
 
