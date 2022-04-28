@@ -200,7 +200,7 @@ class _MakefilePathFormat:
     relative paths are joined correctly with POSIX-style or Windows-style pipeline root paths.
     For example, given a format string `s = "{path:prp/my/subpath.txt}"`, invoking
     `s.format(path=_MakefilePathFormat("/my/pipeline/root/path"))` on Unix systems or
-    `s.format(path=_MakefilePathFormat("C:\my\pipeline\root\path"))` or on Windows systems will
+    `s.format(path=_MakefilePathFormat("C:\my\pipeline\root\path"))`` on Windows systems will
     yield "/my/pipeline/root/path/my/subpath.txt" or "C:/my/pipeline/root/path/my/subpath.txt",
     respectively.
     """
@@ -219,8 +219,8 @@ class _MakefilePathFormat:
         """
         root_path_prefix_placeholder = "prp/"
         if path_spec.startswith(root_path_prefix_placeholder):
-            subpath = path_spec.split(root_path_prefix_placeholder)[1]
-            full_formatted_path = pathlib.Path(self.pipeline_root_path) / pathlib.PurePosixPath(subpath)
+            subpath = pathlib.PurePosixPath(path_spec.split(root_path_prefix_placeholder)[1])
+            full_formatted_path = pathlib.Path(self.pipeline_root_path) / subpath
             return str(full_formatted_path)
         else:
             raise ValueError(f"Invalid Makefile string format path spec: {path_spec}")
