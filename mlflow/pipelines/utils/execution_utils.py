@@ -220,7 +220,10 @@ class _MakefilePathFormat:
         root_path_prefix_placeholder = "prp/"
         if path_spec.startswith(root_path_prefix_placeholder):
             subpath = pathlib.PurePosixPath(path_spec.split(root_path_prefix_placeholder)[1])
-            full_formatted_path = pathlib.Path(self.pipeline_root_path) / subpath
+            pipeline_root_posix_path = pathlib.PurePosixPath(
+                pathlib.Path(self.pipeline_root_path).as_posix()
+            )
+            full_formatted_path = pipeline_root_posix_path / subpath
             return str(full_formatted_path)
         else:
             raise ValueError(f"Invalid Makefile string format path spec: {path_spec}")
