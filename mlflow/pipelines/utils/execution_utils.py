@@ -220,7 +220,7 @@ class _MakefilePathFormat:
         root_path_prefix_placeholder = "prp/"
         if path_spec.startswith(root_path_prefix_placeholder):
             subpath = path_spec.split(root_path_prefix_placeholder)[1]
-            full_formatted_path = pathlib.Path(self.pipeline_root_path) / pathlib.PurePath(subpath)
+            full_formatted_path = pathlib.Path(self.pipeline_root_path) / pathlib.PurePosixPath(subpath)
             return str(full_formatted_path)
         return path_spec
 
