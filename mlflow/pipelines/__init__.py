@@ -10,7 +10,7 @@ import shutil
 import subprocess
 
 from mlflow.pipelines.utils import get_pipeline_root_path, get_pipeline_name
-from mlflow.pipelines.utils.execution_utils import run_pipeline_step, clean_execution_state
+from mlflow.pipelines.utils.execution import run_pipeline_step, clean_execution_state
 from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 
 _logger = logging.getLogger(__name__)
@@ -115,7 +115,11 @@ def _run_pipeline_step(step_name: str) -> str:
     return run_pipeline_step(
         pipeline_root_path=pipeline_root_path,
         pipeline_name=pipeline_name,
+        # TODO: Change this from a list of step names to a list of BaseStep subclass instances
+        # once these subclasses have been implemented
         pipeline_steps=["ingest", "split", "transform", "train", "evaluate"],
+        # TODO: Change this from a string step name to a BaseStep subclass instance once these
+        # subclasses have been implemented
         target_step=step_name,
     )
 

@@ -4,7 +4,7 @@ from unittest import mock
 
 import pytest
 
-from mlflow.pipelines.utils.execution_utils import _get_or_create_execution_directory
+from mlflow.pipelines.utils.execution import _get_or_create_execution_directory
 
 
 def test_get_or_create_execution_directory_is_idempotent(tmp_path):
@@ -30,7 +30,7 @@ def test_get_or_create_execution_directory_is_idempotent(tmp_path):
 
     # Simulate a failure with Makefile creation
     with mock.patch(
-        "mlflow.pipelines.utils.execution_utils._create_makefile",
+        "mlflow.pipelines.utils.execution._create_makefile",
         side_effect=Exception("Makefile creation failed"),
     ), pytest.raises(Exception, match="Makefile creation failed"):
         _get_or_create_execution_directory(
@@ -55,7 +55,7 @@ def test_get_or_create_execution_directory_is_idempotent(tmp_path):
 
     # Simulate a failure with step-specific directory creation
     with mock.patch(
-        "mlflow.pipelines.utils.execution_utils._get_step_output_directory_path",
+        "mlflow.pipelines.utils.execution._get_step_output_directory_path",
         side_effect=Exception("Step directory creation failed"),
     ), pytest.raises(Exception, match="Step directory creation failed"):
         _get_or_create_execution_directory(
