@@ -222,7 +222,8 @@ class _MakefilePathFormat:
             subpath = path_spec.split(root_path_prefix_placeholder)[1]
             full_formatted_path = pathlib.Path(self.pipeline_root_path) / pathlib.PurePosixPath(subpath)
             return str(full_formatted_path)
-        return path_spec
+        else:
+            raise ValueError(f"Invalid Makefile string format path spec: {path_spec}")
 
 
 # Makefile contents for cache-aware pipeline execution. These contents include variable placeholders
