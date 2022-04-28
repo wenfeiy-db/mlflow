@@ -47,8 +47,8 @@ def get_pipeline_root_path() -> str:
         if pipeline_yaml_path_to_check.exists():
             return str(curr_dir_path.resolve())
         elif curr_dir_path != curr_dir_path.parent:
-            DEBUGGING_REMOVE_LATER_CURR_ITER += 1
             curr_dir_path = curr_dir_path.parent
+        DEBUGGING_REMOVE_LATER_CURR_ITER += 1
         # else:
     # If curr_dir_path == curr_dir_path.parent,
     # we have reached the root directory without finding
