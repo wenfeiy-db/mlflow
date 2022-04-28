@@ -60,7 +60,9 @@ class BaseCard:
             tab = widgets.Tab()
             if group_pandas_profiles:
                 pandas_profiles_tab = widgets.Tab()
-                pandas_profiles_tab.children = [profile.widgets for _, profile in self._pandas_profiles]
+                pandas_profiles_tab.children = [
+                    profile.widgets for _, profile in self._pandas_profiles
+                ]
                 pandas_profiles_titles = [name for name, _ in self._pandas_profiles]
                 for i in range(len(pandas_profiles_tab.children)):
                     pandas_profiles_tab.set_title(i, pandas_profiles_titles[i])
@@ -70,12 +72,13 @@ class BaseCard:
                 for i in range(len(tab.children)):
                     tab.set_title(i, titles[i])
             else:
-                tab.children = [widgets.HTML(self.to_html())] + [profile.widgets for _, profile in self._pandas_profiles]
+                tab.children = [widgets.HTML(self.to_html())] + [
+                    profile.widgets for _, profile in self._pandas_profiles
+                ]
                 titles = ["Main"] + [f"{name} Profile" for name, _ in self._pandas_profiles]
                 for i in range(len(tab.children)):
                     tab.set_title(i, titles[i])
             display(tab)
-
 
 
 class IngestCard(BaseCard):
