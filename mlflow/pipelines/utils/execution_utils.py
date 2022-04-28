@@ -232,7 +232,7 @@ class _MakefilePathFormat:
 # Makefile contents for cache-aware pipeline execution. These contents include variable placeholders
 # that need to be formatted (substituted) with the pipeline root directory in order to produce a
 # valid Makefile
-_MAKEFILE_FORMAT_STRING = """\
+_MAKEFILE_FORMAT_STRING = r"""\
 split_objects = steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/split/outputs/summary.html
 
 split: $(split_objects)
