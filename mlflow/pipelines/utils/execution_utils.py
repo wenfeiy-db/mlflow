@@ -1,4 +1,5 @@
 import os
+import pathlib
 from typing import List
 
 from mlflow.utils.file_utils import read_yaml, write_yaml
@@ -186,12 +187,42 @@ def _create_makefile(pipeline_root_path, execution_directory_path) -> None:
                                      in this directory.
     """
     makefile_path = os.path.join(execution_directory_path, "Makefile")
+    makefile_contents = _MAKEFILE_FORMAT_STRING.format(
+        path=_MakefilePathFormat(os.path.abspath(pipeline_root_path)),
+    )
     with open(makefile_path, "w") as f:
-        makefile_contents = _MAKEFILE_FORMAT_STRING.format(
-            prp=os.path.abspath(pipeline_root_path)
-        ).replace("/", os.sep)
         f.write(makefile_contents)
 
+
+class _MakefilePathFormat:
+    """
+    Provides platform-agnostic path substitution for execution Makefiles, ensuring that POSIX-style
+    relative paths are joined correctly with POSIX-style or Windows-style pipeline root paths.
+    For example, given a format string `s = "{path:prp/my/subpath.txt}"`, invoking
+    `s.format(path=_MakefilePathFormat("/my/pipeline/root/path"))` on Unix systems or
+    `s.format(path=_MakefilePathFormat("C:\my\pipeline\root\path"))` or on Windows systems will
+    yield "/my/pipeline/root/path/my/subpath.txt" or "C:/my/pipeline/root/path/my/subpath.txt",
+    respectively.
+    """
+
+    def __init__(self, pipeline_root_path):
+        """
+        :param pipeline_root_path: The absolute path of the pipeline root directory on the local
+                                   filesystem.
+        """
+        self.pipeline_root_path = pipeline_root_path
+
+    def __format__(self, path_spec):
+        """
+        :param path_spec: A substitution path spec of the form `prp/<subpath>`. This method
+                          substitutes `prp/` with `<pipeline_root_path>/`.
+        """
+        root_path_prefix_placeholder = 'prp/'
+        if path_spec.startswith(root_path_prefix_placeholder):
+            subpath = path_spec.split(root_path_prefix_placeholder)[1]
+            full_formatted_path = pathlib.Path(self.pipeline_root_path) / pathlib.PurePath(subpath)
+            return str(full_formatted_path)
+        return path_spec
 
 # Makefile contents for cache-aware pipeline execution. These contents include variable placeholders
 # that need to be formatted (substituted) with the pipeline root directory in order to produce a
@@ -201,22 +232,22 @@ split_objects = steps/split/outputs/train.parquet steps/split/outputs/test.parqu
 
 split: $(split_objects)
 
-steps/%/outputs/train.parquet steps/%/outputs/test.parquet steps/%/outputs/summary.html: {prp}/datasets/autos.parquet
-	python -c "from mlflow.pipelines.split_step import run_split_step; run_split_step(input_path='{prp}/datasets/autos.parquet', summary_path='steps/$*/outputs/summary.html', train_output_path='steps/$*/outputs/train.parquet', test_output_path='steps/$*/outputs/test.parquet')"
+steps/%/outputs/train.parquet steps/%/outputs/test.parquet steps/%/outputs/summary.html: {path:prp/datasets/autos.parquet}
+	python -c "from mlflow.pipelines.split_step import run_split_step; run_split_step(input_path='{path:prp/datasets/autos.parquet}', summary_path='steps/$*/outputs/summary.html', train_output_path='steps/$*/outputs/train.parquet', test_output_path='steps/$*/outputs/test.parquet')"
 
 transform_objects = steps/transform/outputs/transformer.pkl steps/transform/outputs/train_transformed.parquet
 
 transform: $(transform_objects)
 
-steps/%/outputs/transformer.pkl steps/%/outputs/train_transformed.parquet: {prp}/steps/transform.py {prp}/steps/transformer_config.yaml steps/split/outputs/train.parquet steps/transform/conf.yaml
-	python -c "from mlflow.pipelines.transform_step import run_transform_step; run_transform_step(train_data_path='steps/split/outputs/train.parquet', transformer_config_path='{prp}/steps/transformer_config.yaml', transformer_output_path='steps/$*/outputs/transformer.pkl', transformed_data_output_path='steps/$*/outputs/train_transformed.parquet', step_config_path='steps/transform/conf.yaml')"
+steps/%/outputs/transformer.pkl steps/%/outputs/train_transformed.parquet: {path:prp/steps/transform.py} {path:prp/steps/transformer_config.yaml} steps/split/outputs/train.parquet steps/transform/conf.yaml
+	python -c "from mlflow.pipelines.transform_step import run_transform_step; run_transform_step(train_data_path='steps/split/outputs/train.parquet', transformer_config_path='{path:prp/steps/transformer_config.yaml}', transformer_output_path='steps/$*/outputs/transformer.pkl', transformed_data_output_path='steps/$*/outputs/train_transformed.parquet', step_config_path='steps/transform/conf.yaml')"
 
 train_objects = steps/train/outputs/pipeline.pkl steps/train/outputs/run_id
 
 train: $(train_objects)
 
-steps/%/outputs/pipeline.pkl steps/%/outputs/run_id: {prp}/steps/train.py {prp}/steps/train_config.yaml steps/transform/outputs/train_transformed.parquet steps/transform/outputs/transformer.pkl steps/train/conf.yaml
-	python -c "from mlflow.pipelines.train_step import run_train_step; run_train_step(transformed_train_data_path='steps/transform/outputs/train_transformed.parquet', train_config_path='{prp}/steps/train_config.yaml', transformer_path='steps/transform/outputs/transformer.pkl', tracking_uri='file:/tmp/mlruns', pipeline_output_path='steps/$*/outputs/pipeline.pkl', run_id_output_path='steps/$*/outputs/run_id', step_config_path='steps/train/conf.yaml')"
+steps/%/outputs/pipeline.pkl steps/%/outputs/run_id: {path:prp/steps/train.py} {path:prp/steps/train_config.yaml} steps/transform/outputs/train_transformed.parquet steps/transform/outputs/transformer.pkl steps/train/conf.yaml
+	python -c "from mlflow.pipelines.train_step import run_train_step; run_train_step(transformed_train_data_path='steps/transform/outputs/train_transformed.parquet', train_config_path='{path:prp/steps/train_config.yaml}', transformer_path='steps/transform/outputs/transformer.pkl', tracking_uri='file:/tmp/mlruns', pipeline_output_path='steps/$*/outputs/pipeline.pkl', run_id_output_path='steps/$*/outputs/run_id', step_config_path='steps/train/conf.yaml')"
 
 evaluate_objects = steps/evaluate/outputs/worst_training_examples.parquet steps/evaluate/outputs/metrics.json steps/evaluate/outputs/explanations.html
 
