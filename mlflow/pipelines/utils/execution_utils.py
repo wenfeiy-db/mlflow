@@ -217,12 +217,13 @@ class _MakefilePathFormat:
         :param path_spec: A substitution path spec of the form `prp/<subpath>`. This method
                           substitutes `prp/` with `<pipeline_root_path>/`.
         """
-        root_path_prefix_placeholder = 'prp/'
+        root_path_prefix_placeholder = "prp/"
         if path_spec.startswith(root_path_prefix_placeholder):
             subpath = path_spec.split(root_path_prefix_placeholder)[1]
             full_formatted_path = pathlib.Path(self.pipeline_root_path) / pathlib.PurePath(subpath)
             return str(full_formatted_path)
         return path_spec
+
 
 # Makefile contents for cache-aware pipeline execution. These contents include variable placeholders
 # that need to be formatted (substituted) with the pipeline root directory in order to produce a
