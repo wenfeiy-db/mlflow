@@ -40,17 +40,20 @@ def get_pipeline_root_path() -> str:
     # (commented out below)
     curr_dir_path = pathlib.Path.cwd()
 
-    while True:
+    DEBUGGING_REMOVE_LATER_CURR_ITER = 0
+    while True and DEBUGGING_REMOVE_LATER_CURR_ITER < 50:
+        print("CURR DIR", str(curr_dir_path))
         pipeline_yaml_path_to_check = curr_dir_path / "pipeline.yaml"
         if pipeline_yaml_path_to_check.exists():
             return str(curr_dir_path.resolve())
         elif curr_dir_path != curr_dir_path.parent:
+            DEBUGGING_REMOVE_LATER_CURR_ITER += 1
             curr_dir_path = curr_dir_path.parent
-        else:
-            # If curr_dir_path == curr_dir_path.parent,
-            # we have reached the root directory without finding
-            # the desired pipeline.yaml file
-            raise MlflowException("Failed to find pipeline.yaml!")
+        # else:
+    # If curr_dir_path == curr_dir_path.parent,
+    # we have reached the root directory without finding
+    # the desired pipeline.yaml file
+    raise MlflowException("Failed to find pipeline.yaml!")
 
     # TODO: Figure out how to do this in Databricks Jobs (notebook ID isn't available)
     # if databricks_utils.is_in_databricks_repo_notebook():
