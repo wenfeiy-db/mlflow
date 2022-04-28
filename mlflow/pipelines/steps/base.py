@@ -1,11 +1,15 @@
 from typing import TypeVar, Dict, Any
 import mlflow
 import abc
+import mlflow.utils.file_utils
+
 
 PipelineStep = TypeVar("PipelineStep", bound="BaseStep")
 
 
 class BaseStep(metaclass=abc.ABCMeta):
+    _TRACKING_URI_CONFIG_KEY = "tracking_uri"
+
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         """
         :param step_config: dictionary of the config needed to
@@ -13,14 +17,13 @@ class BaseStep(metaclass=abc.ABCMeta):
         :param pipeline_root: String file path to the directory where step
                               are defined.
         """
-        self.config = step_config
+        self.step_config = step_config
         self.pipeline_root = pipeline_root
 
     def _set_tracking_uri(self) -> None:
-        # TODO replace this the tracking_URI key with whatever
-        # is decided post the first pipeline design example.
-        uri = self.config.get("tracking_URI")
-        mlflow.set_tracking_uri(uri)
+        uri = self.step_config.get(self._TRACKING_URI_CONFIG_KEY)
+        if uri is not None:
+            mlflow.set_tracking_uri(uri)
 
     def run(self, output_directory: str):
         """
@@ -99,9 +102,7 @@ class BaseStep(metaclass=abc.ABCMeta):
                               the local filesystem.
         :return: class instance of the step.
         """
-        # Use the step_config_path to read the config path using mark's utils
-        # and return the config here.
-        step_config = {step_config_path}
+        step_config = mlflow.utils.file_utils.read_yaml(pipeline_root, step_config_path)
         return cls(step_config, pipeline_root)
 
     @property
