@@ -3,7 +3,7 @@ import pprint
 import os
 from jinja2 import meta
 from io import StringIO
-from IPython.display import HTML, display
+from IPython.display import display
 import ipywidgets as widgets
 from markdown import markdown as md_to_html
 
