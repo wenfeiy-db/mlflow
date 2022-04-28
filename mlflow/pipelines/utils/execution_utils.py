@@ -187,7 +187,10 @@ def _create_makefile(pipeline_root_path, execution_directory_path) -> None:
     """
     makefile_path = os.path.join(execution_directory_path, "Makefile")
     with open(makefile_path, "w") as f:
-        f.write(_MAKEFILE_FORMAT_STRING.format(prp=os.path.abspath(pipeline_root_path)))
+        makefile_contents = _MAKEFILE_FORMAT_STRING.format(
+            prp=os.path.abspath(pipeline_root_path)
+        ).replace("/", os.sep)
+        f.write(makefile_contents)
 
 
 # Makefile contents for cache-aware pipeline execution. These contents include variable placeholders
