@@ -1,0 +1,19 @@
+<html>
+    <style>
+        h1.title {
+            color: #4287f5;
+        }
+        h2.step-title {
+            color : #4287f5;
+        }
+        {% block CSS %} {% endblock %}
+    </style>
+    <header>
+        <h1 class="title">MLflow Pipeline</h1>
+        <h2 class="step-title">{% block STEP_TITLE %}{% endblock %}</h2>
+        <hr>
+    </header>
+    <body>
+        {% block BODY %}{% endblock %}
+    </body>
+</html>
