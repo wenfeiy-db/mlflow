@@ -1,7 +1,7 @@
 import jinja2
 import pprint
 import os
-from jinja2 import meta
+from jinja2 import meta as jinja2_meta
 from io import StringIO
 from IPython.display import display
 import ipywidgets as widgets
@@ -16,7 +16,7 @@ class BaseCard:
         j2_env = jinja2.Environment()
         with open(os.path.join(template_root, template_name)) as f:
             template = j2_env.parse(f.read())
-        self._variables = meta.find_undeclared_variables(template)
+        self._variables = jinja2_meta.find_undeclared_variables(template)
 
         self._context = {}
         self._string_builder = StringIO()
