@@ -6,13 +6,13 @@ import mlflow
 
 import pytest
 
-PIPELINE_EXAMPLE_PATH_ENV_VAR = "PIPELINE_EXAMPLE_PATH"
+PIPELINE_EXAMPLE_PATH_ENV_VAR_FOR_TESTS = "_PIPELINE_EXAMPLE_PATH"
 PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT = "examples/pipelines/sklearn_regression"
 
 
 @pytest.fixture
 def enter_pipeline_example_directory():
-    pipeline_example_path = os.environ.get(PIPELINE_EXAMPLE_PATH_ENV_VAR)
+    pipeline_example_path = os.environ.get(PIPELINE_EXAMPLE_PATH_ENV_VAR_FOR_TESTS)
     if pipeline_example_path is None:
         mlflow_repo_root_directory = pathlib.Path(mlflow.__file__).parent.parent
         pipeline_example_path = mlflow_repo_root_directory / PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT

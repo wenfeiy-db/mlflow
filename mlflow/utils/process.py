@@ -69,9 +69,11 @@ def _exec_cmd(
     # stringify all elements in `cmd`. Note `str(pathlib.Path("abc"))` returns 'abc'.
     cmd = list(map(str, cmd))
 
-    if capture_output:
+    if capture_output or stream_stdout:
         if kwargs.get("stdout") is not None or kwargs.get("stderr") is not None:
-            raise ValueError("stdout and stderr arguments may not be used with capture_output.")
+            raise ValueError(
+                "stdout and stderr arguments may not be used with capture_output or stream_stdout."
+            )
         kwargs["stdout"] = subprocess.PIPE
         kwargs["stderr"] = subprocess.PIPE
 

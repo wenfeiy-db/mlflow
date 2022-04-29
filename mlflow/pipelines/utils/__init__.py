@@ -41,20 +41,17 @@ def get_pipeline_root_path() -> str:
     # tree, while the release version will find the pipeline repository root (commented out below)
     curr_dir_path = pathlib.Path.cwd()
 
-    DEBUGGING_REMOVE_LATER_CURR_ITER = 0
-    while True and DEBUGGING_REMOVE_LATER_CURR_ITER < 50:
-        print("CURR DIR", str(curr_dir_path))
+    while True:
         pipeline_yaml_path_to_check = curr_dir_path / _PIPELINE_CONFIG_FILE_NAME
         if pipeline_yaml_path_to_check.exists():
             return str(curr_dir_path.resolve())
         elif curr_dir_path != curr_dir_path.parent:
             curr_dir_path = curr_dir_path.parent
-        DEBUGGING_REMOVE_LATER_CURR_ITER += 1
-        # else:
-    # If curr_dir_path == curr_dir_path.parent,
-    # we have reached the root directory without finding
-    # the desired pipeline.yaml file
-    raise MlflowException(f"Failed to find {_PIPELINE_CONFIG_FILE_NAME}")
+        else:
+            # If curr_dir_path == curr_dir_path.parent,
+            # we have reached the root directory without finding
+            # the desired pipeline.yaml file
+            raise MlflowException(f"Failed to find {_PIPELINE_CONFIG_FILE_NAME}!")
 
     # TODO: Uncomment and fix this pipeline repository root resolution code prior to release,
     #       and replace the current method implementation with this logic
