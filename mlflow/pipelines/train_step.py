@@ -2,7 +2,6 @@ import sys
 import cloudpickle
 import pandas as pd
 import importlib
-import os
 import yaml
 
 import numpy as np
@@ -19,16 +18,24 @@ def run_train_step(
     tracking_uri,
     pipeline_output_path,
     run_id_output_path,
+    step_config_path,
 ):
     """
     :param transformed_train_data_path: Path to transformed training data
-    :param train_config: Path to training configuration yaml
+    :param train_config_path: Path to training configuration yaml
     :param transformer: Path to transformer from `transform` step
     :param tracking_uri: The MLflow Tracking URI
     :param pipeline_output_path: Output path of [<transformer>, <trained_model>] pipeline
     :param run_id_output_path: Output path of file containing MLflow Run ID
+    :param step_config_path: Path to the internal transformer step configuration yaml
+                             (TODO: Unify `train_config_path` and `step_config_path`)
     """
-    sys.path.append(os.curdir)
+    with open(step_config_path, "r") as f:
+        step_config = yaml.safe_load(f)
+
+    pipeline_root = step_config["pipeline_root"]
+
+    sys.path.append(pipeline_root)
     with open(train_config_path, "r") as f:
         module_name, method_name = yaml.safe_load(f).get("train_method").rsplit(".", 1)
     train_fn = getattr(importlib.import_module(module_name), method_name)
