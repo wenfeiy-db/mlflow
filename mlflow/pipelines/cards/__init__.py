@@ -53,7 +53,7 @@ class BaseCard:
     def to_text(self):
         return self._string_builder.getvalue()
 
-    def display(self, group_pandas_profiles=True):
+    def display(self):
         if len(self._pandas_profiles) == 0:
             display(widgets.HTML(self.to_html()))
         else:
