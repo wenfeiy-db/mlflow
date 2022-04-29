@@ -65,16 +65,16 @@ def test_cache_return_value_per_process():
     assert queue.get(), "Testing inside child process failed."
 
 
-def test_exec_cmd_streams_to_stdout_correctly_when_configured():
+def test_exec_cmd_streams_output_correctly_when_configured():
     og_sys_stdout = sys.stdout
     try:
         sys.stdout = StringIO()
-        _exec_cmd(["echo", "some test subprocess output"], stream_stdout=True)
+        _exec_cmd(["echo", "some test subprocess output"], stream_output=True, capture_output=False)
         sys.stdout.seek(0)
         assert sys.stdout.read().rstrip("\n") == "some test subprocess output"
 
         sys.stdout = StringIO()
-        _exec_cmd(["echo", "some test subprocess output"], stream_stdout=False)
+        _exec_cmd(["echo", "some test subprocess output"], stream_output=False)
         sys.stdout.seek(0)
         assert sys.stdout.read() == ""
     finally:
