@@ -345,7 +345,7 @@ jobs:
       - name: Run tests
         run: |
           export MLFLOW_HOME=$(pwd)
-          pytest tests/pipelines -s
+          pytest tests/pipelines
 
   # Temporarily create a separate job for MLflow pipelines on Windows to facilitate
   # ease of debugging while quickly iterating on the implementation
@@ -375,7 +375,7 @@ jobs:
       - name: Run tests
         run: |
           export MLFLOW_HOME=$(pwd)
-          pytest tests/pipelines -s
+          pytest tests/pipelines
 
   sagemaker:
     runs-on: ubuntu-latest
