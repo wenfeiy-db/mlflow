@@ -1,3 +1,4 @@
+from __future__ import annotations
 import jinja2
 import pprint
 import os
@@ -30,7 +31,7 @@ class BaseCard:
         self._string_builder = StringIO()
         self._pandas_profiles = []
 
-    def add_markdown(self, name: str, markdown: str) -> "BaseCard":
+    def add_markdown(self, name: str, markdown: str) -> BaseCard:
         """
         This function first converts the given markdown into HTML then fills it into the variable
         declared in the template.
@@ -46,7 +47,7 @@ class BaseCard:
         self._context[name] = md_to_html(markdown)
         return self
 
-    def add_pandas_profile(self, name: str, profile: ProfileReport) -> "BaseCard":
+    def add_pandas_profile(self, name: str, profile: ProfileReport) -> BaseCard:
         """
         Add a new tab representing the provided pandas profile to the card.
 
@@ -57,7 +58,7 @@ class BaseCard:
         self._pandas_profiles.append((name, profile))
         return self
 
-    def add_artifact(self, name: str, artifact: Any) -> "BaseCard":
+    def add_artifact(self, name: str, artifact: Any) -> BaseCard:
         """
         Add an artifact to the card.
 
@@ -72,7 +73,7 @@ class BaseCard:
         self._context[name] = pprint.pformat(artifact)
         return self
 
-    def add_text(self, text: str) -> "BaseCard":
+    def add_text(self, text: str) -> BaseCard:
         """
         Add text to the textual representation of this card.
 
