@@ -33,7 +33,7 @@ def _exec_cmd(
     extra_env=None,
     capture_output=True,
     synchronous=True,
-    stream_stdout=False,
+    stream_output=False,
     **kwargs,
 ):
     """
@@ -48,8 +48,9 @@ def _exec_cmd(
     :param synchronous: If True, wait for the command to complete and return a CompletedProcess
                         instance, If False, does not wait for the command to complete and return
                         a Popen instance, and ignore the `throw_on_error` argument.
-    :param stream_stdout: If True, stream the command's stdout to `sys.stdout` during execution.
-                          If False, do not stream the command's stdout to `sys.stdout`.
+    :param stream_output: If True, stream the command's stdout and stderr to `sys.stdout`
+                          as a unified stream during execution.
+                          If False, do not stream the command's stdout and stderr to `sys.stdout`.
     :param kwargs: Keyword arguments (except `text`) passed to `subprocess.Popen`.
     :return:  If synchronous is True, return a `subprocess.CompletedProcess` instance,
               otherwise return a Popen instance.
@@ -62,6 +63,11 @@ def _exec_cmd(
     if extra_env is not None and env is not None:
         raise ValueError("`extra_env` and `env` cannot be used at the same time")
 
+    if capture_output and stream_output:
+        raise ValueError(
+            "`capture_output=True` and `stream_output=True` cannot be specified at the same time"
+        )
+
     env = env if extra_env is None else {**os.environ, **extra_env}
 
     # In Python < 3.8, `subprocess.Popen` doesn't accept a command containing path-like
@@ -69,13 +75,19 @@ def _exec_cmd(
     # stringify all elements in `cmd`. Note `str(pathlib.Path("abc"))` returns 'abc'.
     cmd = list(map(str, cmd))
 
-    if capture_output or stream_stdout:
+    if capture_output or stream_output:
         if kwargs.get("stdout") is not None or kwargs.get("stderr") is not None:
             raise ValueError(
-                "stdout and stderr arguments may not be used with capture_output or stream_stdout."
+                "stdout and stderr arguments may not be used with capture_output or stream_output"
             )
         kwargs["stdout"] = subprocess.PIPE
-        kwargs["stderr"] = subprocess.PIPE
+        if capture_output:
+            kwargs["stderr"] = subprocess.PIPE
+        elif stream_output:
+            # Redirect stderr to stdout in order to combine the streams for unified printing to
+            # `sys.stdout`, as documented in
+            # https://docs.python.org/3/library/subprocess.html#subprocess.run
+            kwargs["stderr"] = subprocess.STDOUT
 
     process = subprocess.Popen(
         cmd,
@@ -86,7 +98,7 @@ def _exec_cmd(
     if not synchronous:
         return process
 
-    if stream_stdout:
+    if stream_output:
         for output_char in iter(lambda: process.stdout.read(1), ""):
             sys.stdout.write(output_char)
 

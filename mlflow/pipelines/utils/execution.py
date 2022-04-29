@@ -168,7 +168,8 @@ def _run_make(execution_directory_path, rule_name: str) -> None:
     """
     _exec_cmd(
         ["make", "-f", "Makefile", rule_name],
-        stream_stdout=True,
+        capture_output=False,
+        stream_output=True,
         synchronous=True,
         cwd=execution_directory_path,
     )
