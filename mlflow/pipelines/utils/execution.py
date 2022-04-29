@@ -195,7 +195,7 @@ def _create_makefile(pipeline_root_path, execution_directory_path) -> None:
 
 
 class _MakefilePathFormat:
-    """
+    r"""
     Provides platform-agnostic path substitution for execution Makefiles, ensuring that POSIX-style
     relative paths are joined correctly with POSIX-style or Windows-style pipeline root paths.
     For example, given a format string `s = "{path:prp/my/subpath.txt}"`, invoking
