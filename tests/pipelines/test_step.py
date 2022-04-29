@@ -1,6 +1,6 @@
 from unittest import TestCase
 from unittest.mock import patch
-from mlflow.pipelines.steps.base import BaseStep
+from mlflow.pipelines.step import BaseStep
 
 
 class BaseStepImplemented(BaseStep):

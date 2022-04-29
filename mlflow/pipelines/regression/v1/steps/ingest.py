@@ -1,4 +1,4 @@
-from mlflow.pipelines.steps.base import BaseStep
+from mlflow.pipelines.step import BaseStep
 import logging
 
 _logger = logging.getLogger(__name__)
