@@ -1,9 +1,6 @@
-import json
 import pathlib
 
-import mlflow.utils.databricks_utils as databricks_utils
 from mlflow.exceptions import MlflowException
-from mlflow.utils.rest_utils import http_request
 from mlflow.utils.file_utils import read_yaml
 
 _PIPELINE_CONFIG_FILE_NAME = "pipeline.yaml"
@@ -56,6 +53,10 @@ def get_pipeline_root_path() -> str:
     # TODO: Uncomment and fix this pipeline repository root resolution code prior to release,
     #       and replace the current method implementation with this logic
     # TODO: Figure out how to do this in Databricks Jobs (notebook ID isn't available)
+    #
+    # import json
+    # import mlflow.utils.databricks_utils as databricks_utils
+    # from mlflow.utils.rest_utils import http_request
     #
     # def _get_databricks_repo_root_path(repo_notebook_id: int) -> str:
     #     """
