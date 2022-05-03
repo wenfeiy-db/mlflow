@@ -8,7 +8,6 @@ _logger = logging.getLogger(__name__)
 
 
 class IngestStep(BaseStep):
-
     def _run(self, output_directory):
         dataset_dst_path = os.path.join(output_directory, "dataset.parquet")
         dataset_src_path = os.path.join(self.pipeline_root, "datasets", "autos.parquet")
