@@ -18,7 +18,9 @@ class TrainStep(BaseStep):
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
-        self.train_module_name, self.train_method_name = self.step_config["train_method"].rsplit(".", 1)
+        self.train_module_name, self.train_method_name = self.step_config["train_method"].rsplit(
+            ".", 1
+        )
 
     def _run(self, output_directory):
         import pandas as pd
