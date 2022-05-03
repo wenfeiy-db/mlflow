@@ -10,7 +10,6 @@ _logger = logging.getLogger(__name__)
 
 
 class SplitStep(BaseStep):
-
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
@@ -44,11 +43,6 @@ class SplitStep(BaseStep):
     def inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
         _logger.info("split inspect code %s", output_directory)
-        pass
-
-    def clean(self):
-        # Do step-specific code to clean all the artifacts and paths output of the step
-        _logger.info("split clean code")
         pass
 
     @classmethod

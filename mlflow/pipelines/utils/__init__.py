@@ -1,3 +1,4 @@
+import os
 import pathlib
 
 from mlflow.exceptions import MlflowException
@@ -19,8 +20,12 @@ def get_pipeline_name(pipeline_root_path: str = None) -> str:
     :return: The name of the specified pipeline.
     """
     pipeline_root_path = pipeline_root_path or get_pipeline_root_path()
-    pipeline_config = read_yaml(root=pipeline_root_path, file_name=_PIPELINE_CONFIG_FILE_NAME)
-    return pipeline_config["name"]
+    return os.path.basename(pipeline_root_path)
+
+
+def get_pipeline_config(pipeline_root_path: str = None) -> str:
+    pipeline_root_path = pipeline_root_path or get_pipeline_root_path()
+    return read_yaml(root=pipeline_root_path, file_name=_PIPELINE_CONFIG_FILE_NAME)
 
 
 def get_pipeline_root_path() -> str:

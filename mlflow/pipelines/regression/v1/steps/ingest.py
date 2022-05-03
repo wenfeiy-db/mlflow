@@ -1,22 +1,25 @@
-from mlflow.pipelines.step import BaseStep
 import logging
+import os
+import shutil
+
+from mlflow.pipelines.step import BaseStep
 
 _logger = logging.getLogger(__name__)
 
 
 class IngestStep(BaseStep):
-    def _run(self, output_directory):
-        # Do step-specific code to execute the ingest step
-        _logger.info("ingest run code %s", output_directory)
+    def _run(self, output_directory, **kwargs):
+        dataset_dst_path = os.path.join(output_directory, "dataset.parquet")
+        if os.path.exists(dataset_dst_path) and not kwargs.get("reingest", False):
+            return
+        else:
+            dataset_src_path = os.path.join(self.pipeline_root, "datasets", "autos.parquet")
+            shutil.copy2(dataset_src_path, dataset_dst_path)
+            _logger.info("Resolved input data and stored it in '%s'", dataset_dst_path)
 
     def inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
         _logger.info("ingest inspect code %s", output_directory)
-        pass
-
-    def clean(self):
-        # Do step-specific code to clean all the artifacts and paths output of the step
-        _logger.info("ingest clean code")
         pass
 
     @classmethod

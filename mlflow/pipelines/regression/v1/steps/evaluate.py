@@ -7,7 +7,7 @@ import cloudpickle
 import mlflow
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils import get_pipeline_name
-from mlflow.pipelines.utils.execution import get_step_output_path 
+from mlflow.pipelines.utils.execution import get_step_output_path
 
 _logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class EvaluateStep(BaseStep):
 
         with mlflow.start_run(run_id=run_id):
             EvaluateStep._explain(pipeline, X_train, output_directory)
-            EvaluateStep._evaluate(pipeline, train_data, test_data, output_directory) 
+            EvaluateStep._evaluate(pipeline, train_data, test_data, output_directory)
 
     @staticmethod
     def _explain(pipeline, X_train, output_directory):
@@ -128,11 +128,6 @@ class EvaluateStep(BaseStep):
     def inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
         _logger.info("evaluate inspect code %s", output_directory)
-        pass
-
-    def clean(self):
-        # Do step-specific code to clean all the artifacts and paths output of the step
-        _logger.info("evaluate clean code")
         pass
 
     @classmethod

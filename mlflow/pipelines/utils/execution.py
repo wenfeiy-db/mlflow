@@ -1,9 +1,12 @@
 import os
 import pathlib
+import shutil
 from typing import List
 
 from mlflow.utils.file_utils import read_yaml, write_yaml
 from mlflow.utils.process import _exec_cmd
+from mlflow.pipelines.step import BaseStep
+from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 
 
 _MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR = "MLFLOW_PIPELINES_EXECUTION_DIRECTORY"
@@ -13,7 +16,11 @@ _STEP_CONF_YAML_NAME = "conf.yaml"
 
 
 def run_pipeline_step(
-    pipeline_root_path: str, pipeline_name: str, pipeline_steps: List[str], target_step: str
+    pipeline_root_path: str,
+    pipeline_name: str,
+    pipeline_steps: List[BaseStep],
+    target_step: BaseStep,
+    **kwargs,
 ) -> str:
     """
     Runs the specified step in the specified pipeline, as well as all dependent steps.
@@ -23,6 +30,8 @@ def run_pipeline_step(
     :param pipeline_name: The name of the pipeline.
     :param pipeline_steps: A list of names of all the steps contained in the specified pipeline.
     :param target_step: The name of the step to run.
+    :param **kwargs: Additional runtime configuration arguments for the step that are not
+                     associated with the pipeline configuration.
     :return: The absolute path of the step's execution outputs on the local filesystem.
     """
     execution_dir_path = _get_or_create_execution_directory(
@@ -33,21 +42,21 @@ def run_pipeline_step(
         pipeline_steps=pipeline_steps,
         execution_directory_path=execution_dir_path,
     )
-    if target_step == "ingest":
-        import shutil
-        output_directory_path = _get_step_output_directory_path(
-            execution_directory_path=execution_dir_path, step_name=target_step
-        )
-        dataset_path = os.path.join(output_directory_path, "dataset.parquet")
-        shutil.copy2(os.path.join(pipeline_root_path, "datasets", "autos.parquet"), dataset_path)
-    else:
-        _run_make(execution_directory_path=execution_dir_path, rule_name=target_step)
-    return _get_step_output_directory_path(
-        execution_directory_path=execution_dir_path, step_name=target_step
+    step_output_directory_path = _get_step_output_directory_path(
+        execution_directory_path=execution_dir_path, step_name=target_step.name
     )
+    if isinstance(target_step, IngestStep):
+        # Run the ingest step independently of the Make execution graph so that users can manually
+        # re-ingest data even if it has already been resolved to the local filesystem (Make cannot
+        # handle this use case because it will not execute a rule if its output, e.g. a resolved
+        # dataset, is already present on the local filesystem)
+        target_step.run(output_directory=step_output_directory_path, **kwargs)
+    else:
+        _run_make(execution_directory_path=execution_dir_path, rule_name=target_step.name)
+    return step_output_directory_path
 
 
-def clean_execution_state(pipeline_name: str) -> None:
+def clean_execution_state(pipeline_name: str, pipeline_steps: List[BaseStep]) -> None:
     """
     Removes all execution state for the specified pipeline from the associated execution directory
     on the local filesystem. This method does *not* remove other execution results, such as content
@@ -56,8 +65,13 @@ def clean_execution_state(pipeline_name: str) -> None:
     :param pipeline_name: The name of the pipeline.
     """
     execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
-    if os.path.exists(execution_dir_path):
-        _run_make(execution_directory_path=execution_dir_path, rule_name="clean")
+    for step in pipeline_steps:
+        step_outputs_path = _get_step_output_directory_path(
+            execution_directory_path=execution_dir_path,
+            step_name=step.name,
+        )
+        if os.path.exists(step_outputs_path):
+            shutil.rmtree(step_outputs_path)
 
 
 def get_step_output_path(pipeline_name: str, step_name: str, relative_path: str) -> str:
@@ -80,7 +94,7 @@ def get_step_output_path(pipeline_name: str, step_name: str, relative_path: str)
 
 
 def _get_or_create_execution_directory(
-    pipeline_root_path: str, pipeline_name: str, pipeline_steps: List[str]
+    pipeline_root_path: str, pipeline_name: str, pipeline_steps: List[BaseStep]
 ) -> str:
     """
     Obtains the path of the execution directory on the local filesystem corresponding to the
@@ -98,15 +112,15 @@ def _get_or_create_execution_directory(
 
     os.makedirs(execution_dir_path, exist_ok=True)
     _create_makefile(pipeline_root_path, execution_dir_path)
-    for step_name in pipeline_steps:
-        step_output_subdir_path = _get_step_output_directory_path(execution_dir_path, step_name)
+    for step in pipeline_steps:
+        step_output_subdir_path = _get_step_output_directory_path(execution_dir_path, step.name)
         os.makedirs(step_output_subdir_path, exist_ok=True)
 
     return execution_dir_path
 
 
 def _write_updated_step_confs(
-    pipeline_root_path: str, pipeline_steps: List[str], execution_directory_path: str
+    pipeline_root_path: str, pipeline_steps: List[BaseStep], execution_directory_path: str
 ) -> None:
     """
     Compares the in-memory configuration state of the specified pipeline steps with step-specific
@@ -122,9 +136,9 @@ def _write_updated_step_confs(
                                      written to step-specific subdirectories of this execution
                                      directory.
     """
-    for step_name in pipeline_steps:
+    for step in pipeline_steps:
         step_subdir_path = os.path.join(
-            execution_directory_path, _STEPS_SUBDIRECTORY_NAME, step_name
+            execution_directory_path, _STEPS_SUBDIRECTORY_NAME, step.name
         )
         step_conf_path = os.path.join(step_subdir_path, _STEP_CONF_YAML_NAME)
         if os.path.exists(step_conf_path):
@@ -132,16 +146,11 @@ def _write_updated_step_confs(
         else:
             prev_step_conf = None
 
-        # TODO: Extract the conf from the pipeline step
-        step_conf = {
-            "pipeline_root": pipeline_root_path,
-        }
-
-        if prev_step_conf != step_conf:
+        if prev_step_conf != step.step_config:
             write_yaml(
                 root=step_subdir_path,
                 file_name=_STEP_CONF_YAML_NAME,
-                data=step_conf,
+                data=step.step_config,
                 overwrite=True,
                 sort_keys=True,
             )

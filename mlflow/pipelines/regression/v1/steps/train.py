@@ -8,20 +8,18 @@ import cloudpickle
 import mlflow
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils import get_pipeline_name
-from mlflow.pipelines.utils.execution import get_step_output_path 
+from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.utils.file_utils import read_yaml
 
 _logger = logging.getLogger(__name__)
 
 
 class TrainStep(BaseStep):
-
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
-        self.train_module_name, self.train_method_name =\
-            "steps.train.train_fn".rsplit(".", 1) 
-            # self.step_config["train_method"].rsplit(".", 1) 
+        self.train_module_name, self.train_method_name = "steps.train.train_fn".rsplit(".", 1)
+        # self.step_config["train_method"].rsplit(".", 1)
 
     def _run(self, output_directory):
         import pandas as pd
@@ -75,11 +73,6 @@ class TrainStep(BaseStep):
     def inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
         _logger.info("train inspect code %s", output_directory)
-        pass
-
-    def clean(self):
-        # Do step-specific code to clean all the artifacts and paths output of the step
-        _logger.info("train clean code")
         pass
 
     @classmethod
