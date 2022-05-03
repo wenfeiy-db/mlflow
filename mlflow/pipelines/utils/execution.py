@@ -33,7 +33,15 @@ def run_pipeline_step(
         pipeline_steps=pipeline_steps,
         execution_directory_path=execution_dir_path,
     )
-    _run_make(execution_directory_path=execution_dir_path, rule_name=target_step)
+    if target_step == "ingest":
+        import shutil
+        output_directory_path = _get_step_output_directory_path(
+            execution_directory_path=execution_dir_path, step_name=target_step
+        )
+        dataset_path = os.path.join(output_directory_path, "dataset.parquet")
+        shutil.copy2(os.path.join(pipeline_root_path, "datasets", "autos.parquet"), dataset_path)
+    else:
+        _run_make(execution_directory_path=execution_dir_path, rule_name=target_step)
     return _get_step_output_directory_path(
         execution_directory_path=execution_dir_path, step_name=target_step
     )
@@ -50,6 +58,25 @@ def clean_execution_state(pipeline_name: str) -> None:
     execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
     if os.path.exists(execution_dir_path):
         _run_make(execution_directory_path=execution_dir_path, rule_name="clean")
+
+
+def get_step_output_path(pipeline_name: str, step_name: str, relative_path: str) -> str:
+    """
+    Obtains the absolute path of the specified step output on the local filesystem. Does
+    not check the existence of the output.
+
+    :param pipeline_name: The name of the pipeline.
+    :param step_name: The name of the pipeline step containing the specified output.
+    :param relative_path: The relative path of the output within the output directory
+                          of the specified pipeline step.
+    :return The absolute path of the step output on the local filesystem.
+    """
+    execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
+    step_outputs_path = _get_step_output_directory_path(
+        execution_directory_path=execution_dir_path,
+        step_name=step_name,
+    )
+    return os.path.abspath(os.path.join(step_outputs_path, relative_path))
 
 
 def _get_or_create_execution_directory(
@@ -238,29 +265,29 @@ split_objects = steps/split/outputs/train.parquet steps/split/outputs/test.parqu
 
 split: $(split_objects)
 
-steps/%/outputs/train.parquet steps/%/outputs/test.parquet steps/%/outputs/summary.html: {path:prp/datasets/autos.parquet}
-	python -c "from mlflow.pipelines.split_step import run_split_step; run_split_step(input_path='{path:prp/datasets/autos.parquet}', summary_path='steps/$*/outputs/summary.html', train_output_path='steps/$*/outputs/train.parquet', test_output_path='steps/$*/outputs/test.parquet')"
+steps/%/outputs/train.parquet steps/%/outputs/test.parquet steps/%/outputs/summary.html: steps/ingest/outputs/dataset.parquet
+	python -c "from mlflow.pipelines.regression.v1.steps.split import SplitStep; SplitStep.from_step_config_path(step_config_path='steps/split/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/split/outputs')"
 
 transform_objects = steps/transform/outputs/transformer.pkl steps/transform/outputs/train_transformed.parquet
 
 transform: $(transform_objects)
 
 steps/%/outputs/transformer.pkl steps/%/outputs/train_transformed.parquet: {path:prp/steps/transform.py} {path:prp/steps/transformer_config.yaml} steps/split/outputs/train.parquet steps/transform/conf.yaml
-	python -c "from mlflow.pipelines.transform_step import run_transform_step; run_transform_step(train_data_path='steps/split/outputs/train.parquet', transformer_config_path='{path:prp/steps/transformer_config.yaml}', transformer_output_path='steps/$*/outputs/transformer.pkl', transformed_data_output_path='steps/$*/outputs/train_transformed.parquet', step_config_path='steps/transform/conf.yaml')"
+	python -c "from mlflow.pipelines.regression.v1.steps.transform import TransformStep; TransformStep.from_step_config_path(step_config_path='steps/train/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/transform/outputs')"
 
 train_objects = steps/train/outputs/pipeline.pkl steps/train/outputs/run_id
 
 train: $(train_objects)
 
 steps/%/outputs/pipeline.pkl steps/%/outputs/run_id: {path:prp/steps/train.py} {path:prp/steps/train_config.yaml} steps/transform/outputs/train_transformed.parquet steps/transform/outputs/transformer.pkl steps/train/conf.yaml
-	python -c "from mlflow.pipelines.train_step import run_train_step; run_train_step(transformed_train_data_path='steps/transform/outputs/train_transformed.parquet', train_config_path='{path:prp/steps/train_config.yaml}', transformer_path='steps/transform/outputs/transformer.pkl', tracking_uri='file:/tmp/mlruns', pipeline_output_path='steps/$*/outputs/pipeline.pkl', run_id_output_path='steps/$*/outputs/run_id', step_config_path='steps/train/conf.yaml')"
+	python -c "from mlflow.pipelines.regression.v1.steps.train import TrainStep; TrainStep.from_step_config_path(step_config_path='steps/train/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/train/outputs')"
 
 evaluate_objects = steps/evaluate/outputs/worst_training_examples.parquet steps/evaluate/outputs/metrics.json steps/evaluate/outputs/explanations.html
 
 evaluate: $(evaluate_objects)
 
 steps/%/outputs/worst_training_examples.parquet steps/%/outputs/metrics.json steps/%/outputs/explanations.html: steps/train/outputs/pipeline.pkl steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/train/outputs/run_id
-	python -c "from mlflow.pipelines.evaluate_step import run_evaluate_step; run_evaluate_step(pipeline_path='steps/train/outputs/pipeline.pkl', tracking_uri='file:/tmp/mlruns', run_id_path='steps/train/outputs/run_id', train_data_path='steps/split/outputs/train.parquet', test_data_path='steps/split/outputs/test.parquet', explanations_output_path='steps/$*/outputs/explanations.html', metrics_output_path='steps/$*/outputs/metrics.json', worst_train_examples_output_path='steps/$*/outputs/worst_training_examples.parquet')"
+	python -c "from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep; EvaluateStep.from_step_config_path(step_config_path='steps/evaluate/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/evaluate/outputs')"
 
 clean:
 	rm -rf $(split_objects) $(transform_objects) $(train_objects) $(evaluate_objects)

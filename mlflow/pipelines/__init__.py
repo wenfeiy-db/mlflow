@@ -135,7 +135,6 @@ def _maybe_open(path):
 def _run_ingest(reingest=False):  # pylint: disable=unused-argument
     """
     :param reingest: If `True`, reingest data even if it has already been ingested previously.
-                     If `False`, only ingest data even it has not previously been ingested.
+                     If `False`, only ingest data if it has not previously been ingested.
     """
-    ingestStep.run("")
-    pass
+    _run_pipeline_step("ingest")

@@ -1,6 +1,8 @@
-from typing import TypeVar, Dict, Any
-import mlflow
 import abc
+import os
+from typing import TypeVar, Dict, Any
+
+import mlflow
 import mlflow.utils.file_utils
 
 
@@ -102,7 +104,7 @@ class BaseStep(metaclass=abc.ABCMeta):
                               the local filesystem.
         :return: class instance of the step.
         """
-        step_config = mlflow.utils.file_utils.read_yaml(pipeline_root, step_config_path)
+        step_config = mlflow.utils.file_utils.read_yaml(os.getcwd(), step_config_path)
         return cls(step_config, pipeline_root)
 
     @property

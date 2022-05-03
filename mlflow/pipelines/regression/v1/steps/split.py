@@ -1,13 +1,45 @@
-from mlflow.pipelines.step import BaseStep
 import logging
+import os
+
+from mlflow.pipelines.step import BaseStep
+from mlflow.pipelines.utils import get_pipeline_name
+from mlflow.pipelines.utils.execution import get_step_output_path
+
 
 _logger = logging.getLogger(__name__)
 
 
 class SplitStep(BaseStep):
+
+    def __init__(self, step_config, pipeline_root):
+        super().__init__(step_config, pipeline_root)
+        self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
+
     def _run(self, output_directory):
-        # Do step-specific code to execute the split step
-        _logger.info("split run code %s", output_directory)
+        import pandas as pd
+        from pandas_profiling import ProfileReport
+
+        ingested_data_path = get_step_output_path(
+            pipeline_name=self.pipeline_name,
+            step_name="ingest",
+            relative_path="dataset.parquet",
+        )
+        df = pd.read_parquet(ingested_data_path)
+
+        profile = ProfileReport(df, title="Summary of Input Dataset", minimal=True)
+        profile.to_file(output_file=os.path.join(output_directory, "summary.html"))
+
+        # Drop null values.
+        # TODO: load from conf
+        df = df.dropna(subset=["price"])
+
+        hash_buckets = df.apply(lambda x: abs(hash(tuple(x))) % 100, axis=1)
+        is_train = hash_buckets < 80
+        train = df[is_train]
+        test = df[~is_train]
+
+        train.to_parquet(os.path.join(output_directory, "train.parquet"))
+        test.to_parquet(os.path.join(output_directory, "test.parquet"))
 
     def inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
