@@ -18,10 +18,9 @@ class TransformStep(BaseStep):
         super().__init__(step_config, pipeline_root)
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
         (
-            self.transform_module_name,
-            self.transform_method_name,
-        ) = "steps.transform.transform_fn".rsplit(".", 1)
-        # self.step_config["transformer_method"].rsplit(".", 1)
+            self.transformer_module_name,
+            self.transformer_method_name,
+        ) = self.step_config["transformer_method"].rsplit(".", 1)
 
     def _run(self, output_directory):
         import pandas as pd
@@ -35,7 +34,7 @@ class TransformStep(BaseStep):
 
         sys.path.append(self.pipeline_root)
         transformer_fn = getattr(
-            importlib.import_module(self.transform_module_name), self.transform_method_name
+            importlib.import_module(self.transformer_module_name), self.transformer_method_name
         )
         transformer = transformer_fn()
 

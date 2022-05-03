@@ -18,8 +18,7 @@ class TrainStep(BaseStep):
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
-        self.train_module_name, self.train_method_name = "steps.train.train_fn".rsplit(".", 1)
-        # self.step_config["train_method"].rsplit(".", 1)
+        self.train_module_name, self.train_method_name = self.step_config["train_method"].rsplit(".", 1)
 
     def _run(self, output_directory):
         import pandas as pd
@@ -78,6 +77,7 @@ class TrainStep(BaseStep):
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
         step_config = read_yaml(os.path.join(pipeline_root, "steps"), "train_config.yaml")
+        step_config[TrainStep._TRACKING_URI_CONFIG_KEY] = "/tmp/mlruns"
         return cls(step_config, pipeline_root)
 
     @property

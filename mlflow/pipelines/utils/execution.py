@@ -280,7 +280,7 @@ transform_objects = steps/transform/outputs/transformer.pkl steps/transform/outp
 transform: $(transform_objects)
 
 steps/%/outputs/transformer.pkl steps/%/outputs/train_transformed.parquet: {path:prp/steps/transform.py} {path:prp/steps/transformer_config.yaml} steps/split/outputs/train.parquet steps/transform/conf.yaml
-	python -c "from mlflow.pipelines.regression.v1.steps.transform import TransformStep; TransformStep.from_step_config_path(step_config_path='steps/train/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/transform/outputs')"
+	python -c "from mlflow.pipelines.regression.v1.steps.transform import TransformStep; TransformStep.from_step_config_path(step_config_path='steps/transform/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/transform/outputs')"
 
 train_objects = steps/train/outputs/pipeline.pkl steps/train/outputs/run_id
 
