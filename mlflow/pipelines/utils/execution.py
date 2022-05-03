@@ -30,8 +30,8 @@ def run_pipeline_step(
     :param pipeline_name: The name of the pipeline.
     :param pipeline_steps: A list of names of all the steps contained in the specified pipeline.
     :param target_step: The name of the step to run.
-    :param **kwargs: Additional runtime configuration arguments for the step that are not
-                     associated with the pipeline configuration.
+    :param **kwargs: Additional runtime arguments for the step that are not associated with the
+                     pipeline configuration.
     :return: The absolute path of the step's execution outputs on the local filesystem.
     """
     execution_dir_path = _get_or_create_execution_directory(

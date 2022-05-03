@@ -51,8 +51,8 @@ class BaseStep(metaclass=abc.ABCMeta):
 
         :param output_directory: String file path to the directory where step outputs
                                  should be stored.
-        :param **kwargs: Additional runtime configuration arguments not associated with
-                         the pipeline configuration.
+        :param **kwargs: Additional runtime arguments for the step that are not associated with the
+                         pipeline configuration.
         :return: Results from executing the corresponding step.
         """
         pass

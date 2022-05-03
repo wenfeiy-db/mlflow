@@ -8,14 +8,19 @@ _logger = logging.getLogger(__name__)
 
 
 class IngestStep(BaseStep):
-    def _run(self, output_directory, **kwargs):
+
+    def _run(self, output_directory, reingest=False):  # pylint: disable=arguments-differ
+        """
+        :param reingest: If `True`, reingest data even if it has already been ingested previously.
+                         If `False`, only ingest data if it has not previously been ingested.
+        """
         dataset_dst_path = os.path.join(output_directory, "dataset.parquet")
-        if os.path.exists(dataset_dst_path) and not kwargs.get("reingest", False):
+        if not os.path.exists(dataset_dst_path) or reingest:
             return
-        else:
-            dataset_src_path = os.path.join(self.pipeline_root, "datasets", "autos.parquet")
-            shutil.copy2(dataset_src_path, dataset_dst_path)
-            _logger.info("Resolved input data and stored it in '%s'", dataset_dst_path)
+
+        dataset_src_path = os.path.join(self.pipeline_root, "datasets", "autos.parquet")
+        shutil.copyfile(dataset_src_path, dataset_dst_path)
+        _logger.info("Resolved input data and stored it in '%s'", dataset_dst_path)
 
     def inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step

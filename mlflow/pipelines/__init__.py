@@ -115,8 +115,8 @@ def _run_pipeline_step(step_name: str, **kwargs) -> str:
     the current working directory.
 
     :param target_step: The name of the step to run.
-    :param **kwargs: Additional runtime configuration arguments for the step that are not
-                     associated with the pipeline configuration.
+    :param **kwargs: Additional runtime arguments for the step that are not associated with the
+                     pipeline configuration.
     :return: The absolute path of the step's execution outputs on the local filesystem.
     """
     pipeline_root_path = get_pipeline_root_path()
