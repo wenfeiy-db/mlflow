@@ -26,15 +26,14 @@ def run_pipeline_step(
     :param pipeline_root_path: The absolute path of the pipeline root directory on the local
                                filesystem.
     :param pipeline_name: The name of the pipeline.
-    :param pipeline_steps: A list of names of all the steps contained in the specified pipeline.
-    :param target_step: The name of the step to run.
+    :param pipeline_steps: A list of all the steps contained in the specified pipeline.
+    :param target_step: The step to run.
     :return: The absolute path of the step's execution outputs on the local filesystem.
     """
     execution_dir_path = _get_or_create_execution_directory(
         pipeline_root_path, pipeline_name, pipeline_steps
     )
     _write_updated_step_confs(
-        pipeline_root_path=pipeline_root_path,
         pipeline_steps=pipeline_steps,
         execution_directory_path=execution_dir_path,
     )
@@ -93,7 +92,7 @@ def _get_or_create_execution_directory(
     :param pipeline_root_path: The absolute path of the pipeline root directory on the local
                                filesystem.
     :param pipeline_name: The name of the pipeline.
-    :param pipeline_steps: A list of names of all the steps contained in the specified pipeline.
+    :param pipeline_steps: A list of all the steps contained in the specified pipeline.
     :return: The absolute path of the execution directory on the local filesystem for the specified
              pipeline.
     """
@@ -109,7 +108,7 @@ def _get_or_create_execution_directory(
 
 
 def _write_updated_step_confs(
-    pipeline_root_path: str, pipeline_steps: List[BaseStep], execution_directory_path: str
+    pipeline_steps: List[BaseStep], execution_directory_path: str
 ) -> None:
     """
     Compares the in-memory configuration state of the specified pipeline steps with step-specific
@@ -117,9 +116,7 @@ def _write_updated_step_confs(
     state to the corresponding files. If no updates are found, configuration state is not
     rewritten.
 
-    :param pipeline_root_path: The absolute path of the pipeline root directory on the local
-                               filesystem.
-    :param pipeline_steps: A list of names of all the steps contained in the specified pipeline.
+    :param pipeline_steps: A list of all the steps contained in the specified pipeline.
     :param execution_directory_path: The absolute path of the execution directory on the local
                                      filesystem for the specified pipeline. Configuration files are
                                      written to step-specific subdirectories of this execution

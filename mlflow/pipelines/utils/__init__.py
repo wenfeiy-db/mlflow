@@ -1,5 +1,6 @@
 import os
 import pathlib
+from typing import Dict, Any
 
 from mlflow.exceptions import MlflowException
 from mlflow.utils.file_utils import read_yaml
@@ -23,7 +24,17 @@ def get_pipeline_name(pipeline_root_path: str = None) -> str:
     return os.path.basename(pipeline_root_path)
 
 
-def get_pipeline_config(pipeline_root_path: str = None) -> str:
+def get_pipeline_config(pipeline_root_path: str = None) -> Dict[str, Any]:
+    """
+    Obtains a dictionary representation of the configuration for the specified pipeline.
+
+    :param pipeline_root_path: The absolute path of the pipeline root directory on the local
+                               filesystem. If unspecified, the pipeline root directory is
+                               resolved from the current working directory, and an
+                               ``MlflowException`` is thrown if the current working directory does
+                               not correspond to a pipeline.
+    :return: The configuration of the specified pipeline.
+    """
     pipeline_root_path = pipeline_root_path or get_pipeline_root_path()
     return read_yaml(root=pipeline_root_path, file_name=_PIPELINE_CONFIG_FILE_NAME)
 
