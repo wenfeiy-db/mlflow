@@ -27,23 +27,21 @@ class BaseStep(metaclass=abc.ABCMeta):
         if uri is not None:
             mlflow.set_tracking_uri(uri)
 
-    def run(self, output_directory: str, **kwargs):
+    def run(self, output_directory: str):
         """
         Executes the step by running common setup operations and invoking
         step-specific code (as defined in ``_run()``).
 
         :param output_directory: String file path to the directory where step
                                  outputs should be stored.
-        :param **kwargs: Additional runtime configuration arguments not associated with
-                         the pipeline configuration.
         :return: Results from executing the corresponding step.
         """
         self._set_tracking_uri()
         # other common setup stuff for steps goes here
-        return self._run(output_directory, **kwargs)
+        return self._run(output_directory)
 
     @abc.abstractmethod
-    def _run(self, output_directory: str, **kwargs):
+    def _run(self, output_directory: str):
         """
         This function is responsible for executing the step, writing outputs
         to the specified directory, and returning results to the user. It
@@ -51,8 +49,6 @@ class BaseStep(metaclass=abc.ABCMeta):
 
         :param output_directory: String file path to the directory where step outputs
                                  should be stored.
-        :param **kwargs: Additional runtime arguments for the step that are not associated with the
-                         pipeline configuration.
         :return: Results from executing the corresponding step.
         """
         pass

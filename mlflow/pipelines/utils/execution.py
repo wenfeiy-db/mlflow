@@ -6,7 +6,6 @@ from typing import List
 from mlflow.utils.file_utils import read_yaml, write_yaml
 from mlflow.utils.process import _exec_cmd
 from mlflow.pipelines.step import BaseStep
-from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 
 
 _MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR = "MLFLOW_PIPELINES_EXECUTION_DIRECTORY"
@@ -20,7 +19,6 @@ def run_pipeline_step(
     pipeline_name: str,
     pipeline_steps: List[BaseStep],
     target_step: BaseStep,
-    **kwargs,
 ) -> str:
     """
     Runs the specified step in the specified pipeline, as well as all dependent steps.
@@ -30,8 +28,6 @@ def run_pipeline_step(
     :param pipeline_name: The name of the pipeline.
     :param pipeline_steps: A list of names of all the steps contained in the specified pipeline.
     :param target_step: The name of the step to run.
-    :param **kwargs: Additional runtime arguments for the step that are not associated with the
-                     pipeline configuration.
     :return: The absolute path of the step's execution outputs on the local filesystem.
     """
     execution_dir_path = _get_or_create_execution_directory(
@@ -45,14 +41,7 @@ def run_pipeline_step(
     step_output_directory_path = _get_step_output_directory_path(
         execution_directory_path=execution_dir_path, step_name=target_step.name
     )
-    if isinstance(target_step, IngestStep):
-        # Run the ingest step independently of the Make execution graph so that users can manually
-        # re-ingest data even if it has already been resolved to the local filesystem (Make cannot
-        # handle this use case because it will not execute a rule if its output, e.g. a resolved
-        # dataset, is already present on the local filesystem)
-        target_step.run(output_directory=step_output_directory_path, **kwargs)
-    else:
-        _run_make(execution_directory_path=execution_dir_path, rule_name=target_step.name)
+    _run_make(execution_directory_path=execution_dir_path, rule_name=target_step.name)
     return step_output_directory_path
 
 
@@ -269,13 +258,25 @@ class _MakefilePathFormat:
 # Makefile contents for cache-aware pipeline execution. These contents include variable placeholders
 # that need to be formatted (substituted) with the pipeline root directory in order to produce a
 # valid Makefile
-_MAKEFILE_FORMAT_STRING = r"""\
+_MAKEFILE_FORMAT_STRING = r"""
+# Define `ingest` as a target with no dependencies to ensure that it runs whenever a user explicitly
+# invokes the MLflow Pipelines ingest step, allowing them to reingest data on-demand
+ingest:
+	python -c "from mlflow.pipelines.regression.v1.steps.ingest import IngestStep; IngestStep.from_step_config_path(step_config_path='steps/ingest/conf.yaml', pipeline_root='/Users/corey.zumar/mlflow-private/examples/pipelines/sklearn_regression').run(output_directory='steps/ingest/outputs')"
+
+# Define a separate target for the ingested dataset that recursively invokes make with the `ingest`
+# target. Downstream steps depend on the ingested dataset target, rather than the `ingest` target,
+# ensuring that data is only ingested for downstream steps if it is not already present on the
+# local filesystem
+steps/ingest/outputs/dataset.parquet:
+	$(MAKE) ingest
+
 split_objects = steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/split/outputs/summary.html
 
 split: $(split_objects)
 
 steps/%/outputs/train.parquet steps/%/outputs/test.parquet steps/%/outputs/summary.html: steps/ingest/outputs/dataset.parquet
-	python -c "from mlflow.pipelines.regression.v1.steps.split import SplitStep; SplitStep.from_step_config_path(step_config_path='steps/split/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/split/outputs')"
+	python -c "from mlflow.pipelines.regression.v1.steps.split import SplitStep; SplitStep.from_step_config_path(step_config_path='steps/split/conf.yaml', pipeline_root='/Users/corey.zumar/mlflow-private/examples/pipelines/sklearn_regression').run(output_directory='steps/split/outputs')"
 
 transform_objects = steps/transform/outputs/transformer.pkl steps/transform/outputs/train_transformed.parquet
 

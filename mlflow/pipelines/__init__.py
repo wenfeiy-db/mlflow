@@ -24,7 +24,7 @@ def ingest():
     """
     Ingest data
     """
-    _run_ingest(reingest=True)
+    _run_pipeline_step("ingest")
 
 
 def split():
@@ -33,7 +33,6 @@ def split():
     """
     import pandas as pd
 
-    _run_ingest(reingest=False)
     split_outputs_path = _run_pipeline_step("split")
 
     _logger.info("== Showing summary of input data ==\n")
@@ -55,7 +54,6 @@ def transform():
     import numpy as np
     import pandas as pd
 
-    _run_ingest(reingest=False)
     transform_outputs_path = _run_pipeline_step("transform")
 
     _logger.info("== Summary of transformed features ==\n")
@@ -68,7 +66,6 @@ def train():
     """
     Train a model
     """
-    _run_ingest(reingest=False)
     train_outputs_path = _run_pipeline_step("train")
     trained_pipeline_path = os.path.join(train_outputs_path, "pipeline.pkl")
     _logger.info(f"== Trained a model at {trained_pipeline_path} ==\n")
@@ -78,7 +75,6 @@ def evaluate():
     """
     Evaluate a model (explanations included)
     """
-    _run_ingest(reingest=False)
     evaluate_outputs_path = _run_pipeline_step("evaluate")
 
     _logger.info("== Created the model card ==\n")
@@ -109,14 +105,12 @@ def inspect():
     raise NotImplementedError
 
 
-def _run_pipeline_step(step_name: str, **kwargs) -> str:
+def _run_pipeline_step(step_name: str) -> str:
     """
     Runs the specified step in the current pipeline, where the current pipeline is determined by
     the current working directory.
 
     :param target_step: The name of the step to run.
-    :param **kwargs: Additional runtime arguments for the step that are not associated with the
-                     pipeline configuration.
     :return: The absolute path of the step's execution outputs on the local filesystem.
     """
     pipeline_root_path = get_pipeline_root_path()
@@ -131,7 +125,6 @@ def _run_pipeline_step(step_name: str, **kwargs) -> str:
         pipeline_name=pipeline_name,
         pipeline_steps=pipeline_steps,
         target_step=[step for step in pipeline_steps if step.name == step_name][0],
-        **kwargs,
     )
 
 
@@ -151,11 +144,3 @@ def _maybe_open(path):
         subprocess.run(["open", path], check=True)
     else:
         _logger.info(f"Please open {path} manually.")
-
-
-def _run_ingest(reingest=False):  # pylint: disable=unused-argument
-    """
-    :param reingest: If `True`, reingest data even if it has already been ingested previously.
-                     If `False`, only ingest data if it has not previously been ingested.
-    """
-    _run_pipeline_step("ingest", reingest=reingest)

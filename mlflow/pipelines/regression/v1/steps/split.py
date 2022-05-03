@@ -10,6 +10,7 @@ _logger = logging.getLogger(__name__)
 
 
 class SplitStep(BaseStep):
+
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
