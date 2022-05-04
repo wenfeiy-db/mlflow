@@ -1,9 +1,9 @@
 import abc
 import os
+import yaml
 from typing import TypeVar, Dict, Any
 
 import mlflow
-import mlflow.utils.file_utils
 from mlflow.pipelines.utils import get_pipeline_name
 
 
@@ -97,7 +97,8 @@ class BaseStep(metaclass=abc.ABCMeta):
                               the local filesystem.
         :return: class instance of the step.
         """
-        step_config = mlflow.utils.file_utils.read_yaml(os.getcwd(), step_config_path)
+        with open(step_config_path, "r") as f:
+            step_config = yaml.safe_load(f)
         return cls(step_config, pipeline_root)
 
     @property
