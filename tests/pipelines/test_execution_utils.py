@@ -5,11 +5,12 @@ from unittest import mock
 import pytest
 
 from mlflow.pipelines.utils.execution import _get_or_create_execution_directory
-from mlflow.pipelines.regression.v1.steps.train import TrainStep
+
+from tests.pipelines.helper_functions import BaseStepImplemented
 
 
 def test_get_or_create_execution_directory_is_idempotent(tmp_path):
-    class TestStep(TrainStep):
+    class TestStep(BaseStepImplemented):
         def __init__(self):  # pylint: disable=super-init-not-called
             pass
 
