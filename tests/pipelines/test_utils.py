@@ -54,7 +54,7 @@ def test_get_pipeline_config_returns_correctly_for_valid_pipeline_directory(
     pipeline_root_path = enter_pipeline_example_directory
     test_pipeline_root_path = tmp_path / "test_pipeline"
     shutil.copytree(pipeline_root_path, test_pipeline_root_path)
-    
+
     test_pipeline_config = {
         "config1": 10,
         "config2": {
@@ -65,11 +65,13 @@ def test_get_pipeline_config_returns_correctly_for_valid_pipeline_directory(
     write_yaml(test_pipeline_root_path, "pipeline.yaml", test_pipeline_config, overwrite=True)
 
     with chdir(test_pipeline_root_path):
-        assert pathlib.Path.cwd() == test_pipeline_root_path 
+        assert pathlib.Path.cwd() == test_pipeline_root_path
         assert get_pipeline_config() == test_pipeline_config
 
     with chdir(tmp_path):
-        assert get_pipeline_config(pipeline_root_path=test_pipeline_root_path) == test_pipeline_config
+        assert (
+            get_pipeline_config(pipeline_root_path=test_pipeline_root_path) == test_pipeline_config
+        )
 
 
 def test_get_pipeline_config_throws_for_invalid_pipeline_directory(tmp_path):

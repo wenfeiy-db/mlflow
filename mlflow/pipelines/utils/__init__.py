@@ -123,7 +123,7 @@ def get_pipeline_root_path() -> str:
 
 def _verify_is_pipeline_root_directory(pipeline_root_path: str) -> str:
     """
-    Verifies that the specified local filesystem path is the path of a pipeline root directory. 
+    Verifies that the specified local filesystem path is the path of a pipeline root directory.
 
     :param pipeline_root_path: The absolute path of the pipeline root directory on the local
                                filesystem to validate.
