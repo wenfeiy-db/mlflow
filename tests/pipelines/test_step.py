@@ -1,3 +1,5 @@
+import os
+
 from unittest import TestCase
 from unittest.mock import patch
 from mlflow.pipelines.step import BaseStep
@@ -38,4 +40,4 @@ class TestBaseStep(TestCase):
                 step_config_path, pipeline_root
             )
             assert baseStepInstance.step_config == read_yaml.return_value
-            read_yaml.assert_called_once_with(pipeline_root, step_config_path)
+            read_yaml.assert_called_once_with(os.getcwd(), step_config_path)

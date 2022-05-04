@@ -16,11 +16,13 @@ def get_pipeline_name(pipeline_root_path: str = None) -> str:
     :param pipeline_root_path: The absolute path of the pipeline root directory on the local
                                filesystem. If unspecified, the pipeline root directory is
                                resolved from the current working directory, and an
-                               ``MlflowException`` is thrown if the current working directory does
-                               not correspond to a pipeline.
+    :raises MlflowException: If the specified ``pipeline_root_path`` is not a pipeline root
+                             directory or if ``pipeline_root_path`` is ``None`` and the current
+                             working directory does not correspond to a pipeline.
     :return: The name of the specified pipeline.
     """
     pipeline_root_path = pipeline_root_path or get_pipeline_root_path()
+    _verify_is_pipeline_root_directory(pipeline_root_path=pipeline_root_path)
     return os.path.basename(pipeline_root_path)
 
 
@@ -31,11 +33,13 @@ def get_pipeline_config(pipeline_root_path: str = None) -> Dict[str, Any]:
     :param pipeline_root_path: The absolute path of the pipeline root directory on the local
                                filesystem. If unspecified, the pipeline root directory is
                                resolved from the current working directory, and an
-                               ``MlflowException`` is thrown if the current working directory does
-                               not correspond to a pipeline.
+    :raises MlflowException: If the specified ``pipeline_root_path`` is not a pipeline root
+                             directory or if ``pipeline_root_path`` is ``None`` and the current
+                             working directory does not correspond to a pipeline.
     :return: The configuration of the specified pipeline.
     """
     pipeline_root_path = pipeline_root_path or get_pipeline_root_path()
+    _verify_is_pipeline_root_directory(pipeline_root_path=pipeline_root_path)
     return read_yaml(root=pipeline_root_path, file_name=_PIPELINE_CONFIG_FILE_NAME)
 
 
@@ -115,3 +119,17 @@ def get_pipeline_root_path() -> str:
     #     )
     #
     # os.chdir(repo_root)
+
+
+def _verify_is_pipeline_root_directory(pipeline_root_path: str) -> str:
+    """
+    Verifies that the specified local filesystem path is the path of a pipeline root directory. 
+
+    :param pipeline_root_path: The absolute path of the pipeline root directory on the local
+                               filesystem to validate.
+    :raises MlflowException: If the specified ``pipeline_root_path`` is not a pipeline root
+                             directory.
+    """
+    pipeline_yaml_path = os.path.join(pipeline_root_path, _PIPELINE_CONFIG_FILE_NAME)
+    if not os.path.exists(pipeline_yaml_path):
+        raise MlflowException(f"Failed to find {_PIPELINE_CONFIG_FILE_NAME}!")
