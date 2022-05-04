@@ -4,6 +4,7 @@ from typing import TypeVar, Dict, Any
 
 import mlflow
 import mlflow.utils.file_utils
+from mlflow.pipelines.utils import get_pipeline_name
 
 
 PipelineStep = TypeVar("PipelineStep", bound="BaseStep")
@@ -21,6 +22,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         self.step_config = step_config
         self.pipeline_root = pipeline_root
+        self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
 
     def _set_tracking_uri(self) -> None:
         uri = self.step_config.get(self._TRACKING_URI_CONFIG_KEY)

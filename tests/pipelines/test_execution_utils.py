@@ -10,7 +10,7 @@ from mlflow.pipelines.regression.v1.steps.train import TrainStep
 
 def test_get_or_create_execution_directory_is_idempotent(tmp_path):
     class TestStep(TrainStep):
-        def __init__(self):
+        def __init__(self):  # pylint: disable=super-init-not-called
             pass
 
         @property

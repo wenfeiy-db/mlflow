@@ -16,7 +16,6 @@ _logger = logging.getLogger(__name__)
 class TransformStep(BaseStep):
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
-        self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
         (self.transformer_module_name, self.transformer_method_name,) = self.step_config[
             "transformer_method"
         ].rsplit(".", 1)
