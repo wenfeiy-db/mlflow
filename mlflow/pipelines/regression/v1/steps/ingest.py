@@ -21,7 +21,9 @@ class IngestStep(BaseStep):
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
-        step_config = {}
+        step_config = {
+            "data_path": 
+        }
         return cls(step_config, pipeline_root)
 
     @property
