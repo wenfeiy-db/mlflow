@@ -17,7 +17,7 @@ from mlflow.pipelines.regression.v1.steps.split import SplitStep
 from mlflow.pipelines.regression.v1.steps.transform import TransformStep
 from mlflow.pipelines.regression.v1.steps.train import TrainStep
 from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep
-from mlflow.pipelines.step import BaseStep 
+from mlflow.pipelines.step import BaseStep
 
 _logger = logging.getLogger(__name__)
 

@@ -11,4 +11,4 @@ def test_mlflow_tracking_uri_is_set_during_run(enter_pipeline_example_directory)
         pipeline_root_path,
     )
     step.run("")
-    assert mlflow.get_tracking_uri() == test_mlflow_uri 
+    assert mlflow.get_tracking_uri() == test_mlflow_uri
