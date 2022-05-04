@@ -259,7 +259,7 @@ _MAKEFILE_FORMAT_STRING = r"""
 # Define `ingest` as a target with no dependencies to ensure that it runs whenever a user explicitly
 # invokes the MLflow Pipelines ingest step, allowing them to reingest data on-demand
 ingest:
-	python -c "from mlflow.pipelines.regression.v1.steps.ingest import IngestStep; IngestStep.from_step_config_path(step_config_path='steps/ingest/conf.yaml', pipeline_root='/Users/corey.zumar/mlflow-private/examples/pipelines/sklearn_regression').run(output_directory='steps/ingest/outputs')"
+	python -c "from mlflow.pipelines.regression.v1.steps.ingest import IngestStep; IngestStep.from_step_config_path(step_config_path='steps/ingest/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/ingest/outputs')"
 
 # Define a separate target for the ingested dataset that recursively invokes make with the `ingest`
 # target. Downstream steps depend on the ingested dataset target, rather than the `ingest` target,
@@ -273,7 +273,7 @@ split_objects = steps/split/outputs/train.parquet steps/split/outputs/test.parqu
 split: $(split_objects)
 
 steps/%/outputs/train.parquet steps/%/outputs/test.parquet steps/%/outputs/summary.html: steps/ingest/outputs/dataset.parquet
-	python -c "from mlflow.pipelines.regression.v1.steps.split import SplitStep; SplitStep.from_step_config_path(step_config_path='steps/split/conf.yaml', pipeline_root='/Users/corey.zumar/mlflow-private/examples/pipelines/sklearn_regression').run(output_directory='steps/split/outputs')"
+	python -c "from mlflow.pipelines.regression.v1.steps.split import SplitStep; SplitStep.from_step_config_path(step_config_path='steps/split/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/split/outputs')"
 
 transform_objects = steps/transform/outputs/transformer.pkl steps/transform/outputs/train_transformed.parquet
 
