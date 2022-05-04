@@ -1,5 +1,6 @@
 import mlflow
 
+# pylint: disable=unused-import
 from tests.pipelines.helper_functions import BaseStepImplemented, enter_pipeline_example_directory
 
 

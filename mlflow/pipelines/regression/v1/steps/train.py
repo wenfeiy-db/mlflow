@@ -7,7 +7,6 @@ import cloudpickle
 
 import mlflow
 from mlflow.pipelines.step import BaseStep
-from mlflow.pipelines.utils import get_pipeline_name
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.utils.file_utils import read_yaml
 
