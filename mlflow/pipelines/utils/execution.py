@@ -71,7 +71,8 @@ def get_step_output_path(pipeline_name: str, step_name: str, relative_path: str)
     :param step_name: The name of the pipeline step containing the specified output.
     :param relative_path: The relative path of the output within the output directory
                           of the specified pipeline step.
-    :return The absolute path of the step output on the local filesystem.
+    :return The absolute path of the step output on the local filesystem, which may or may
+            not exist.
     """
     execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
     step_outputs_path = _get_step_output_directory_path(

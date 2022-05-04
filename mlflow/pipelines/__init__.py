@@ -8,6 +8,7 @@ import logging
 import os
 import shutil
 import subprocess
+from typing import Dict, List, Any
 
 from mlflow.pipelines.utils import get_pipeline_root_path, get_pipeline_name, get_pipeline_config
 from mlflow.pipelines.utils.execution import run_pipeline_step, clean_execution_state
@@ -128,7 +129,14 @@ def _run_pipeline_step(step_name: str) -> str:
     )
 
 
-def _get_pipeline_steps(pipeline_root_path, pipeline_config):
+def _get_pipeline_steps(pipeline_root_path: str, pipeline_config: Dict[str, Any]) -> List[BaseStep]:
+    """
+    :param pipeline_root_path: The absolute path of the pipeline root directory on the local
+                               filesystem.
+    :param pipeline_config: The configuration of the specified pipeline.
+    :return: A list of all steps contained in the pipeline, where each step occurs after the
+             previous step.
+    """
     return [
         pipeline_class.from_pipeline_config(
             pipeline_config=pipeline_config,
