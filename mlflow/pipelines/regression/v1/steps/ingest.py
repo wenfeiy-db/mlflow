@@ -33,7 +33,9 @@ class IngestStep(BaseStep):
         self.dataset_format = self.step_config["format"]
 
     def _run(self, output_directory):
-        dataset_dst_path = os.path.abspath(os.path.join(output_directory, IngestStep._DATASET_OUTPUT_NAME))
+        dataset_dst_path = os.path.abspath(
+            os.path.join(output_directory, IngestStep._DATASET_OUTPUT_NAME)
+        )
 
         if self.dataset_format in [
             IngestStep._DATASET_FORMAT_SPARK_TABLE,
@@ -59,7 +61,7 @@ class IngestStep(BaseStep):
                 artifact_uri=self.dataset_location, dst_path=tmpdir.path()
             )
             _logger.info("Resolved input data to '%s'", local_dataset_path)
-            _logger.info("Converting dataset to parquet format, if necessary") 
+            _logger.info("Converting dataset to parquet format, if necessary")
             self._convert_dataset_to_parquet(
                 local_dataset_path=local_dataset_path,
                 dataset_dst_path=dataset_dst_path,
@@ -82,7 +84,9 @@ class IngestStep(BaseStep):
             )
 
         if os.path.isdir(local_dataset_path):
-            data_file_paths = list(pathlib.Path(local_dataset_path).glob(f"*.{self.dataset_format}"))
+            data_file_paths = list(
+                pathlib.Path(local_dataset_path).glob(f"*.{self.dataset_format}")
+            )
             if len(data_file_paths) == 0:
                 raise MlflowException(
                     message=(
@@ -175,7 +179,7 @@ class IngestStep(BaseStep):
         card = IngestCard()
         card.add_markdown(
             name="DATASET_SOURCE_LOCATION",
-            markdown=f"**Dataset source location:** `{dataset_src_location}`"
+            markdown=f"**Dataset source location:** `{dataset_src_location}`",
         )
         card.add_markdown(
             name="RESOLVED_DATASET_LOCATION",
@@ -192,23 +196,35 @@ class IngestStep(BaseStep):
         )
         dataset_types = dataset_df.dtypes.to_frame(name="column type").transpose()
         dataset_types = dataset_types.reset_index(level=0)
-        dataset_types = dataset_types.rename(columns = {"index": "column name"})
-        dataset_types_styler = dataset_types.style.set_properties(**{'text-align': 'center'}).hide(axis='index').set_table_styles([
-            {"selector": "", "props": [("border", "1px solid grey")]},
-            {"selector": "tbody td", "props": [("border", "1px solid grey")]},
-            {"selector": "th", "props": [("border", "1px solid grey")]},
-        ])
+        dataset_types = dataset_types.rename(columns={"index": "column name"})
+        dataset_types_styler = (
+            dataset_types.style.set_properties(**{"text-align": "center"})
+            .hide(axis="index")
+            .set_table_styles(
+                [
+                    {"selector": "", "props": [("border", "1px solid grey")]},
+                    {"selector": "tbody td", "props": [("border", "1px solid grey")]},
+                    {"selector": "th", "props": [("border", "1px solid grey")]},
+                ]
+            )
+        )
         card.add_artifact(
             name="DATASET_SCHEMA",
             artifact=dataset_types_styler.to_html(),
             artifact_format="html",
         )
         dataset_sample = dataset_df.sample(n=10, random_state=42).sort_index()
-        dataset_sample_styler = dataset_sample.style.set_properties(**{'text-align': 'center'}).format(precision=2).set_table_styles([
-            {"selector": "", "props": [("border", "1px solid grey")]},
-            {"selector": "tbody td", "props": [("border", "1px solid grey")]},
-            {"selector": "th", "props": [("border", "1px solid grey")]},
-        ])
+        dataset_sample_styler = (
+            dataset_sample.style.set_properties(**{"text-align": "center"})
+            .format(precision=2)
+            .set_table_styles(
+                [
+                    {"selector": "", "props": [("border", "1px solid grey")]},
+                    {"selector": "tbody td", "props": [("border", "1px solid grey")]},
+                    {"selector": "th", "props": [("border", "1px solid grey")]},
+                ]
+            )
+        )
         card.add_artifact(
             name="DATASET_SAMPLE",
             artifact=dataset_sample_styler.to_html(),
