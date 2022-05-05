@@ -58,7 +58,7 @@ class BaseCard:
         self._pandas_profiles.append((name, profile))
         return self
 
-    def add_artifact(self, name: str, artifact: Any) -> BaseCard:
+    def add_artifact(self, name: str, artifact: Any, artifact_format=None) -> BaseCard:
         """
         Add an artifact to the card.
 
@@ -70,7 +70,9 @@ class BaseCard:
             raise ValueError(
                 f"{name} is not a valid artifact variable found in template '{self.template_name}'"
             )
-        self._context[name] = pprint.pformat(artifact)
+        if not artifact_format:
+            artifact = pprint.pformat(artifact)
+        self._context[name] = artifact
         return self
 
     def add_text(self, text: str) -> BaseCard:

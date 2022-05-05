@@ -6,14 +6,27 @@
 h3.section-title {
     color: #57a8de;
 }
+.dataset-container {
+    width: max;
+    overflow-x: auto;
+    white-space: nowrap;
+}
 {% endblock %}
 {% block BODY %}
-<h3 class="section-title">Markdown:</h3>
-{{ MARKDOWN_1 }}
+<h3 class="section-title">Dataset info</h3>
+{{ DATASET_SOURCE_LOCATION }}
+{{ RESOLVED_DATASET_LOCATION }}
+{{ DATASET_SIZE }}
+{{ DATASET_NUM_ROWS }}
 <hr>
-<h3 class="section-title">Artifacts:</h3>
-{{ ARTIFACT_1 }}
-<br>
-{{ ARTIFACT_2 }}
+<h3 class="section-title">Dataset schema</h3>
+<div class="dataset-container">
+{{ DATASET_SCHEMA }}
+</div>
+<hr>
+<h3 class="section-title">Dataset sample</h3>
+<div class="dataset-container">
+{{ DATASET_SAMPLE }}
+</div>
 
 {% endblock %}

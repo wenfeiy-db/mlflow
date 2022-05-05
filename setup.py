@@ -83,8 +83,10 @@ CORE_REQUIREMENTS = SKINNY_REQUIREMENTS + [
     "sqlalchemy",
     "waitress; platform_system == 'Windows'",
     # Required for MLflow Pipelines
+    # TODO: Move these to extras later
     "pandas-profiling",
     "pyarrow",
+    "ipywidgets",
 ]
 
 _is_mlflow_skinny = bool(os.environ.get(_MLFLOW_SKINNY_ENV_VAR))
