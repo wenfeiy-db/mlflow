@@ -16,6 +16,7 @@ from mlflow.utils.file_utils import (
     write_pandas_df_as_parquet,
     read_parquet_as_pandas_df,
 )
+from mlflow.utils._spark_utils import _get_active_spark_session
 
 _logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class IngestStep(BaseStep):
 
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
-        self.dataset_location = self.step_config["location"]
+        self.dataset_location = self.step_config.get("location")
         self.dataset_format = self.step_config["format"]
 
     def _run(self, output_directory):
@@ -55,6 +56,15 @@ class IngestStep(BaseStep):
             f.write(step_card.to_html())
 
     def _ingest_dataset(self, dataset_dst_path):
+        if not self.dataset_location:
+            raise MlflowException(
+                message=(
+                    "Dataset `location` must be specified in `pipeline.yaml` for format"
+                   f" '{self.dataset_format}."
+                ),
+                error_code=INVALID_PARAMETER_VALUE,
+            )
+
         with TempDir(chdr=True) as tmpdir:
             _logger.info("Resolving input data from '%s'", self.dataset_location)
             local_dataset_path = download_artifacts(
@@ -171,7 +181,31 @@ class IngestStep(BaseStep):
             )
 
     def _ingest_databricks_dataset(self, dataset_dst_path):
-        raise NotImplementedError
+        try:
+            spark_session = _get_active_spark_session()
+        except Exception as e:
+            raise MlflowException(
+                message=(
+                   f"Encountered an error while searching for an active Spark session to"
+                   f" load the dataset from '{self.dataset_location}' with format"
+                    " '{self.dataset_format}'. Please create a Spark session and try again."
+                   f" Exception: {e}"
+                ),
+                error_code=BAD_REQUEST,
+            )
+
+        if not spark_session:
+            raise MlflowException(
+                message=(
+                   f"Could not find an active Spark session to load the dataset from"
+                   f" '{self.dataset_location}' with format '{self.dataset_format}'. Please create"
+                    " a Spark session and try again."
+                ),
+                error_code=BAD_REQUEST,
+            )
+
+        spark_session.sql
+
 
     @staticmethod
     def _build_step_card(dataset_src_location, ingested_parquet_dataset_path):
@@ -257,16 +291,37 @@ class IngestStep(BaseStep):
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
+        dataset_format = pipeline_config["dataset"]["format"]
         step_config = {
-            "location": IngestStep._sanitize_local_dataset_location_if_necessary(
-                pipeline_root=pipeline_root,
-                dataset_location=pipeline_config["data"]["location"],
-            ),
-            "format": pipeline_config["data"]["format"],
+            "format": dataset_format,
         }
-        custom_loader_method = pipeline_config["data"].get("custom_loader_method")
+        
+        dataset_location = pipeline_config["dataset"].get("location")
+        if dataset_location:
+            step_config["location"] = IngestStep._sanitize_local_dataset_location_if_necessary(
+                pipeline_root=pipeline_root,
+                dataset_location=dataset_location,
+            )
+        elif dataset_location != "spark_sql":
+            raise MlflowException(
+                message="TODO: NEED LOCATION WITH FORMATS OTHER THAN SPARK SQL",
+                error_code=INVALID_PARAMETER_VALUE,
+            )
+
+        dataset_sql_statement = pipeline_config["dataset"].get("sql")
+        if dataset_sql_statement:
+            step_config["sql"] = dataset_sql_statement
+        elif dataset_format == "spark_sql":
+            raise MlflowException(
+                message="TODO: NEED SQL WITH SPARK_SQL FORMAT",
+                error_code=INVALID_PARAMETER_VALUE,
+            )
+
+
+        custom_loader_method = pipeline_config["dataset"].get("custom_loader_method")
         if custom_loader_method:
             step_config["custom_loader_method"] = custom_loader_method
+
         return cls(step_config, pipeline_root)
 
     @staticmethod
