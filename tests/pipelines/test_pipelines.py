@@ -79,6 +79,4 @@ def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_d
     CliRunner().invoke(cli=pipelines_cli.clean, env=cli_env)
     for step_name in ["ingest", "split", "train", "transform", "evaluate"]:
         step_outputs_path = expected_execution_directory_location / "steps" / step_name / "outputs"
-        assert step_outputs_path.exists()
-        nonexistent_first_output = next(step_outputs_path.iterdir(), None)
-        assert nonexistent_first_output is None, nonexistent_first_output
+        assert not step_outputs_path.exists()

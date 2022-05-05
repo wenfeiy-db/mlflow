@@ -8,21 +8,25 @@ import logging
 import os
 import shutil
 import subprocess
+from typing import Dict, List, Any
 
-from mlflow.pipelines.utils import get_pipeline_root_path, get_pipeline_name
+from mlflow.pipelines.utils import get_pipeline_root_path, get_pipeline_name, get_pipeline_config
 from mlflow.pipelines.utils.execution import run_pipeline_step, clean_execution_state
 from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
+from mlflow.pipelines.regression.v1.steps.split import SplitStep
+from mlflow.pipelines.regression.v1.steps.transform import TransformStep
+from mlflow.pipelines.regression.v1.steps.train import TrainStep
+from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep
+from mlflow.pipelines.step import BaseStep
 
 _logger = logging.getLogger(__name__)
-# Pass pipeline_root and pipeline config here instead of {}
-ingestStep = IngestStep.from_pipeline_config({}, "")
 
 
 def ingest():
     """
     Ingest data
     """
-    _run_ingest(reingest=True)
+    _run_pipeline_step("ingest")
 
 
 def split():
@@ -31,7 +35,6 @@ def split():
     """
     import pandas as pd
 
-    _run_ingest(reingest=False)
     split_outputs_path = _run_pipeline_step("split")
 
     _logger.info("== Showing summary of input data ==\n")
@@ -53,7 +56,6 @@ def transform():
     import numpy as np
     import pandas as pd
 
-    _run_ingest(reingest=False)
     transform_outputs_path = _run_pipeline_step("transform")
 
     _logger.info("== Summary of transformed features ==\n")
@@ -66,7 +68,6 @@ def train():
     """
     Train a model
     """
-    _run_ingest(reingest=False)
     train_outputs_path = _run_pipeline_step("train")
     trained_pipeline_path = os.path.join(train_outputs_path, "pipeline.pkl")
     _logger.info(f"== Trained a model at {trained_pipeline_path} ==\n")
@@ -76,7 +77,6 @@ def evaluate():
     """
     Evaluate a model (explanations included)
     """
-    _run_ingest(reingest=False)
     evaluate_outputs_path = _run_pipeline_step("evaluate")
 
     _logger.info("== Created the model card ==\n")
@@ -90,9 +90,14 @@ def clean():
     """
     Clean
     """
+    pipeline_root_path = get_pipeline_root_path()
+    pipeline_config = get_pipeline_config(pipeline_root_path=pipeline_root_path)
     pipeline_name = get_pipeline_name()
-    clean_execution_state(pipeline_name=pipeline_name)
-    ingestStep.clean()
+    pipeline_steps = _get_pipeline_steps(
+        pipeline_root_path=pipeline_root_path,
+        pipeline_config=pipeline_config,
+    )
+    clean_execution_state(pipeline_name=pipeline_name, pipeline_steps=pipeline_steps)
 
 
 def inspect():
@@ -111,17 +116,35 @@ def _run_pipeline_step(step_name: str) -> str:
     :return: The absolute path of the step's execution outputs on the local filesystem.
     """
     pipeline_root_path = get_pipeline_root_path()
+    pipeline_config = get_pipeline_config(pipeline_root_path=pipeline_root_path)
     pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root_path)
+    pipeline_steps = _get_pipeline_steps(
+        pipeline_root_path=pipeline_root_path,
+        pipeline_config=pipeline_config,
+    )
     return run_pipeline_step(
         pipeline_root_path=pipeline_root_path,
         pipeline_name=pipeline_name,
-        # TODO: Change this from a list of step names to a list of BaseStep subclass instances
-        # once these subclasses have been implemented
-        pipeline_steps=["ingest", "split", "transform", "train", "evaluate"],
-        # TODO: Change this from a string step name to a BaseStep subclass instance once these
-        # subclasses have been implemented
-        target_step=step_name,
+        pipeline_steps=pipeline_steps,
+        target_step=[step for step in pipeline_steps if step.name == step_name][0],
     )
+
+
+def _get_pipeline_steps(pipeline_root_path: str, pipeline_config: Dict[str, Any]) -> List[BaseStep]:
+    """
+    :param pipeline_root_path: The absolute path of the pipeline root directory on the local
+                               filesystem.
+    :param pipeline_config: The configuration of the specified pipeline.
+    :return: A list of all steps contained in the pipeline, where each step occurs after the
+             previous step.
+    """
+    return [
+        pipeline_class.from_pipeline_config(
+            pipeline_config=pipeline_config,
+            pipeline_root=pipeline_root_path,
+        )
+        for pipeline_class in (IngestStep, SplitStep, TransformStep, TrainStep, EvaluateStep)
+    ]
 
 
 def _maybe_open(path):
@@ -130,12 +153,3 @@ def _maybe_open(path):
         subprocess.run(["open", path], check=True)
     else:
         _logger.info(f"Please open {path} manually.")
-
-
-def _run_ingest(reingest=False):  # pylint: disable=unused-argument
-    """
-    :param reingest: If `True`, reingest data even if it has already been ingested previously.
-                     If `False`, only ingest data even it has not previously been ingested.
-    """
-    ingestStep.run("")
-    pass

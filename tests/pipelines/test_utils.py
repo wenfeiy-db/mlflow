@@ -1,10 +1,12 @@
 import os
 import pathlib
+import shutil
 
 import pytest
 
 from mlflow.exceptions import MlflowException
-from mlflow.pipelines.utils import get_pipeline_root_path, get_pipeline_name
+from mlflow.pipelines.utils import get_pipeline_root_path, get_pipeline_name, get_pipeline_config
+from mlflow.utils.file_utils import write_yaml
 
 # pylint: disable=unused-import
 from tests.pipelines.helper_functions import (
@@ -42,5 +44,39 @@ def test_get_pipeline_name_throws_for_invalid_pipeline_directory(tmp_path):
     with pytest.raises(MlflowException, match="Failed to find pipeline.yaml"), chdir(tmp_path):
         get_pipeline_name()
 
-    with pytest.raises(MlflowException, match="Yaml file.*does not exist"):
+    with pytest.raises(MlflowException, match="Failed to find pipeline.yaml"):
         get_pipeline_name(pipeline_root_path=tmp_path)
+
+
+def test_get_pipeline_config_returns_correctly_for_valid_pipeline_directory(
+    enter_pipeline_example_directory, tmp_path
+):
+    pipeline_root_path = enter_pipeline_example_directory
+    test_pipeline_root_path = tmp_path / "test_pipeline"
+    shutil.copytree(pipeline_root_path, test_pipeline_root_path)
+
+    test_pipeline_config = {
+        "config1": 10,
+        "config2": {
+            "subconfig": ["A"],
+        },
+        "config3": "3",
+    }
+    write_yaml(test_pipeline_root_path, "pipeline.yaml", test_pipeline_config, overwrite=True)
+
+    with chdir(test_pipeline_root_path):
+        assert pathlib.Path.cwd() == test_pipeline_root_path
+        assert get_pipeline_config() == test_pipeline_config
+
+    with chdir(tmp_path):
+        assert (
+            get_pipeline_config(pipeline_root_path=test_pipeline_root_path) == test_pipeline_config
+        )
+
+
+def test_get_pipeline_config_throws_for_invalid_pipeline_directory(tmp_path):
+    with pytest.raises(MlflowException, match="Failed to find pipeline.yaml"), chdir(tmp_path):
+        get_pipeline_config()
+
+    with pytest.raises(MlflowException, match="Failed to find pipeline.yaml"):
+        get_pipeline_config(pipeline_root_path=tmp_path)

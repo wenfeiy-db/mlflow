@@ -1,7 +1,9 @@
-from typing import TypeVar, Dict, Any
-import mlflow
 import abc
-import mlflow.utils.file_utils
+import yaml
+from typing import TypeVar, Dict, Any
+
+import mlflow
+from mlflow.pipelines.utils import get_pipeline_name
 
 
 PipelineStep = TypeVar("PipelineStep", bound="BaseStep")
@@ -19,6 +21,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         self.step_config = step_config
         self.pipeline_root = pipeline_root
+        self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
 
     def _set_tracking_uri(self) -> None:
         uri = self.step_config.get(self._TRACKING_URI_CONFIG_KEY)
@@ -64,15 +67,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         pass
 
-    @abc.abstractmethod
-    def clean(self) -> None:
-        """
-        Remove the output of the step that was stored as part of the last
-        execution. Each individual step needs to implement this function to
-        clean its outputs.
-        """
-        pass
-
     @classmethod
     @abc.abstractmethod
     def from_pipeline_config(
@@ -102,7 +96,8 @@ class BaseStep(metaclass=abc.ABCMeta):
                               the local filesystem.
         :return: class instance of the step.
         """
-        step_config = mlflow.utils.file_utils.read_yaml(pipeline_root, step_config_path)
+        with open(step_config_path, "r") as f:
+            step_config = yaml.safe_load(f)
         return cls(step_config, pipeline_root)
 
     @property

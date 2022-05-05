@@ -3,6 +3,7 @@ import pathlib
 from contextlib import contextmanager
 
 import mlflow
+from mlflow.pipelines.step import BaseStep
 
 import pytest
 
@@ -29,3 +30,22 @@ def chdir(directory_path):
         yield
     finally:
         os.chdir(og_dir)
+
+
+class BaseStepImplemented(BaseStep):
+    def _run(self, output_directory):
+        pass
+
+    def inspect(self, output_directory):
+        pass
+
+    def clean(self):
+        pass
+
+    @classmethod
+    def from_pipeline_config(cls, pipeline_config, pipeline_root):
+        pass
+
+    @property
+    def name(self):
+        pass

@@ -6,21 +6,33 @@ import pytest
 
 from mlflow.pipelines.utils.execution import _get_or_create_execution_directory
 
+from tests.pipelines.helper_functions import BaseStepImplemented
+
 
 def test_get_or_create_execution_directory_is_idempotent(tmp_path):
+    class TestStep(BaseStepImplemented):
+        def __init__(self):  # pylint: disable=super-init-not-called
+            pass
+
+        @property
+        def name(self):
+            return "test_step"
+
+    test_step = TestStep()
+
     def assert_expected_execution_directory_contents_exist(execution_dir_path):
         assert (execution_dir_path / "Makefile").exists()
         assert (execution_dir_path / "steps").exists()
-        assert (execution_dir_path / "steps" / "test_step" / "outputs").exists()
+        assert (execution_dir_path / "steps" / test_step.name / "outputs").exists()
 
     execution_dir_path_1 = pathlib.Path(
         _get_or_create_execution_directory(
-            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=["test_step"]
+            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=[test_step]
         )
     )
     execution_dir_path_2 = pathlib.Path(
         _get_or_create_execution_directory(
-            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=["test_step"]
+            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=[test_step]
         )
     )
     assert execution_dir_path_1 == execution_dir_path_2
@@ -34,7 +46,7 @@ def test_get_or_create_execution_directory_is_idempotent(tmp_path):
         side_effect=Exception("Makefile creation failed"),
     ), pytest.raises(Exception, match="Makefile creation failed"):
         _get_or_create_execution_directory(
-            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=["test_step"]
+            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=[test_step]
         )
 
     # Verify that the directory exists but is empty due to short circuiting after
@@ -45,7 +57,7 @@ def test_get_or_create_execution_directory_is_idempotent(tmp_path):
     # Re-create the execution directory and verify that all expected contents are present
     execution_dir_path_3 = pathlib.Path(
         _get_or_create_execution_directory(
-            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=["test_step"]
+            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=[test_step]
         )
     )
     assert execution_dir_path_3 == execution_dir_path_1
@@ -59,7 +71,7 @@ def test_get_or_create_execution_directory_is_idempotent(tmp_path):
         side_effect=Exception("Step directory creation failed"),
     ), pytest.raises(Exception, match="Step directory creation failed"):
         _get_or_create_execution_directory(
-            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=["test_step"]
+            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=[test_step]
         )
 
     # Verify that the directory exists & that a Makefile is present but step-specific directories
@@ -70,7 +82,7 @@ def test_get_or_create_execution_directory_is_idempotent(tmp_path):
     # Re-create the execution directory and verify that all expected contents are present
     execution_dir_path_4 = pathlib.Path(
         _get_or_create_execution_directory(
-            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=["test_step"]
+            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=[test_step]
         )
     )
     assert execution_dir_path_4 == execution_dir_path_1
