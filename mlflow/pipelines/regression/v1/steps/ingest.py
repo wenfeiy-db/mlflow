@@ -60,7 +60,7 @@ class IngestStep(BaseStep):
             raise MlflowException(
                 message=(
                     "Dataset `location` must be specified in `pipeline.yaml` for format"
-                   f" '{self.dataset_format}."
+                    f" '{self.dataset_format}."
                 ),
                 error_code=INVALID_PARAMETER_VALUE,
             )
@@ -186,10 +186,10 @@ class IngestStep(BaseStep):
         except Exception as e:
             raise MlflowException(
                 message=(
-                   f"Encountered an error while searching for an active Spark session to"
-                   f" load the dataset from '{self.dataset_location}' with format"
+                    f"Encountered an error while searching for an active Spark session to"
+                    f" load the dataset from '{self.dataset_location}' with format"
                     " '{self.dataset_format}'. Please create a Spark session and try again."
-                   f" Exception: {e}"
+                    f" Exception: {e}"
                 ),
                 error_code=BAD_REQUEST,
             )
@@ -197,15 +197,14 @@ class IngestStep(BaseStep):
         if not spark_session:
             raise MlflowException(
                 message=(
-                   f"Could not find an active Spark session to load the dataset from"
-                   f" '{self.dataset_location}' with format '{self.dataset_format}'. Please create"
+                    f"Could not find an active Spark session to load the dataset from"
+                    f" '{self.dataset_location}' with format '{self.dataset_format}'. Please create"
                     " a Spark session and try again."
                 ),
                 error_code=BAD_REQUEST,
             )
 
         spark_session.sql
-
 
     @staticmethod
     def _build_step_card(dataset_src_location, ingested_parquet_dataset_path):
@@ -295,7 +294,7 @@ class IngestStep(BaseStep):
         step_config = {
             "format": dataset_format,
         }
-        
+
         dataset_location = pipeline_config["dataset"].get("location")
         if dataset_location:
             step_config["location"] = IngestStep._sanitize_local_dataset_location_if_necessary(
@@ -316,7 +315,6 @@ class IngestStep(BaseStep):
                 message="TODO: NEED SQL WITH SPARK_SQL FORMAT",
                 error_code=INVALID_PARAMETER_VALUE,
             )
-
 
         custom_loader_method = pipeline_config["dataset"].get("custom_loader_method")
         if custom_loader_method:
