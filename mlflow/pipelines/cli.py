@@ -1,11 +1,29 @@
 import click
-
 import mlflow.pipelines
+
+from mlflow.pipelines.pipeline import Pipeline
+from mlflow.exceptions import MlflowException
 
 
 @click.group("pipelines")
 def commands():
     pass
+
+
+@commands.command(help="Pipeline initialization")
+@click.option(
+    "--step",
+    type=click.STRING,
+    help="Specify the step that needs to run",
+    required=True,
+)
+def run(step):
+    # TODO: replace to use env instead of hard coding the profile
+    pipeline_module = Pipeline("local")
+    try:
+        getattr(pipeline_module, step)()
+    except AttributeError:
+        raise MlflowException("Not a valid step input")
 
 
 @commands.command(help="Ingest data")

@@ -6,7 +6,7 @@ import mlflow
 from mlflow.pipelines.utils import get_pipeline_name
 
 
-PipelineStep = TypeVar("PipelineStep", bound="BaseStep")
+StepType = TypeVar("StepType", bound="BaseStep")
 
 
 class BaseStep(metaclass=abc.ABCMeta):
@@ -69,9 +69,7 @@ class BaseStep(metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def from_pipeline_config(
-        cls, pipeline_config: Dict[str, Any], pipeline_root: str
-    ) -> PipelineStep:
+    def from_pipeline_config(cls, pipeline_config: Dict[str, Any], pipeline_root: str) -> StepType:
         """
         Constructs a step class instance by creating a step config using the pipeline
         config.
@@ -85,7 +83,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         pass
 
     @classmethod
-    def from_step_config_path(cls, step_config_path: str, pipeline_root: str) -> PipelineStep:
+    def from_step_config_path(cls, step_config_path: str, pipeline_root: str) -> StepType:
         """
         Constructs a step class instance using the config specified in the
         configuration file.
