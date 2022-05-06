@@ -21,7 +21,6 @@ _logger = logging.getLogger(__name__)
 
 
 class _Dataset:
-
     def __init__(self, dataset_format):
         self.dataset_format = dataset_format
 
@@ -48,7 +47,6 @@ class _Dataset:
     def matches_format(dataset_format):
         pass
 
-
     @classmethod
     def _get_required_config(cls, config, key):
         try:
@@ -61,11 +59,11 @@ class _Dataset:
 
 
 class _LocationBasedDataset(_Dataset):
-
     def __init__(self, location, dataset_format, pipeline_root):
         super().__init__(dataset_format=dataset_format)
         self.location = _LocationBasedDataset._sanitize_local_dataset_location_if_necessary(
-            dataset_location=location, pipeline_root=pipeline_root,
+            dataset_location=location,
+            pipeline_root=pipeline_root,
         )
 
     @abstractmethod
@@ -106,7 +104,6 @@ class _LocationBasedDataset(_Dataset):
 
 
 class _PandasParseableDataset(_LocationBasedDataset):
-
     def resolve_to_parquet(self, dst_path):
         with TempDir(chdr=True) as tmpdir:
             _logger.info("Resolving input data from '%s'", self.location)
@@ -173,14 +170,22 @@ class _ParquetDataset(_PandasParseableDataset):
 
 class _CustomDataset(_PandasParseableDataset):
     def __init__(self, location, dataset_format, custom_loader_method, pipeline_root):
-        super().__init__(location=location, dataset_format=dataset_format, pipeline_root=pipeline_root)
+        super().__init__(
+            location=location, dataset_format=dataset_format, pipeline_root=pipeline_root
+        )
         self.pipeline_root = pipeline_root
-        self.custom_loader_module_name, self.custom_loader_method_name = custom_loader_method.rsplit(".", 1)
+        (
+            self.custom_loader_module_name,
+            self.custom_loader_method_name,
+        ) = custom_loader_method.rsplit(".", 1)
 
     def _load_file_as_pandas_dataframe(self, local_data_file_path):
         try:
             sys.path.append(self.pipeline_root)
-            custom_loader_method = getattr(importlib.import_module(self.custom_loader_module_name), self.custom_loader_method_name)
+            custom_loader_method = getattr(
+                importlib.import_module(self.custom_loader_module_name),
+                self.custom_loader_method_name,
+            )
         except Exception:
             raise MlflowException(
                 message="TODO: FAILED TO LOAD LOADER FUNCTION....",
@@ -215,7 +220,9 @@ class _CustomDataset(_PandasParseableDataset):
         return cls(
             location=cls._get_required_config(config=config, key="location"),
             dataset_format=cls._get_required_config(config=config, key="format"),
-            custom_loader_method=cls._get_required_config(config=config, key="custom_loader_method"),
+            custom_loader_method=cls._get_required_config(
+                config=config, key="custom_loader_method"
+            ),
             pipeline_root=pipeline_root,
         )
 

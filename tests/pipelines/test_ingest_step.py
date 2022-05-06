@@ -26,11 +26,13 @@ def enter_ingest_test_pipeline_directory(enter_pipeline_example_directory):
 
 @pytest.fixture
 def pandas_df():
-    return pd.DataFrame.from_dict({
-        "A": ["x", "y", "z"],
-        "B": [1, 2, 3],
-        "C": [-9.2, 82.5, 3.40],
-    })
+    return pd.DataFrame.from_dict(
+        {
+            "A": ["x", "y", "z"],
+            "B": [1, 2, 3],
+            "C": [-9.2, 82.5, 3.40],
+        }
+    )
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -54,7 +56,9 @@ def spark_df(spark_session):
 
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
-def test_ingests_parquet_successfully(enter_ingest_test_pipeline_directory, use_relative_path, pandas_df, tmp_path):
+def test_ingests_parquet_successfully(
+    enter_ingest_test_pipeline_directory, use_relative_path, pandas_df, tmp_path
+):
     ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
     dataset_path = tmp_path / "df.parquet"
     pandas_df.to_parquet(dataset_path)
@@ -62,7 +66,7 @@ def test_ingests_parquet_successfully(enter_ingest_test_pipeline_directory, use_
         dataset_path = os.path.relpath(dataset_path)
 
     IngestStep.from_pipeline_config(
-        pipeline_config = {
+        pipeline_config={
             "data": {
                 "format": "parquet",
                 "location": str(dataset_path),
@@ -76,7 +80,9 @@ def test_ingests_parquet_successfully(enter_ingest_test_pipeline_directory, use_
 
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
-def test_ingests_csv_successfully(enter_ingest_test_pipeline_directory, use_relative_path, pandas_df, tmp_path):
+def test_ingests_csv_successfully(
+    enter_ingest_test_pipeline_directory, use_relative_path, pandas_df, tmp_path
+):
     ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
     dataset_path = tmp_path / "df.csv"
     pandas_df.to_csv(dataset_path, index=False)
@@ -103,7 +109,9 @@ def custom_load_file_as_dataframe(file_path, file_format):
 
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
-def test_ingests_custom_format_successfully(enter_ingest_test_pipeline_directory, use_relative_path, pandas_df, tmp_path):
+def test_ingests_custom_format_successfully(
+    enter_ingest_test_pipeline_directory, use_relative_path, pandas_df, tmp_path
+):
     ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
     dataset_path = tmp_path / "df.fooformat"
     pandas_df.to_csv(dataset_path, index=False, sep="#")
@@ -111,7 +119,7 @@ def test_ingests_custom_format_successfully(enter_ingest_test_pipeline_directory
         dataset_path = os.path.relpath(dataset_path)
 
     IngestStep.from_pipeline_config(
-        pipeline_config = {
+        pipeline_config={
             "data": {
                 "format": "fooformat",
                 "location": str(dataset_path),
@@ -130,7 +138,7 @@ def test_ingests_spark_sql_successfully(enter_ingest_test_pipeline_directory, sp
     spark_df.write.saveAsTable("test_table")
 
     IngestStep.from_pipeline_config(
-        pipeline_config = {
+        pipeline_config={
             "data": {
                 "format": "spark_sql",
                 "sql": "SELECT * FROM test_table ORDER BY id",

@@ -72,7 +72,9 @@ class IngestStep(BaseStep):
             f.write(step_card.to_html())
 
     @staticmethod
-    def _build_step_card(ingested_parquet_dataset_path, dataset_src_location=None, dataset_sql=None):
+    def _build_step_card(
+        ingested_parquet_dataset_path, dataset_src_location=None, dataset_sql=None
+    ):
         if dataset_src_location is None and dataset_sql is None:
             raise MlflowException("TODO: MUST SPECIFY ONE", error_code=INTERNAL_ERROR)
 
@@ -82,8 +84,8 @@ class IngestStep(BaseStep):
             name="DATASET_SOURCE",
             markdown=(
                 f"**Dataset source location:** `{dataset_src_location}`"
-                if dataset_src_location is not None else
-                f"**Dataset SQL:** `{dataset_sql}`"
+                if dataset_src_location is not None
+                else f"**Dataset SQL:** `{dataset_sql}`"
             ),
         )
         card.add_markdown(
