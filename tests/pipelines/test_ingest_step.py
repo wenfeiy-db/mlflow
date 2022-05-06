@@ -140,6 +140,4 @@ def test_ingests_spark_sql_successfully(enter_ingest_test_pipeline_directory, sp
     ).run(output_directory=tmp_path)
 
     reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
-    print(reloaded_df)
-    print(spark_df.toPandas())
     pd.testing.assert_frame_equal(reloaded_df, spark_df.toPandas())
