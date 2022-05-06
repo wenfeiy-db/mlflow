@@ -37,7 +37,12 @@ def pandas_df():
 
 @pytest.fixture(scope="module", autouse=True)
 def spark_session():
-    session = SparkSession.builder.master("local[*]").getOrCreate()
+    session = SparkSession.builder \
+        .master("local[*]") \
+        .config("spark.jars.packages", "io.delta:delta-core_2.12:1.2.1") \
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
+        .getOrCreate()
     yield session
     session.stop()
 
@@ -142,6 +147,30 @@ def test_ingests_spark_sql_successfully(enter_ingest_test_pipeline_directory, sp
             "data": {
                 "format": "spark_sql",
                 "sql": "SELECT * FROM test_table ORDER BY id",
+            }
+        },
+        pipeline_root=ingest_test_pipeline_root_path,
+    ).run(output_directory=tmp_path)
+
+    reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
+    pd.testing.assert_frame_equal(reloaded_df, spark_df.toPandas())
+
+
+@pytest.mark.parametrize("use_relative_path", [False, True])
+def test_ingests_delta_successfully(
+    enter_ingest_test_pipeline_directory, use_relative_path, spark_df, tmp_path
+):
+    ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
+    dataset_path = tmp_path / "test.delta"
+    spark_df.write.format("delta").save(str(dataset_path))
+    if use_relative_path:
+        dataset_path = os.path.relpath(dataset_path)
+
+    IngestStep.from_pipeline_config(
+        pipeline_config={
+            "data": {
+                "format": "delta",
+                "location": str(dataset_path),
             }
         },
         pipeline_root=ingest_test_pipeline_root_path,
