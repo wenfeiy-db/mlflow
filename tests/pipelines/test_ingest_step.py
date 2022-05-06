@@ -37,12 +37,15 @@ def pandas_df():
 
 @pytest.fixture(scope="module", autouse=True)
 def spark_session():
-    session = SparkSession.builder \
-        .master("local[*]") \
-        .config("spark.jars.packages", "io.delta:delta-core_2.12:1.2.1") \
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
+    session = (
+        SparkSession.builder.master("local[*]")
+        .config("spark.jars.packages", "io.delta:delta-core_2.12:1.2.1")
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+        .config(
+            "spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+        )
         .getOrCreate()
+    )
     yield session
     session.stop()
 
