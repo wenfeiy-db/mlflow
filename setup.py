@@ -87,6 +87,7 @@ CORE_REQUIREMENTS = SKINNY_REQUIREMENTS + [
     "pandas-profiling",
     "pyarrow",
     "ipywidgets",
+    "Markdown",
 ]
 
 _is_mlflow_skinny = bool(os.environ.get(_MLFLOW_SKINNY_ENV_VAR))
