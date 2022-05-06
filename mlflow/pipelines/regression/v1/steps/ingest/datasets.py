@@ -160,7 +160,7 @@ class _PandasParseableDataset(_LocationBasedDataset):
         pass
 
 
-class _ParquetDataset(_PandasParseableDataset):
+class ParquetDataset(_PandasParseableDataset):
     def _load_file_as_pandas_dataframe(self, local_data_file_path):
         return read_parquet_as_pandas_df(data_parquet_path=local_data_file_path)
 
@@ -168,7 +168,7 @@ class _ParquetDataset(_PandasParseableDataset):
         return dataset_format == "parquet"
 
 
-class _CustomDataset(_PandasParseableDataset):
+class CustomDataset(_PandasParseableDataset):
     def __init__(self, location, dataset_format, custom_loader_method, pipeline_root):
         super().__init__(
             location=location, dataset_format=dataset_format, pipeline_root=pipeline_root
@@ -253,7 +253,7 @@ class _SparkDatasetMixin:
             ) from e
 
 
-class _DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
+class DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
     def resolve_to_parquet(self, dst_path):
         spark_session = self._get_spark_session()
         spark_df = spark_session.read.format("delta").load(self.location)
@@ -267,7 +267,7 @@ class _DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
         return dataset_format == "delta"
 
 
-class _SparkSqlDataset(_SparkDatasetMixin, _Dataset):
+class SparkSqlDataset(_SparkDatasetMixin, _Dataset):
     def __init__(self, sql, dataset_format):
         super().__init__(dataset_format=dataset_format)
         self.sql = sql

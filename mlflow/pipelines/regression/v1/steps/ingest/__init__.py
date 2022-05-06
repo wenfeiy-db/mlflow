@@ -8,10 +8,10 @@ from mlflow.pipelines.cards import IngestCard
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, INTERNAL_ERROR
 from mlflow.utils.file_utils import read_parquet_as_pandas_df
 from mlflow.pipelines.regression.v1.steps.ingest.datasets import (
-    _ParquetDataset,
-    _DeltaTableDataset,
-    _SparkSqlDataset,
-    _CustomDataset,
+    ParquetDataset,
+    DeltaTableDataset,
+    SparkSqlDataset,
+    CustomDataset,
 )
 
 _logger = logging.getLogger(__name__)
@@ -24,13 +24,13 @@ class IngestStep(BaseStep):
     _DATASET_OUTPUT_NAME = "dataset.parquet"
     _STEP_CARD_OUTPUT_NAME = "card.html"
     _SUPPORTED_DATASETS = [
-        _ParquetDataset,
-        _DeltaTableDataset,
-        _SparkSqlDataset,
+        ParquetDataset,
+        DeltaTableDataset,
+        SparkSqlDataset,
         # NB: The custom dataset is deliberately listed last as a catch-all for any
         # format not matched by the datasets above. When mapping a format to a dataset,
         # datasets are explored in the listed order
-        _CustomDataset,
+        CustomDataset,
     ]
 
     def __init__(self, step_config, pipeline_root):
