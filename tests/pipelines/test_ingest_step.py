@@ -26,13 +26,15 @@ def enter_ingest_test_pipeline_directory(enter_pipeline_example_directory):
 
 @pytest.fixture
 def pandas_df():
-    return pd.DataFrame.from_dict(
+    df = pd.DataFrame.from_dict(
         {
             "A": ["x", "y", "z"],
             "B": [1, 2, 3],
             "C": [-9.2, 82.5, 3.40],
         }
     )
+    df.index.rename("index", inplace=True)
+    return df
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -64,12 +66,23 @@ def spark_df(spark_session):
 
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
+@pytest.mark.parametrize("multiple_files", [False, True])
 def test_ingests_parquet_successfully(
-    enter_ingest_test_pipeline_directory, use_relative_path, pandas_df, tmp_path
+    enter_ingest_test_pipeline_directory, use_relative_path, multiple_files, pandas_df, tmp_path
 ):
     ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
-    dataset_path = tmp_path / "df.parquet"
-    pandas_df.to_parquet(dataset_path)
+    if multiple_files:
+        dataset_path = tmp_path / "dataset"
+        dataset_path.mkdir()
+        pandas_df_part1 = pandas_df[:1]
+        pandas_df_part2 = pandas_df[1:]
+        pandas_df_part1.to_parquet(dataset_path / "df1.parquet")
+        pandas_df_part2.to_parquet(dataset_path / "df2.parquet")
+    else:
+        dataset_path = tmp_path / "df.parquet"
+        pandas_df.to_parquet(dataset_path)
+
+
     if use_relative_path:
         dataset_path = os.path.relpath(dataset_path)
 
@@ -88,12 +101,22 @@ def test_ingests_parquet_successfully(
 
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
+@pytest.mark.parametrize("multiple_files", [False, True])
 def test_ingests_csv_successfully(
-    enter_ingest_test_pipeline_directory, use_relative_path, pandas_df, tmp_path
+    enter_ingest_test_pipeline_directory, use_relative_path, multiple_files, pandas_df, tmp_path
 ):
     ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
-    dataset_path = tmp_path / "df.csv"
-    pandas_df.to_csv(dataset_path, index=False)
+    if multiple_files:
+        dataset_path = tmp_path / "dataset"
+        dataset_path.mkdir()
+        pandas_df_part1 = pandas_df[:1]
+        pandas_df_part2 = pandas_df[1:]
+        pandas_df_part1.to_csv(dataset_path / "df1.csv")
+        pandas_df_part2.to_csv(dataset_path / "df2.csv")
+    else:
+        dataset_path = tmp_path / "df.csv"
+        pandas_df.to_csv(dataset_path)
+
     if use_relative_path:
         dataset_path = os.path.relpath(dataset_path)
 
@@ -112,17 +135,27 @@ def test_ingests_csv_successfully(
     pd.testing.assert_frame_equal(reloaded_df, pandas_df)
 
 
-def custom_load_file_as_dataframe(file_path, file_format):
-    return pd.read_csv(file_path, sep="#")
+def custom_load_file_as_dataframe(file_path, file_format):  # pylint: disable=unused-argument
+    return pd.read_csv(file_path, sep="#", index_col=0)
 
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
+@pytest.mark.parametrize("multiple_files", [False, True])
 def test_ingests_custom_format_successfully(
-    enter_ingest_test_pipeline_directory, use_relative_path, pandas_df, tmp_path
+    enter_ingest_test_pipeline_directory, use_relative_path, multiple_files, pandas_df, tmp_path
 ):
     ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
-    dataset_path = tmp_path / "df.fooformat"
-    pandas_df.to_csv(dataset_path, index=False, sep="#")
+    if multiple_files:
+        dataset_path = tmp_path / "dataset"
+        dataset_path.mkdir()
+        pandas_df_part1 = pandas_df[:1]
+        pandas_df_part2 = pandas_df[1:]
+        pandas_df_part1.to_csv(dataset_path / "df1.fooformat", sep="#")
+        pandas_df_part2.to_csv(dataset_path / "df2.fooformat", sep="#")
+    else:
+        dataset_path = tmp_path / "df.fooformat"
+        pandas_df.to_csv(dataset_path, sep="#")
+
     if use_relative_path:
         dataset_path = os.path.relpath(dataset_path)
 

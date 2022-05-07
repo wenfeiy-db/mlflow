@@ -93,8 +93,6 @@ class _LocationBasedDataset(_Dataset):
             # Use pathlib to join the local dataset relative path with the pipeline root
             # directory to correctly handle the case where the root path is Windows-formatted
             # and the local dataset relative path is POSIX-formatted
-            print("LOCAL DATASET PATH", local_dataset_path)
-            print("PIPELINE ROOT", pipeline_root)
             return str(pathlib.Path(pipeline_root) / local_dataset_path)
 
     @staticmethod
@@ -105,6 +103,8 @@ class _LocationBasedDataset(_Dataset):
 
 class _PandasParseableDataset(_LocationBasedDataset):
     def resolve_to_parquet(self, dst_path):
+        import pandas as pd
+
         with TempDir(chdr=True) as tmpdir:
             _logger.info("Resolving input data from '%s'", self.location)
             local_dataset_path = download_artifacts(
@@ -112,9 +112,11 @@ class _PandasParseableDataset(_LocationBasedDataset):
             )
 
             if os.path.isdir(local_dataset_path):
-                data_file_paths = list(
+                # NB: Sort the file names alphanumerically to ensure a consistent
+                # ordering across invocations
+                data_file_paths = sorted(list(
                     pathlib.Path(local_dataset_path).glob(f"*.{self.dataset_format}")
-                )
+                ))
                 if len(data_file_paths) == 0:
                     raise MlflowException(
                         message=(
@@ -205,7 +207,7 @@ class CustomDataset(_PandasParseableDataset):
                 ),
                 error_code=INVALID_PARAMETER_VALUE,
             ) from None
-        except Exception:
+        except Exception as e:
             raise MlflowException(
                 message=(
                     f"Unable to load data file at path '{local_data_file_path}' with format"
@@ -236,9 +238,6 @@ class _SparkDatasetMixin:
     TODO: DOCS: MUST BE MIXED INTO A SUBCLASS OF `_DATASET`
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def _get_spark_session(self):
         try:
             return _get_active_spark_session()
@@ -258,8 +257,8 @@ class DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
         spark_session = self._get_spark_session()
         spark_df = spark_session.read.format("delta").load(self.location)
         if len(spark_df.columns) > 0:
-            # Sort by the first column in hopes of achieving a consistent ordering at ingest
-            spark_df = spark_df.orderBy(spark_df.columns[0])
+            # Sort across columns in hopes of achieving a consistent ordering at ingest
+            spark_df = spark_df.orderBy(spark_df.columns)
         spark_df.write.parquet(dst_path)
 
     @staticmethod
