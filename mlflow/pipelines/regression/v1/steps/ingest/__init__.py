@@ -106,7 +106,7 @@ class IngestStep(BaseStep):
         dataset_types = dataset_types.rename(columns={"index": "column name"})
         dataset_types_styler = (
             dataset_types.style.set_properties(**{"text-align": "center"})
-            .hide(axis="index")
+            .hide_index()
             .set_table_styles(
                 [
                     {"selector": "", "props": [("border", "1px solid grey")]},
