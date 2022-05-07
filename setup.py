@@ -76,7 +76,6 @@ CORE_REQUIREMENTS = SKINNY_REQUIREMENTS + [
     "pandas",
     "prometheus-flask-exporter",
     "querystring_parser",
-    "jinja2",
     # Pin sqlparse for: https://github.com/mlflow/mlflow/issues/3433
     "sqlparse>=0.3.1",
     # Required to run the MLflow server against SQL-backed storage
@@ -86,6 +85,7 @@ CORE_REQUIREMENTS = SKINNY_REQUIREMENTS + [
     # TODO: Move these to extras later
     "pandas-profiling",
     "pyarrow",
+    "jinja2",
     "ipywidgets",
     "Markdown",
 ]

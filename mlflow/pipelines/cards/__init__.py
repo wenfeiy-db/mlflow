@@ -1,13 +1,7 @@
 from __future__ import annotations
-import jinja2
 import pprint
 import os
-from jinja2 import meta as jinja2_meta
 from io import StringIO
-from IPython.display import display
-import ipywidgets as widgets
-from markdown import markdown as md_to_html
-from pandas_profiling import ProfileReport
 from typing import Any
 
 
@@ -19,6 +13,9 @@ class BaseCard:
         :param template_root: a string representing the root directory of the template
         :param template_name: a string representing the file name
         """
+        import jinja2
+        from jinja2 import meta as jinja2_meta
+
         self.template_root = template_root
         self.template_name = template_name
 
@@ -40,6 +37,8 @@ class BaseCard:
         :param markdown: the markdown content
         :return: the updated card instance
         """
+        from markdown import markdown as md_to_html
+
         if name not in self._variables:
             raise ValueError(
                 f"{name} is not a valid markdown variable found in template '{self.template_name}'"
@@ -47,7 +46,7 @@ class BaseCard:
         self._context[name] = md_to_html(markdown)
         return self
 
-    def add_pandas_profile(self, name: str, profile: ProfileReport) -> BaseCard:
+    def add_pandas_profile(self, name: str, profile) -> BaseCard:
         """
         Add a new tab representing the provided pandas profile to the card.
 
@@ -91,6 +90,8 @@ class BaseCard:
 
         :return: a HTML string
         """
+        import jinja2
+
         j2_env = jinja2.Environment(loader=jinja2.FileSystemLoader(self.template_root))
         return j2_env.get_template(self.template_name).render(self._context)
 
@@ -104,6 +105,9 @@ class BaseCard:
         """
         Display the rendered card as a ipywidget
         """
+        import ipywidgets as widgets
+        from IPython.display import display
+
         if len(self._pandas_profiles) == 0:
             display(widgets.HTML(self.to_html()))
         else:
