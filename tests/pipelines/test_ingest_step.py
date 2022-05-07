@@ -82,7 +82,6 @@ def test_ingests_parquet_successfully(
         dataset_path = tmp_path / "df.parquet"
         pandas_df.to_parquet(dataset_path)
 
-
     if use_relative_path:
         dataset_path = os.path.relpath(dataset_path)
 

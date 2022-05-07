@@ -114,9 +114,9 @@ class _PandasParseableDataset(_LocationBasedDataset):
             if os.path.isdir(local_dataset_path):
                 # NB: Sort the file names alphanumerically to ensure a consistent
                 # ordering across invocations
-                data_file_paths = sorted(list(
-                    pathlib.Path(local_dataset_path).glob(f"*.{self.dataset_format}")
-                ))
+                data_file_paths = sorted(
+                    list(pathlib.Path(local_dataset_path).glob(f"*.{self.dataset_format}"))
+                )
                 if len(data_file_paths) == 0:
                     raise MlflowException(
                         message=(
