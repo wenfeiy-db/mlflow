@@ -121,3 +121,11 @@ class IngestCard(BaseCard):
             template_root=os.path.join(os.path.dirname(__file__), "templates"),
             template_name="ingest.html",
         )
+
+
+class SplitCard(BaseCard):
+    def __init__(self):
+        super().__init__(
+            template_root=os.path.join(os.path.dirname(__file__), "templates"),
+            template_name="split.html",
+        )
