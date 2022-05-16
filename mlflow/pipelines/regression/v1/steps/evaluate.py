@@ -34,6 +34,7 @@ class EvaluateStep(BaseStep):
         super().__init__(step_config, pipeline_root)
         self.metrics = self.step_config
         self.target_col = self.pipeline_config.get("target_col")
+        self.status = "UNKNOWN"
 
     @staticmethod
     def _satisfies_metric_criteria(eval_result, metrics):
@@ -107,10 +108,11 @@ class EvaluateStep(BaseStep):
 
         # Apply metric success criteria and log `is_validated` result
         metrics = self.step_config.get("metrics", [])
-        satisfies_metric_criteria = EvaluateStep._satisfies_metric_criteria(eval_result, metrics)
-        # Reject the model if `satisfies_metric_criteria` is False
-        # if satisfies_metric_criteria:
-        #     ...
+        if metrics:
+            satisfies_metric_criteria = EvaluateStep._satisfies_metric_criteria(
+                eval_result, metrics
+            )
+            self.status = "VALIDATED" if satisfies_metric_criteria else "REJECTED"
 
         # card = get_step_card(eval_result)
         # return card  # The step card will be written as output.
