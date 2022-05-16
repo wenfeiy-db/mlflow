@@ -1,17 +1,52 @@
-import json
 import logging
-import os
+import importlib.util
+import sys
+from pathlib import Path
+from typing import Dict, Any
 
 import cloudpickle
 
 import mlflow
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
+from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 
 _logger = logging.getLogger(__name__)
 
 
+# ref: https://stackoverflow.com/a/41595552/6943581
+def _import_source_file(fname, modname):
+    # https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
+    spec = importlib.util.spec_from_file_location(modname, fname)
+    if spec is None:
+        raise ImportError(f"Could not load spec for module '{modname}' at: {fname}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[modname] = module
+    try:
+        spec.loader.exec_module(module)
+    except FileNotFoundError as e:
+        raise ImportError(f"{e.strerror}: {fname}") from e
+    return module
+
+
 class EvaluateStep(BaseStep):
+    def __init__(self, step_config: Dict[str, Any], pipeline_root: str) -> None:
+        super().__init__(step_config, pipeline_root)
+        self.metrics = self.step_config
+        self.target_col = self.pipeline_config.get("target_col")
+
+    @staticmethod
+    def _satisfies_metric_criteria(eval_result, metrics):
+        for metric in metrics:
+            metric_key = metric["metric"]
+            metric_threshold = metric["threshold"]
+            metric_val = eval_result.metrics.get(metric_key)
+            if metric_val is None:
+                return False
+            if metric_val > metric_threshold:
+                return False
+        return True
+
     def _run(self, output_directory):
         import pandas as pd
 
@@ -35,7 +70,8 @@ class EvaluateStep(BaseStep):
         )
         train_data = pd.read_parquet(train_data_path)
         test_data = pd.read_parquet(test_data_path)
-        X_train = train_data.drop(columns=["price"])
+        X_train = train_data.drop(columns=[self.target_col])
+        X_test = test_data.drop(columns=[self.target_col])
 
         run_id_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
@@ -47,78 +83,37 @@ class EvaluateStep(BaseStep):
 
         mlflow.set_experiment("demo")  # hardcoded
 
+        custom_metrics_path = Path(self.pipeline_root, "steps", "custom_metrics.py")
+        if custom_metrics_path.exists():
+            custom_metrics_module = _import_source_file(custom_metrics_path, "custom_metrics")
+            custom_metrics = [
+                getattr(custom_metrics_module, cm["function"])
+                for cm in self.step_config["cutsom_metrics"]
+            ]
+        else:
+            custom_metrics = None
+
         with mlflow.start_run(run_id=run_id):
-            EvaluateStep._explain(pipeline, X_train, output_directory)
-            EvaluateStep._evaluate(pipeline, train_data, test_data, output_directory)
+            model_uri = mlflow.get_artifact_uri("model")
+            eval_result = mlflow.evaluate(
+                model_uri,
+                test_data,
+                targets=self.target_col,
+                model_type="regressor",
+                evaluators="default",
+                custom_metrics=custom_metrics,
+            )
+            eval_result.save(output_directory)
 
-    @staticmethod
-    def _explain(pipeline, X_train, output_directory):
-        """
-        :param pipeline: The [<transformer>, <trained_model>] pipeline
-        :param X_train: Features from the training dataset
-        :param output_directory: Path to the output directory for the evaluate step on the local
-                                 filesystem.
-        """
-        import matplotlib.pyplot as plt
-        import pandas as pd
-        import shap
-        from matplotlib import rcParams
+        # Apply metric success criteria and log `is_validated` result
+        metrics = self.step_config.get("metrics", [])
+        satisfies_metric_criteria = EvaluateStep._satisfies_metric_criteria(eval_result, metrics)
+        # Reject the model if `satisfies_metric_criteria` is False
+        # if satisfies_metric_criteria:
+        #     ...
 
-        mode = X_train.mode().iloc[0]
-
-        background = shap.sample(X_train, 10, random_state=3).fillna(mode)
-        sample = shap.sample(X_train, 10, random_state=12).fillna(mode)
-
-        predict = lambda x: pipeline.predict(pd.DataFrame(x, columns=X_train.columns))
-        evaluateer = shap.KernelExplainer(predict, background, link="identity")
-        shap_values = evaluateer.shap_values(sample)
-
-        # https://giters.com/slundberg/shap/issues/1916
-        rcParams.update({"figure.autolayout": True})
-
-        explanations_output_path = os.path.join(output_directory, "explanations.html")
-        shap.summary_plot(shap_values, sample, show=False)
-        plt.savefig(explanations_output_path, format="svg")
-
-        mlflow.log_artifact(explanations_output_path)
-
-    @staticmethod
-    def _evaluate(pipeline, train_data, test_data, output_directory):
-        """
-        :param pipeline: The [<transformer>, <trained_model>] pipeline
-        :param train_data: The training dataset
-        :param test_data: The test dataset
-        :param output_directory: Path to the output directory for the evaluate step on the local
-                                 filesystem.
-        """
-        train_rmse, train_worst = EvaluateStep._evaluate_model_on_dataset(pipeline, train_data)
-        test_rmse, _ = EvaluateStep._evaluate_model_on_dataset(pipeline, test_data)
-
-        metrics = [
-            {"dataset": "train", "metric": "rmse", "value": train_rmse},
-            {"dataset": "test", "metric": "rmse", "value": test_rmse},
-        ]
-
-        with open(os.path.join(output_directory, "metrics.json"), "w") as f:
-            json.dump(metrics, f)
-
-        train_worst.to_parquet(os.path.join(output_directory, "worst_training_examples.parquet"))
-
-    @staticmethod
-    def _evaluate_model_on_dataset(model, df):
-        from sklearn.metrics import mean_squared_error
-
-        # TODO: read from conf
-        label_col = "price"
-        y_true = df[label_col]
-        y_pred = model.predict(df.drop(columns=[label_col]))
-        rmse = mean_squared_error(y_true, y_pred, squared=False)
-
-        df["_pred_"] = y_pred
-        df["_error_"] = (y_true - y_pred).abs()
-        worst = df.nlargest(20, columns=["_error_"])
-
-        return rmse, worst
+        # card = get_step_card(eval_result)
+        # return card  # The step card will be written as output.
 
     def inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
@@ -127,7 +122,14 @@ class EvaluateStep(BaseStep):
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
-        step_config = {EvaluateStep._TRACKING_URI_CONFIG_KEY: "/tmp/mlruns"}
+        try:
+            step_config = {"metrics": pipeline_config["steps"]["evaluate"]}
+        except KeyError:
+            raise MlflowException(
+                "Config for evaluate step is not found.", error_code=INVALID_PARAMETER_VALUE
+            )
+        step_config[EvaluateStep._TRACKING_URI_CONFIG_KEY] = "/tmp/mlruns"
+        step_config["cutsom_metrics"] = pipeline_config["metrics"]
         return cls(step_config, pipeline_root)
 
     @property
