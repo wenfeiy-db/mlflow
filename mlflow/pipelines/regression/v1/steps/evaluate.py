@@ -37,7 +37,7 @@ class EvaluateStep(BaseStep):
         self.status = "UNKNOWN"
 
     @staticmethod
-    def _satisfies_metric_criteria(eval_result, metrics):
+    def _check_metric_criteria(eval_result, metrics):
         for metric in metrics:
             metric_key = metric["metric"]
             metric_threshold = metric["threshold"]
@@ -109,9 +109,7 @@ class EvaluateStep(BaseStep):
         # Apply metric success criteria and log `is_validated` result
         metrics = self.step_config.get("metrics", [])
         if metrics:
-            satisfies_metric_criteria = EvaluateStep._satisfies_metric_criteria(
-                eval_result, metrics
-            )
+            satisfies_metric_criteria = EvaluateStep._check_metric_criteria(eval_result, metrics)
             self.status = "VALIDATED" if satisfies_metric_criteria else "REJECTED"
 
         # card = get_step_card(eval_result)
