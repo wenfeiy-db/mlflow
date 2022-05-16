@@ -110,8 +110,8 @@ class EvaluateStep(BaseStep):
         # Apply metric success criteria and log `is_validated` result
         metrics = self.step_config.get("metrics", [])
         if metrics:
-            satisfies_metric_criteria = EvaluateStep._check_metric_criteria(eval_result, metrics)
-            self.status = "VALIDATED" if satisfies_metric_criteria else "REJECTED"
+            validated = EvaluateStep._check_metric_criteria(eval_result, metrics)
+            self.status = "VALIDATED" if validated else "REJECTED"
 
         # card = get_step_card(eval_result)
         # return card  # The step card will be written as output.
