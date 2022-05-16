@@ -102,6 +102,7 @@ class EvaluateStep(BaseStep):
                 targets=self.target_col,
                 model_type="regressor",
                 evaluators="default",
+                dataset_name="test",
                 custom_metrics=custom_metrics,
             )
             eval_result.save(output_directory)
