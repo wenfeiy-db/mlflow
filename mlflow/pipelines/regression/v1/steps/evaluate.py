@@ -10,6 +10,7 @@ import cloudpickle
 import mlflow
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
+from mlflow.pipelines.cards import SplitCard
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 
 _logger = logging.getLogger(__name__)
@@ -130,8 +131,8 @@ class EvaluateStep(BaseStep):
             criteria_summary = self._assess_metric_criteria(eval_result.metrics, metrics)
             self.status = "VALIDATED" if all(criteria_summary.values()) else "REJECTED"
 
-        # card = get_step_card(eval_result)
-        # return card  # The step card will be written as output.
+        card = SplitCard()
+        Path(output_directory, "card.html").write_text(card.to_html())
 
     def inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
