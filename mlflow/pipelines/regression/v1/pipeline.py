@@ -13,6 +13,12 @@ from mlflow.pipelines.utils import get_pipeline_name
 _logger = logging.getLogger(__name__)
 
 
+def _is_running_from_ipython():
+    from IPython import get_ipython
+
+    return get_ipython() is not None
+
+
 class Pipeline:
     def __init__(self, profile: str, pipeline_root: str) -> None:
         """
@@ -120,3 +126,17 @@ class Pipeline:
             evaluateStep,
         )
         _logger.info("in evaluate step")
+
+    def inspect(self) -> None:
+        from IPython.core.display import display, HTML
+
+        path = os.path.join(os.path.dirname(__file__), "DAG.html")
+        filePath = f"file:///{path}?"
+
+        if _is_running_from_ipython():
+            display(HTML(filename=path))
+        else:
+            import webbrowser
+
+            webbrowser.open_new(filePath)
+            _logger.info(f"The path: {filePath}")

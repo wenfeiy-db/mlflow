@@ -1,0 +1,672 @@
+
+  <!DOCTYPE html>
+  <html lang="en">
+  <body>
+    <script src="https://unpkg.com/gojs@2.2.6/release/go.js"></script>
+    <script id="code">
+    function init() {
+
+      // Since 2.2 you can also author concise templates with method chaining instead of GraphObject.make
+      // For details, see https://gojs.net/latest/intro/buildingObjects.html
+      const $ = go.GraphObject.make;
+
+      myDiagram = $(go.Diagram, "myDiagramDiv");
+
+
+      // Node template
+      myDiagram.nodeTemplate =
+        $(go.Node, "Auto",
+          {
+            locationSpot: go.Spot.Center, locationObjectName: "SHAPE",
+            desiredSize: new go.Size(120, 60), minSize: new go.Size(40, 40),
+          },
+          // these Bindings are TwoWay because the DraggingTool and ResizingTool modify the target properties
+          new go.Binding("location", "loc", go.Point.parse).makeTwoWay(go.Point.stringify),
+          new go.Binding("desiredSize", "size", go.Size.parse).makeTwoWay(go.Size.stringify),
+          $(go.Shape,
+            { // the border
+              name: "SHAPE", fill: "white",
+              portId: "", cursor: "pointer",
+              fromSpot: go.Spot.AllSides, toSpot: go.Spot.AllSides
+            },
+            new go.Binding("figure"),
+            new go.Binding("fill"),
+            new go.Binding("stroke", "color"),
+            new go.Binding("strokeWidth", "thickness"),
+            new go.Binding("strokeDashArray", "dash")),
+          $(go.TextBlock,
+            { margin: 1, textAlign: "center", overflow: go.TextBlock.OverflowEllipsis },
+            // this Binding is TwoWay due to the user editing the text with the TextEditingTool
+            new go.Binding("text").makeTwoWay(),
+            new go.Binding("stroke", "color"))
+        );
+
+
+      // Tooltip template
+      myDiagram.nodeTemplate.toolTip =
+        $("ToolTip",  // show some detailed information
+          $(go.Panel, "Vertical",
+            { maxSize: new go.Size(200, NaN) },  // limit width but not height
+            $(go.TextBlock,
+              { font: "bold 10pt sans-serif", textAlign: "center" },
+              new go.Binding("text")),
+            $(go.TextBlock,
+              { font: "10pt sans-serif", textAlign: "center" },
+              new go.Binding("text", "details"))
+          )
+        );
+
+
+      // Link template
+      myDiagram.linkTemplate =
+        $(go.Link,
+          {
+            layerName: "Foreground",
+            routing: go.Link.AvoidsNodes, corner: 10,
+            toShortLength: 4,  // assume arrowhead at "to" end, need to avoid bad appearance when path is thick
+          },
+          new go.Binding("fromShortLength", "dir", dir => dir === 2 ? 4 : 0),
+          new go.Binding("toShortLength", "dir", dir => dir >= 1 ? 4 : 0),
+          $(go.Shape, { strokeWidth: 2 },
+            new go.Binding("stroke", "color"),
+            new go.Binding("strokeWidth", "thickness"),
+            new go.Binding("strokeDashArray", "dash")),
+          $(go.Shape, { fromArrow: "Backward", strokeWidth: 0, scale: 4/3, visible: false },
+            new go.Binding("visible", "dir", dir => dir === 2),
+            new go.Binding("fill", "color"),
+            new go.Binding("scale", "thickness", t => (2+t)/3)),
+          $(go.Shape, { toArrow: "Standard", strokeWidth: 0, scale: 4/3 },
+            new go.Binding("visible", "dir", dir => dir >= 1),
+            new go.Binding("fill", "color"),
+            new go.Binding("scale", "thickness", t => (2+t)/3)),
+          $(go.TextBlock,
+            { alignmentFocus: new go.Spot(0, 1, -4, 0) },
+            new go.Binding("stroke", "color"))
+        );
+
+
+      loadDAG();
+    }
+
+    // Show the diagram's model in JSON format
+    function loadDAG() {
+      myDiagram.model = go.Model.fromJson({
+        "class": "GraphLinksModel",
+        "nodeDataArray": [
+          {
+            "key": 1,
+            "loc": "290 -260",
+            "text": "split(data.parquet, target_column, split_ratio=(80,20,20), random_seed=42)",
+            "details": "split step",
+            "size": "200 80",
+            "figure": "Procedure"
+          },
+          {
+            "key": 2,
+            "loc": "130 -150",
+            "text": "train_summary.html\nvalidation_summary.html\ntest_summary.html\n",
+            "details": "Summary profiles of splits",
+            "color": "blue",
+            "thickness": 2,
+            "figure": "Document"
+          },
+          {
+            "key": 3,
+            "loc": "290 -370",
+            "text": "data.parquet",
+            "color": "green",
+            "figure": "Cylinder1",
+            "size": "80 60"
+          },
+          {
+            "key": -8,
+            "loc": "290 -150",
+            "text": "train.parquet & validation.parquet",
+            "details": "Outputs splits for training and validation",
+            "size": "120 60"
+          },
+          {
+            "key": -10,
+            "loc": "630 330",
+            "text": "test.parquet",
+            "details": "Output split for evaluating the model",
+            "size": "120 60"
+          },
+          {
+            "key": -11,
+            "loc": "290 -20",
+            "text": "transform(train.parquet, validation.parquet, steps/transform.py)",
+            "details": "transform step",
+            "size": "200 80",
+            "figure": "Procedure"
+          },
+          {
+            "key": -12,
+            "loc": "300 230",
+            "text": "train(train_transform.parquet, validation_transform\n.parquet target_column, transformer, steps/train.py)",
+            "details": "train step",
+            "size": "280 80",
+            "figure": "Procedure"
+          },
+          {
+            "key": -13,
+            "loc": "280 530",
+            "text": "evaluate(test.parquet, target_col, run_id,  transformer, steps/evaluate.py)",
+            "details": "evaluate step",
+            "size": "180 80",
+            "figure": "Procedure"
+          },
+          {
+            "key": -14,
+            "loc": "560 -20",
+            "text": "steps/transform.py",
+            "details": "def transform() -> transformer",
+            "size": "120 60",
+            "figure": "Document",
+            "color": "brown"
+          },
+          {
+            "key": -16,
+            "loc": "560 230",
+            "text": "steps/train.py",
+            "details": "def train() -> model",
+            "size": "120 60",
+            "figure": "Document",
+            "color": "brown"
+          },
+          {
+            "key": -18,
+            "loc": "290 100",
+            "text": "train_transform.parquet  & validation_transform.parquet",
+            "details": "Transformed output of training and validation needed for training",
+            "size": "140 60",
+            "figure": "Rectangle"
+          },
+          {
+            "key": -20,
+            "loc": "450 100",
+            "text": "transformer",
+            "details": "transformer needed to transform during inference",
+            "size": "120 60",
+            "figure": "RoundedRectangle"
+          },
+          {
+            "key": -21,
+            "loc": "90 360",
+            "text": "Run",
+            "details": "Output run which is tracked in MLFlow",
+            "size": "120 60",
+            "color": "blue",
+            "figure": "Document",
+            "thickness": 2
+          },
+          {
+            "key": -22,
+            "loc": "240 360",
+            "text": "model",
+            "details": "Output model of the training step",
+            "size": "120 60",
+            "color": "blue",
+            "figure": "Document",
+            "thickness": 2
+          },
+          {
+            "key": -23,
+            "loc": "550 530",
+            "text": "steps/evaluate.py",
+            "details": "def custom_metric_fns() -> List[Callable]",
+            "size": "120 60",
+            "figure": "Document",
+            "color": "brown"
+          },
+          {
+            "key": -25,
+            "loc": "280 640",
+            "text": "eval_summary.html",
+            "details": "evaluation summary",
+            "size": "120 60",
+            "color": "blue",
+            "figure": "Document",
+            "thickness": 2
+          },
+          {
+            "key": -19,
+            "loc": "-100 -80",
+            "text": "ingest(data-source, ingest.py)",
+            "details": "ingest step",
+            "size": "160 80",
+            "figure": "Procedure"
+          },
+          {
+            "key": -24,
+            "loc": "50 -360",
+            "text": "pipeline.yaml",
+            "details": `initial config for the pipeline`,
+            "size": "120 60",
+            "figure": "Document"
+          },
+          {
+            "key": -26,
+            "loc": "-100 -200",
+            "text": "steps/ingest.py",
+            "details": "def load_file_as_dataframe(file_path: str, file_format: str) -> Pandas.parquet",
+            "size": "100 60",
+            "figure": "Document",
+            "color": "brown"
+          },
+          {
+            "key": -28,
+            "loc": "-100 40",
+            "text": "data.parquet",
+            "color": "green",
+            "figure": "Cylinder1",
+            "size": "80 60"
+          },
+          {
+            "key": -27,
+            "loc": "130 100",
+            "text": "transform_report.html",
+            "details": "Summary report of the transform step",
+            "size": "140 60",
+            "figure": "Document",
+            "color": "blue",
+            "thickness": 2
+          }
+        ],
+        "linkDataArray": [
+          {
+            "from": 1,
+            "to": 2,
+            "dash": null,
+            "thickness": 1,
+            "points": [
+              240,
+              -220,
+              240,
+              -210,
+              240,
+              -200,
+              130,
+              -200,
+              130,
+              -190,
+              130,
+              -180
+            ]
+          },
+          {
+            "from": 3,
+            "to": 1,
+            "points": [
+              290,
+              -340,
+              290,
+              -330,
+              290,
+              -320,
+              290,
+              -320,
+              290,
+              -310,
+              290,
+              -300
+            ]
+          },
+          {
+            "from": 1,
+            "to": -8,
+            "points": [
+              290,
+              -220,
+              290,
+              -210,
+              290,
+              -200,
+              290,
+              -200,
+              290,
+              -190,
+              290,
+              -180
+            ]
+          },
+          {
+            "from": 1,
+            "to": -10,
+            "points": [
+              340,
+              -220,
+              340,
+              -210,
+              340,
+              -210,
+              630,
+              -210,
+              630,
+              290,
+              630,
+              300
+            ]
+          },
+          {
+            "from": -8,
+            "to": -11,
+            "points": [
+              290,
+              -120,
+              290,
+              -110,
+              290,
+              -90,
+              290,
+              -90,
+              290,
+              -70,
+              290,
+              -60
+            ]
+          },
+          {
+            "from": -14,
+            "to": -11,
+            "points": [
+              500,
+              -20,
+              490,
+              -20,
+              445,
+              -20,
+              445,
+              -20,
+              400,
+              -20,
+              390,
+              -20
+            ]
+          },
+          {
+            "from": -16,
+            "to": -12,
+            "points": [
+              500,
+              230,
+              490,
+              230,
+              470,
+              230,
+              470,
+              230,
+              450,
+              230,
+              440,
+              230
+            ]
+          },
+          {
+            "from": -11,
+            "to": -18,
+            "points": [
+              290,
+              20,
+              290,
+              30,
+              290,
+              45,
+              290,
+              45,
+              290,
+              60,
+              290,
+              70
+            ]
+          },
+          {
+            "from": -18,
+            "to": -12,
+            "points": [
+              290,
+              130,
+              290,
+              140,
+              290,
+              156,
+              253.33333333333331,
+              156,
+              253.33333333333331,
+              172,
+              253.33333333333331,
+              190
+            ]
+          },
+          {
+            "from": -11,
+            "to": -20,
+            "points": [
+              340,
+              20,
+              340,
+              30,
+              340,
+              45,
+              450,
+              45,
+              450,
+              60,
+              450,
+              70
+            ]
+          },
+          {
+            "from": -20,
+            "to": -13,
+            "points": [
+              470,
+              130,
+              470,
+              148,
+              470,
+              148,
+              470,
+              148,
+              470,
+              404,
+              280,
+              404,
+              280,
+              472,
+              280,
+              490
+            ]
+          },
+          {
+            "from": -12,
+            "to": -21,
+            "points": [
+              253.33333333333334,
+              270,
+              253.33333333333334,
+              280,
+              253.33333333333334,
+              300,
+              90,
+              300,
+              90,
+              320,
+              90,
+              330
+            ]
+          },
+          {
+            "from": -12,
+            "to": -22,
+            "points": [
+              346.6666666666667,
+              270,
+              346.6666666666667,
+              288,
+              346.6666666666667,
+              304,
+              240,
+              304,
+              240,
+              320,
+              240,
+              330
+            ]
+          },
+          {
+            "from": -23,
+            "to": -13,
+            "points": [
+              490,
+              530,
+              480,
+              530,
+              430,
+              530,
+              430,
+              530,
+              380,
+              530,
+              370,
+              530
+            ]
+          },
+          {
+            "from": -13,
+            "to": -25,
+            "points": [
+              280,
+              570,
+              280,
+              580,
+              280,
+              590,
+              280,
+              590,
+              280,
+              600,
+              280,
+              610
+            ]
+          },
+          {
+            "from": -22,
+            "to": -13,
+            "points": [
+              240,
+              390,
+              240,
+              400,
+              240,
+              432,
+              235,
+              432,
+              235,
+              464,
+              235,
+              490
+            ]
+          },
+          {
+            "from": -10,
+            "to": -13,
+            "points": [
+              630,
+              360,
+              630,
+              370,
+              630,
+              425,
+              325,
+              425,
+              325,
+              480,
+              325,
+              490
+            ]
+          },
+          {
+            "from": -26,
+            "to": -19,
+            "points": [
+              -100,
+              -170,
+              -100,
+              -160,
+              -100,
+              -145,
+              -100,
+              -145,
+              -100,
+              -130,
+              -100,
+              -120
+            ]
+          },
+          {
+            "from": -19,
+            "to": -28,
+            "points": [
+              -100,
+              -40,
+              -100,
+              -30,
+              -100,
+              -15,
+              -100,
+              -15,
+              -100,
+              0,
+              -100,
+              10
+            ]
+          },
+          {
+            "from": -11,
+            "to": -27,
+            "points": [
+              230,
+              20,
+              230,
+              30,
+              230,
+              45,
+              130,
+              45,
+              130,
+              60,
+              130,
+              70
+            ]
+          },
+          {
+            "from": -20,
+            "to": -12,
+            "points": [
+              430,
+              130,
+              430,
+              140,
+              430,
+              160,
+              346.66666666666663,
+              160,
+              346.66666666666663,
+              180,
+              346.66666666666663,
+              190
+            ]
+          }
+        ]
+      })
+    }
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+
+  <div id="sample">
+    <div id="myDiagramDiv" style="width: 880px; height: 1100px; position: relative; -webkit-tap-highlight-color: rgba(255, 255, 255, 0); cursor: auto; font: 13px sans-serif;"><canvas tabindex="0" width="1183" height="583" style="position: absolute; top: 0px; left: 0px; z-index: 2; user-select: none; touch-action: none; width: 1183px; height: 583px; cursor: auto;">This text is displayed if your browser does not support the Canvas HTML element.</canvas><div style="position: absolute; overflow: auto; width: 1183px; height: 598px; z-index: 1;"><div style="position: absolute; width: 1260px; height: 1px;"></div>
+  </div>
+
+</body>
+</html>
