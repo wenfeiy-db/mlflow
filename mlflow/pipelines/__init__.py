@@ -40,7 +40,9 @@ def split():
     split_outputs_path = _run_pipeline_step("split")
 
     _logger.info("== Showing summary of input data ==\n")
-    _maybe_open(os.path.join(split_outputs_path, "summary.html"))
+    summary_profile_file = os.path.join(split_outputs_path, "summary.html")
+    if os.path.exists(summary_profile_file):
+        _maybe_open(summary_profile_file)
 
     _logger.info("Split data into train/test sets")
 

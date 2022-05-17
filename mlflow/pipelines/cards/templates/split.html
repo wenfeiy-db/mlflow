@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block STEP_TITLE %}Split{% endblock %}
+
+{% block CSS %}
+h3.section-title {
+    color: #57a8de;
+}
+.dataset-container {
+    width: max;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+{% endblock %}
+{% block BODY %}
+<h3 class="section-title">Dataset split info</h3>
+{{ SCHEMA_LOCATION }}
+{{ TRAIN_SPLIT_NUM_ROWS }}
+{{ VALIDATION_SPLIT_NUM_ROWS }}
+{{ TEST_SPLIT_NUM_ROWS }}
+{{ NUM_DROPPED_ROWS }}
+{{ EXECUTION_DURATION}}
+{{ RUN_END_TIMESTAMP }}
+{{ RUN_STATUS }}
+
+{% endblock %}

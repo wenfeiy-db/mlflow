@@ -342,7 +342,7 @@ jobs:
           INSTALL_LARGE_PYTHON_DEPS: false
         run: |
           source ./dev/install-common-deps.sh
-          pip install pyspark
+          pip install -r mlflow/pipelines/requirements.txt
       - name: Run tests
         run: |
           export MLFLOW_HOME=$(pwd)

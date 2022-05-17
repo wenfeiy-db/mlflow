@@ -57,6 +57,12 @@ class TrainStep(BaseStep):
             with open(transformer_path, "rb") as f:
                 transformer = cloudpickle.load(f)
 
+            if hasattr(model, "best_score_"):
+                mlflow.log_metric("best_cv_score", model.best_score_)
+
+            if hasattr(model, "best_params_"):
+                mlflow.log_params(model.best_params_)
+
             pipeline = make_pipeline(transformer, model)
             mlflow.sklearn.log_model(pipeline, "model")
 
