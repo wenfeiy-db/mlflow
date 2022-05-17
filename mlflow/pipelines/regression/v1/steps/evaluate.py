@@ -1,6 +1,7 @@
 import logging
 import importlib.util
 import sys
+import operator
 from pathlib import Path
 from typing import Dict, Any
 
@@ -12,6 +13,8 @@ from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 
 _logger = logging.getLogger(__name__)
+
+from dataclasses import dataclass
 
 
 # ref: https://stackoverflow.com/a/41595552/6943581
@@ -29,6 +32,15 @@ def _import_source_file(fname, modname):
     return module
 
 
+_GREATER_IS_BETTER_MAP = {
+    "mean_absolute_error": False,
+    "mean_squared_error": False,
+    "root_mean_squared_error": False,
+    "max_error": False,
+    "mean_absolute_percentage_error": False,
+}
+
+
 class EvaluateStep(BaseStep):
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str) -> None:
         super().__init__(step_config, pipeline_root)
@@ -36,17 +48,22 @@ class EvaluateStep(BaseStep):
         self.target_col = self.pipeline_config.get("target_col")
         self.status = "UNKNOWN"
 
-    @staticmethod
-    def _check_metric_criteria(eval_result, metrics):
-        for metric in metrics:
-            metric_key = metric["metric"]
-            metric_threshold = metric["threshold"]
-            metric_val = eval_result.metrics.get(metric_key)
+    def _assess_metric_criteria(self, metrics, metric_list):
+        custom_metrics_gib_map = {
+            m["name"]: m["greater_is_better"] for m in self.step_config["cutsom_metrics"]
+        }
+        gib_map = {**_GREATER_IS_BETTER_MAP, **custom_metrics_gib_map}
+        summary = {}
+        for metric in metric_list:
+            metric_name = metric["metric"]
+            metric_val = metrics.get(metric_name)
             if metric_val is None:
-                return False
-            if metric_val > metric_threshold:
-                return False
-        return True
+                summary[metric_name] = False
+                continue
+            comp_func = operator.ge if gib_map[metric_name] else operator.le
+            metric_threshold = metric["threshold"]
+            summary[metric_name] = comp_func(metric_val, metric_threshold)
+        return summary
 
     def _run(self, output_directory):
         import pandas as pd
@@ -102,7 +119,7 @@ class EvaluateStep(BaseStep):
                 targets=self.target_col,
                 model_type="regressor",
                 evaluators="default",
-                dataset_name="test",
+                dataset_name="validation",
                 custom_metrics=custom_metrics,
             )
             eval_result.save(output_directory)
@@ -110,8 +127,8 @@ class EvaluateStep(BaseStep):
         # Apply metric success criteria and log `is_validated` result
         metrics = self.step_config.get("metrics", [])
         if metrics:
-            validated = EvaluateStep._check_metric_criteria(eval_result, metrics)
-            self.status = "VALIDATED" if validated else "REJECTED"
+            criteria_summary = self._assess_metric_criteria(eval_result.metrics, metrics)
+            self.status = "VALIDATED" if all(criteria_summary.values()) else "REJECTED"
 
         # card = get_step_card(eval_result)
         # return card  # The step card will be written as output.
