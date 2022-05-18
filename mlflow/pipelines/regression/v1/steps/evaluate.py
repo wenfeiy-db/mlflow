@@ -15,8 +15,6 @@ from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 
 _logger = logging.getLogger(__name__)
 
-from dataclasses import dataclass
-
 
 # ref: https://stackoverflow.com/a/41595552/6943581
 def _import_source_file(fname, modname):
