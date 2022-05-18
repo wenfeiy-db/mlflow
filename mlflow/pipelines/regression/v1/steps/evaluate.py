@@ -10,7 +10,6 @@ import cloudpickle
 import mlflow
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
-from mlflow.pipelines.cards import SplitCard
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 
 _logger = logging.getLogger(__name__)
@@ -47,21 +46,22 @@ class EvaluateStep(BaseStep):
         self.target_col = self.pipeline_config.get("target_col")
         self.status = "UNKNOWN"
 
-    def _assess_metric_criteria(self, metrics, metric_list):
+    def _check_validation_criteria(self, metrics, validation_criteria):
         custom_metrics_gib_map = {
-            m["name"]: m["greater_is_better"] for m in self.step_config["cutsom_metrics"]
+            m["name"]: m["greater_is_better"]
+            for m in (self.step_config.get("metrics") or {}).get("custom", [])
         }
         gib_map = {**_GREATER_IS_BETTER_MAP, **custom_metrics_gib_map}
         summary = {}
-        for metric in metric_list:
-            metric_name = metric["metric"]
+        for val_criterion in validation_criteria:
+            metric_name = val_criterion["metric"]
             metric_val = metrics.get(metric_name)
             if metric_val is None:
                 summary[metric_name] = False
                 continue
             comp_func = operator.ge if gib_map[metric_name] else operator.le
-            metric_threshold = metric["threshold"]
-            summary[metric_name] = comp_func(metric_val, metric_threshold)
+            threshold = val_criterion["threshold"]
+            summary[metric_name] = comp_func(metric_val, threshold)
         return summary
 
     def _run(self, output_directory):
@@ -105,7 +105,7 @@ class EvaluateStep(BaseStep):
             custom_metrics_module = _import_source_file(custom_metrics_path, "custom_metrics")
             custom_metrics = [
                 getattr(custom_metrics_module, cm["function"])
-                for cm in self.step_config["cutsom_metrics"]
+                for cm in self.step_config["metrics"].get("custom")
             ]
         else:
             custom_metrics = None
@@ -124,13 +124,12 @@ class EvaluateStep(BaseStep):
             eval_result.save(output_directory)
 
         # Apply metric success criteria and log `is_validated` result
-        metrics = self.step_config.get("metrics", [])
-        if metrics:
-            criteria_summary = self._assess_metric_criteria(eval_result.metrics, metrics)
+        validation_criteria = self.step_config.get("validation_criteria")
+        if validation_criteria:
+            criteria_summary = self._check_validation_criteria(
+                eval_result.metrics, validation_criteria
+            )
             self.status = "VALIDATED" if all(criteria_summary.values()) else "REJECTED"
-
-        card = SplitCard()
-        Path(output_directory, "card.html").write_text(card.to_html())
 
     def inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
@@ -140,13 +139,13 @@ class EvaluateStep(BaseStep):
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
         try:
-            step_config = {"metrics": pipeline_config["steps"]["evaluate"]}
+            step_config = pipeline_config["steps"]["evaluate"]
         except KeyError:
             raise MlflowException(
                 "Config for evaluate step is not found.", error_code=INVALID_PARAMETER_VALUE
             )
         step_config[EvaluateStep._TRACKING_URI_CONFIG_KEY] = "/tmp/mlruns"
-        step_config["cutsom_metrics"] = pipeline_config["metrics"]
+        step_config["metrics"] = pipeline_config.get("metrics")
         return cls(step_config, pipeline_root)
 
     @property
