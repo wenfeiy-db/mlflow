@@ -101,7 +101,7 @@ class _Dataset:
                                (i.e. the `data` section of pipeline.yaml).
         :param key: The key within the dataset configuration for which to fetch the associated
                     value.
-        :return: The value associated with the specified configuration key. 
+        :return: The value associated with the specified configuration key.
         """
         try:
             return dataset_config[key]
@@ -144,7 +144,9 @@ class _LocationBasedDataset(_Dataset):
         )
 
     @staticmethod
-    def _sanitize_local_dataset_location_if_necessary(dataset_location: str, pipeline_root: str) -> str:
+    def _sanitize_local_dataset_location_if_necessary(
+        dataset_location: str, pipeline_root: str
+    ) -> str:
         """
         Checks whether or not the specified `dataset_location` is a local filesystem location and,
         if it is, converts it to an absolute path if it is not already absolute.
@@ -200,9 +202,9 @@ class _PandasParseableDataset(_LocationBasedDataset):
                     raise MlflowException(
                         message=(
                             "Did not find any data files with the specified format"
-                           f" '{self.dataset_format}' in the resolved data directory with path"
-                           f" '{local_dataset_path}'. Directory contents:"
-                           f" {os.listdir(local_dataset_path)}."
+                            f" '{self.dataset_format}' in the resolved data directory with path"
+                            f" '{local_dataset_path}'. Directory contents:"
+                            f" {os.listdir(local_dataset_path)}."
                         ),
                         error_code=INVALID_PARAMETER_VALUE,
                     )
@@ -235,7 +237,7 @@ class _PandasParseableDataset(_LocationBasedDataset):
     @abstractmethod
     def _load_file_as_pandas_dataframe(self, local_data_file_path: str):
         """
-        Loads the specified file as a Pandas DataFrame. 
+        Loads the specified file as a Pandas DataFrame.
 
         :param local_data_file_path: The local filesystem path of the file to load.
         :return: A Pandas DataFrame representation of the specified file.
@@ -250,7 +252,7 @@ class _PandasParseableDataset(_LocationBasedDataset):
 
 class ParquetDataset(_PandasParseableDataset):
     """
-    Representation of a dataset in parquet format with files having the `.parquet` extension. 
+    Representation of a dataset in parquet format with files having the `.parquet` extension.
     """
 
     def _load_file_as_pandas_dataframe(self, local_data_file_path: str):
@@ -268,7 +270,9 @@ class CustomDataset(_PandasParseableDataset):
     and convert the dataset to parquet format.
     """
 
-    def __init__(self, location: str, dataset_format: str, custom_loader_method: str, pipeline_root: str):
+    def __init__(
+        self, location: str, dataset_format: str, custom_loader_method: str, pipeline_root: str
+    ):
         """
         :param location: The location of the dataset
                          (e.g. '/tmp/myfile.parquet', './mypath', 's3://mybucket/mypath', ...).
@@ -299,8 +303,8 @@ class CustomDataset(_PandasParseableDataset):
             raise MlflowException(
                 message=(
                     "Failed to import custom dataset loader function"
-                   f" '{self.custom_loader_module_name}.{self.custom_loader_method_name}' for"
-                   f" ingesting dataset with format '{self.dataset_format}'. Exception: {e}",
+                    f" '{self.custom_loader_module_name}.{self.custom_loader_method_name}' for"
+                    f" ingesting dataset with format '{self.dataset_format}'. Exception: {e}",
                 ),
                 error_code=BAD_REQUEST,
             ) from None
@@ -371,7 +375,7 @@ class _SparkDatasetMixin:
 
 class DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
     """
-    Representation of a dataset in delta format with files having the `.delta` extension. 
+    Representation of a dataset in delta format with files having the `.delta` extension.
     """
 
     def resolve_to_parquet(self, dst_path: str):
@@ -390,7 +394,7 @@ class DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
 class SparkSqlDataset(_SparkDatasetMixin, _Dataset):
     """
     Representation of a Spark SQL dataset defined by a Spark SQL query string
-    (e.g. `SELECT * FROM my_spark_table`). 
+    (e.g. `SELECT * FROM my_spark_table`).
     """
 
     def __init__(self, sql: str, dataset_format: str):
