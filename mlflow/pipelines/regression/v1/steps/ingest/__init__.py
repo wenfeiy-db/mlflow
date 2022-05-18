@@ -47,7 +47,7 @@ class IngestStep(BaseStep):
             )
 
         for dataset_class in IngestStep._SUPPORTED_DATASETS:
-            if dataset_class.matches_format(dataset_format):
+            if dataset_class.handles_format(dataset_format):
                 self.dataset = dataset_class.from_config(
                     dataset_config=step_config,
                     pipeline_root=pipeline_root,
