@@ -130,7 +130,7 @@ class Pipeline:
     def inspect(self) -> None:
         from IPython.core.display import display, HTML
 
-        path = os.path.join(os.path.dirname(__file__), "DAG.html")
+        path = os.path.join(os.path.dirname(__file__), "DAG/DAG.html")
         filePath = f"file:///{path}?"
 
         if _is_running_from_ipython():
