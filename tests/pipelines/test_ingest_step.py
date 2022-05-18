@@ -380,3 +380,40 @@ def test_ingest_throws_when_required_dataset_config_keys_are_missing():
             },
             pipeline_root=os.getcwd(),
         )
+
+
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingest_throws_when_dataset_files_have_wrong_format(pandas_df, tmp_path):
+    dataset_path = tmp_path / "df.csv"
+    pandas_df.to_csv(dataset_path)
+
+    with pytest.raises(MlflowException, match="Resolved data file.*does not have the expected format"):
+        IngestStep.from_pipeline_config(
+            pipeline_config={
+                "data": {
+                    # Intentionally use an incorrect format that doesn't match the dataset
+                    "format": "parquet",
+                    "location": str(dataset_path),
+                }
+            },
+            pipeline_root=os.getcwd(),
+        ).run(output_directory=tmp_path)
+
+    dataset_path = tmp_path / "dataset"
+    dataset_path.mkdir()
+    pandas_df_part1 = pandas_df[:1]
+    pandas_df_part2 = pandas_df[1:]
+    pandas_df_part1.to_csv(dataset_path / "df1.csv")
+    pandas_df_part2.to_csv(dataset_path / "df2.csv")
+
+    with pytest.raises(MlflowException, match="Did not find any data files with the specified format"):
+        IngestStep.from_pipeline_config(
+            pipeline_config={
+                "data": {
+                    # Intentionally use an incorrect format that doesn't match the dataset
+                    "format": "parquet",
+                    "location": str(dataset_path),
+                }
+            },
+            pipeline_root=os.getcwd(),
+        ).run(output_directory=tmp_path)
