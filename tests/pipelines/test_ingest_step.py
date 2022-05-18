@@ -387,7 +387,9 @@ def test_ingest_throws_when_dataset_files_have_wrong_format(pandas_df, tmp_path)
     dataset_path = tmp_path / "df.csv"
     pandas_df.to_csv(dataset_path)
 
-    with pytest.raises(MlflowException, match="Resolved data file.*does not have the expected format"):
+    with pytest.raises(
+        MlflowException, match="Resolved data file.*does not have the expected format"
+    ):
         IngestStep.from_pipeline_config(
             pipeline_config={
                 "data": {
@@ -406,7 +408,9 @@ def test_ingest_throws_when_dataset_files_have_wrong_format(pandas_df, tmp_path)
     pandas_df_part1.to_csv(dataset_path / "df1.csv")
     pandas_df_part2.to_csv(dataset_path / "df2.csv")
 
-    with pytest.raises(MlflowException, match="Did not find any data files with the specified format"):
+    with pytest.raises(
+        MlflowException, match="Did not find any data files with the specified format"
+    ):
         IngestStep.from_pipeline_config(
             pipeline_config={
                 "data": {
