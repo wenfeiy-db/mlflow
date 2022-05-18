@@ -1,6 +1,5 @@
 import logging
 import os
-from abc import abstractmethod
 
 from mlflow.exceptions import MlflowException
 from mlflow.pipelines.step import BaseStep
@@ -149,7 +148,13 @@ class IngestStep(BaseStep):
         return card
 
     @staticmethod
-    def _get_dataset_size(dataset_path):
+    def _get_dataset_size(dataset_path: str) -> str:
+        """
+        Obtains the size of the specified parquet dataset file.
+
+        :param dataset_path: The local filesystem path to the parquet dataset file.
+        :return: A human-readable string representation of the size of the specified dataset.
+        """
         kb = 10**3
         mb = 10**6
         gb = 10**9
@@ -167,9 +172,10 @@ class IngestStep(BaseStep):
     def inspect(self, output_directory):
         parquet_dataset_path = os.path.join(output_directory, IngestStep._DATASET_OUTPUT_NAME)
         return IngestStep._build_step_card(
-            dataset_src_location=self.dataset_location,
             ingested_parquet_dataset_path=parquet_dataset_path,
-        )
+            dataset_src_location=getattr(self.dataset, "location", None),
+            dataset_sql=getattr(self.dataset, "sql", None),
+        ).display()
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):

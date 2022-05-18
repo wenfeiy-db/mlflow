@@ -304,10 +304,10 @@ class CustomDataset(_PandasParseableDataset):
                 message=(
                     "Failed to import custom dataset loader function"
                     f" '{self.custom_loader_module_name}.{self.custom_loader_method_name}' for"
-                    f" ingesting dataset with format '{self.dataset_format}'. Exception: {e}",
+                    f" ingesting dataset with format '{self.dataset_format}'.",
                 ),
                 error_code=BAD_REQUEST,
-            ) from None
+            ) from e
 
         try:
             return custom_loader_method(local_data_file_path, self.dataset_format)

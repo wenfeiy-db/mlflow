@@ -1,10 +1,12 @@
 import os
-import pytest
 import shutil
+from unittest import mock
 
 import pandas as pd
+import pytest
 from pyspark.sql import SparkSession
 
+from mlflow.exceptions import MlflowException
 from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 from mlflow.store.artifact.s3_artifact_repo import S3ArtifactRepository
 from mlflow.utils.file_utils import TempDir
@@ -69,10 +71,8 @@ def spark_df(spark_session):
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
 @pytest.mark.parametrize("multiple_files", [False, True])
-def test_ingests_parquet_successfully(
-    enter_ingest_test_pipeline_directory, use_relative_path, multiple_files, pandas_df, tmp_path
-):
-    ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingests_parquet_successfully(use_relative_path, multiple_files, pandas_df, tmp_path):
     if multiple_files:
         dataset_path = tmp_path / "dataset"
         dataset_path.mkdir()
@@ -94,7 +94,7 @@ def test_ingests_parquet_successfully(
                 "location": str(dataset_path),
             }
         },
-        pipeline_root=ingest_test_pipeline_root_path,
+        pipeline_root=os.getcwd(),
     ).run(output_directory=tmp_path)
 
     reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
@@ -103,10 +103,8 @@ def test_ingests_parquet_successfully(
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
 @pytest.mark.parametrize("multiple_files", [False, True])
-def test_ingests_csv_successfully(
-    enter_ingest_test_pipeline_directory, use_relative_path, multiple_files, pandas_df, tmp_path
-):
-    ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingests_csv_successfully(use_relative_path, multiple_files, pandas_df, tmp_path):
     if multiple_files:
         dataset_path = tmp_path / "dataset"
         dataset_path.mkdir()
@@ -129,7 +127,7 @@ def test_ingests_csv_successfully(
                 "custom_loader_method": "steps.ingest.load_file_as_dataframe",
             }
         },
-        pipeline_root=ingest_test_pipeline_root_path,
+        pipeline_root=os.getcwd(),
     ).run(output_directory=tmp_path)
 
     reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
@@ -142,10 +140,8 @@ def custom_load_file_as_dataframe(file_path, file_format):  # pylint: disable=un
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
 @pytest.mark.parametrize("multiple_files", [False, True])
-def test_ingests_custom_format_successfully(
-    enter_ingest_test_pipeline_directory, use_relative_path, multiple_files, pandas_df, tmp_path
-):
-    ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingests_custom_format_successfully(use_relative_path, multiple_files, pandas_df, tmp_path):
     if multiple_files:
         dataset_path = tmp_path / "dataset"
         dataset_path.mkdir()
@@ -168,17 +164,15 @@ def test_ingests_custom_format_successfully(
                 "custom_loader_method": "tests.pipelines.test_ingest_step.custom_load_file_as_dataframe",
             }
         },
-        pipeline_root=ingest_test_pipeline_root_path,
+        pipeline_root=os.getcwd(),
     ).run(output_directory=tmp_path)
 
     reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
     pd.testing.assert_frame_equal(reloaded_df, pandas_df)
 
 
-def test_ingests_remote_datasets_successfully(
-    enter_ingest_test_pipeline_directory, mock_s3_bucket, pandas_df, tmp_path
-):
-    ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingests_remote_datasets_successfully(mock_s3_bucket, pandas_df, tmp_path):
     dataset_path = tmp_path / "df.parquet"
     pandas_df.to_parquet(dataset_path)
     S3ArtifactRepository(f"s3://{mock_s3_bucket}").log_artifact(str(dataset_path))
@@ -190,15 +184,15 @@ def test_ingests_remote_datasets_successfully(
                 "location": f"s3://{mock_s3_bucket}/df.parquet",
             }
         },
-        pipeline_root=ingest_test_pipeline_root_path,
+        pipeline_root=os.getcwd(),
     ).run(output_directory=tmp_path)
 
     reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
     pd.testing.assert_frame_equal(reloaded_df, pandas_df)
 
 
-def test_ingests_spark_sql_successfully(enter_ingest_test_pipeline_directory, spark_df, tmp_path):
-    ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingests_spark_sql_successfully(spark_df, tmp_path):
     spark_df.write.saveAsTable("test_table")
 
     IngestStep.from_pipeline_config(
@@ -208,7 +202,7 @@ def test_ingests_spark_sql_successfully(enter_ingest_test_pipeline_directory, sp
                 "sql": "SELECT * FROM test_table ORDER BY id",
             }
         },
-        pipeline_root=ingest_test_pipeline_root_path,
+        pipeline_root=os.getcwd(),
     ).run(output_directory=tmp_path)
 
     reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
@@ -216,10 +210,8 @@ def test_ingests_spark_sql_successfully(enter_ingest_test_pipeline_directory, sp
 
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
-def test_ingests_delta_successfully(
-    enter_ingest_test_pipeline_directory, use_relative_path, spark_df, tmp_path
-):
-    ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingests_delta_successfully(use_relative_path, spark_df, tmp_path):
     dataset_path = tmp_path / "test.delta"
     spark_df.write.format("delta").save(str(dataset_path))
     if use_relative_path:
@@ -232,8 +224,91 @@ def test_ingests_delta_successfully(
                 "location": str(dataset_path),
             }
         },
-        pipeline_root=ingest_test_pipeline_root_path,
+        pipeline_root=os.getcwd(),
     ).run(output_directory=tmp_path)
 
     reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
     pd.testing.assert_frame_equal(reloaded_df, spark_df.toPandas())
+
+
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingest_throws_when_dataset_format_unspecified():
+    with pytest.raises(MlflowException, match="Dataset format must be specified"):
+        IngestStep.from_pipeline_config(
+            pipeline_config={
+                "data": {
+                    "location": "my_location",
+                }
+            },
+            pipeline_root=os.getcwd(),
+        )
+
+
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingest_throws_when_data_section_unspecified():
+    with pytest.raises(MlflowException, match="The `data` section.*must be specified"):
+        IngestStep.from_pipeline_config(
+            pipeline_config={},
+            pipeline_root=os.getcwd(),
+        )
+
+
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingest_throws_when_required_dataset_config_keys_are_missing():
+    with pytest.raises(MlflowException, match="The `location` configuration key must be specified"):
+        IngestStep.from_pipeline_config(
+            pipeline_config={
+                "data": {
+                    "format": "parquet",
+                    # Missing location
+                }
+            },
+            pipeline_root=os.getcwd(),
+        )
+
+    with pytest.raises(MlflowException, match="The `sql` configuration key must be specified"):
+        IngestStep.from_pipeline_config(
+            pipeline_config={
+                "data": {
+                    "format": "spark_sql",
+                    # Missing sql
+                }
+            },
+            pipeline_root=os.getcwd(),
+        )
+
+    with pytest.raises(
+        MlflowException, match="The `custom_loader_method` configuration key must be specified"
+    ):
+        IngestStep.from_pipeline_config(
+            pipeline_config={
+                "data": {
+                    "format": "csv",
+                    "location": "my/dataset.csv",
+                    # Missing custom_loader_method
+                }
+            },
+            pipeline_root=os.getcwd(),
+        )
+
+
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingest_throws_when_spark_unavailable_for_spark_based_dataset(spark_df, tmp_path):
+    dataset_path = tmp_path / "test.delta"
+    spark_df.write.format("delta").save(str(dataset_path))
+
+    with mock.patch(
+        "mlflow.pipelines.regression.v1.steps.ingest.datasets._get_active_spark_session",
+        side_effect=Exception("Spark unavailable"),
+    ), pytest.raises(
+        MlflowException, match="Encountered an error while searching for an active Spark session"
+    ):
+        IngestStep.from_pipeline_config(
+            pipeline_config={
+                "data": {
+                    "format": "delta",
+                    "location": str(dataset_path),
+                }
+            },
+            pipeline_root=os.getcwd(),
+        ).run(output_directory=tmp_path)
