@@ -4,11 +4,11 @@ import os
 import pathlib
 import sys
 from abc import abstractmethod
-from typing import Dict, Any, TypeVar
+from typing import Dict, Any, List, TypeVar
 
 from mlflow.artifacts import download_artifacts
 from mlflow.exceptions import MlflowException
-from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, BAD_REQUEST, INTERNAL_ERROR
+from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, BAD_REQUEST
 from mlflow.utils.file_utils import (
     TempDir,
     get_local_path_or_none,
@@ -56,10 +56,10 @@ class _Dataset:
                               local filesystem.
         :return: A `_Dataset` instance representing the configured dataset.
         """
-        if not cls.matches_format(dataset_config.get("format")):
+        if not cls.handles_format(dataset_config.get("format")):
             raise MlflowException(
                 f"Invalid format {dataset_config.get('format')} for dataset {cls}",
-                error_code=INTERNAL_ERROR,
+                error_code=INVALID_PARAMETER_VALUE,
             )
         return cls._from_config(dataset_config, pipeline_root)
 
@@ -80,7 +80,7 @@ class _Dataset:
 
     @staticmethod
     @abstractmethod
-    def matches_format(dataset_format: str) -> bool:
+    def handles_format(dataset_format: str) -> bool:
         """
         Determines whether or not the dataset class is a compatible representation of the
         specified dataset format.
@@ -156,12 +156,12 @@ class _LocationBasedDataset(_Dataset):
                               filesystem.
         :return: The sanitized dataset location.
         """
-        local_dataset_path_or_uri_or_none = get_local_path_or_none(path_or_uri=dataset_location)
-        if local_dataset_path_or_uri_or_none is None:
+        local_dataset_path_or_none = get_local_path_or_none(path_or_uri=dataset_location)
+        if local_dataset_path_or_none is None:
             return dataset_location
 
         # If the local dataset path is a file: URI, convert it to a filesystem path
-        local_dataset_path = local_file_uri_to_path(uri=local_dataset_path_or_uri_or_none)
+        local_dataset_path = local_file_uri_to_path(uri=local_dataset_path_or_none)
         local_dataset_path = pathlib.Path(local_dataset_path)
         if local_dataset_path.is_absolute():
             return str(local_dataset_path)
@@ -173,19 +173,19 @@ class _LocationBasedDataset(_Dataset):
 
     @staticmethod
     @abstractmethod
-    def matches_format(dataset_format: str) -> bool:
+    def handles_format(dataset_format: str) -> bool:
         pass
 
 
-class _PandasParseableDataset(_LocationBasedDataset):
+class _DownloadThenConvertDataset(_LocationBasedDataset):
     """
-    Base class representing a location-based ingestable dataset that can be parsed and converted to
-    parquet using a series of Pandas DataFrame ``read_*`` and ``concat`` operations.
+    Base class representing a location-based ingestible dataset that is resolved in two distinct
+    phases: 1. Download the dataset files to the local filesystem. 2. Convert the dataset to parquet
+    format. `_DownloadThenConvertDataset` implements phase (1) and provides an abstract method
+    for phase (2).
     """
 
     def resolve_to_parquet(self, dst_path: str):
-        import pandas as pd
-
         with TempDir(chdr=True) as tmpdir:
             _logger.info("Resolving input data from '%s'", self.location)
             local_dataset_path = download_artifacts(
@@ -221,18 +221,46 @@ class _PandasParseableDataset(_LocationBasedDataset):
 
             _logger.info("Resolved input data to '%s'", local_dataset_path)
             _logger.info("Converting dataset to parquet format, if necessary")
-            aggregated_dataframe = None
-            for data_file_path in data_file_paths:
-                data_file_as_dataframe = self._load_file_as_pandas_dataframe(
-                    local_data_file_path=data_file_path,
-                )
-                aggregated_dataframe = (
-                    pd.concat([aggregated_dataframe, data_file_as_dataframe])
-                    if aggregated_dataframe is not None
-                    else data_file_as_dataframe
-                )
+            return self._convert_to_parquet(
+                dataset_file_paths=dataset_file_paths,
+                dst_path=dst_path,
+            )
 
-            write_pandas_df_as_parquet(df=aggregated_dataframe, data_parquet_path=dst_path)
+    @abstractmethod
+    def _convert_to_parquet(self, dataset_file_paths: List[str], dst_path: str):
+        """
+        Converts the specified dataset files to parquet format and aggregates them together,
+        writing the consolidated parquet file to the specified destination path.
+
+        :param dataset_file_paths: A list of local filesystem of dataset files to convert to
+                                   parquet format.
+        :param dst_path: The local filesystem path at which to store the resolved parquet dataset
+                         (e.g. `<execution_directory_path>/steps/ingest/outputs/dataset.parquet`).
+        """
+        pass
+
+
+class _PandasConvertibleDataset(_DownloadThenConvertDataset):
+    """
+    Base class representing a location-based ingestable dataset that can be parsed and converted to
+    parquet using a series of Pandas DataFrame ``read_*`` and ``concat`` operations.
+    """
+
+    def _convert_to_parquet(self, dataset_file_paths: List[str], dst_path: str):
+        import pandas as pd
+
+        aggregated_dataframe = None
+        for data_file_path in dataset_file_paths:
+            data_file_as_dataframe = self._load_file_as_pandas_dataframe(
+                local_data_file_path=data_file_path,
+            )
+            aggregated_dataframe = (
+                pd.concat([aggregated_dataframe, data_file_as_dataframe])
+                if aggregated_dataframe is not None
+                else data_file_as_dataframe
+            )
+
+        write_pandas_df_as_parquet(df=aggregated_dataframe, data_parquet_path=dst_path)
 
     @abstractmethod
     def _load_file_as_pandas_dataframe(self, local_data_file_path: str):
@@ -246,11 +274,11 @@ class _PandasParseableDataset(_LocationBasedDataset):
 
     @staticmethod
     @abstractmethod
-    def matches_format(dataset_format: str) -> bool:
+    def handles_format(dataset_format: str) -> bool:
         pass
 
 
-class ParquetDataset(_PandasParseableDataset):
+class ParquetDataset(_PandasConvertibleDataset):
     """
     Representation of a dataset in parquet format with files having the `.parquet` extension.
     """
@@ -259,11 +287,11 @@ class ParquetDataset(_PandasParseableDataset):
         return read_parquet_as_pandas_df(data_parquet_path=local_data_file_path)
 
     @staticmethod
-    def matches_format(dataset_format: str) -> bool:
+    def handles_format(dataset_format: str) -> bool:
         return dataset_format == "parquet"
 
 
-class CustomDataset(_PandasParseableDataset):
+class CustomDataset(_PandasConvertibleDataset):
     """
     Representation of a location-based dataset with files containing a consistent, custom
     extension (e.g. 'csv', 'csv.gz', 'json', ...), as well as a custom function used to load
@@ -344,7 +372,7 @@ class CustomDataset(_PandasParseableDataset):
         )
 
     @staticmethod
-    def matches_format(dataset_format: str) -> bool:
+    def handles_format(dataset_format: str) -> bool:
         return dataset_format is not None
 
 
@@ -387,7 +415,7 @@ class DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
         spark_df.write.parquet(dst_path)
 
     @staticmethod
-    def matches_format(dataset_format: str) -> bool:
+    def handles_format(dataset_format: str) -> bool:
         return dataset_format == "delta"
 
 
@@ -419,5 +447,5 @@ class SparkSqlDataset(_SparkDatasetMixin, _Dataset):
         )
 
     @staticmethod
-    def matches_format(dataset_format: str) -> bool:
+    def handles_format(dataset_format: str) -> bool:
         return dataset_format == "spark_sql"
