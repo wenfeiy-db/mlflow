@@ -68,28 +68,12 @@ class EvaluateStep(BaseStep):
     def _run(self, output_directory):
         import pandas as pd
 
-        pipeline_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
-            step_name="train",
-            relative_path="pipeline.pkl",
-        )
-        with open(pipeline_path, "rb") as f:
-            pipeline = cloudpickle.load(f)
-
-        train_data_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
-            step_name="split",
-            relative_path="train.parquet",
-        )
         test_data_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
             step_name="split",
             relative_path="test.parquet",
         )
-        train_data = pd.read_parquet(train_data_path)
         test_data = pd.read_parquet(test_data_path)
-        X_train = train_data.drop(columns=[self.target_col])
-        X_test = test_data.drop(columns=[self.target_col])
 
         run_id_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
