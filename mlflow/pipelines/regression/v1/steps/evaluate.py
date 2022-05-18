@@ -47,11 +47,28 @@ class EvaluateStep(BaseStep):
         self.target_col = self.pipeline_config.get("target_col")
         self.status = "UNKNOWN"
 
+    def _get_custom_metrics(self):
+        return (self.step_config.get("metrics") or {}).get("custom")
+
+    def _get_custom_metrics_gib_map(self):
+        custom_metrics = self._get_custom_metrics()
+        if not custom_metrics:
+            return None
+        return {cm["name"]: cm["greater_is_better"] for cm in custom_metrics}
+
+    def _get_custom_metric_functions(self):
+        custom_metrics = self._get_custom_metrics()
+        if not custom_metrics:
+            return None
+        custom_metrics_path = Path(self.pipeline_root, "steps", "custom_metrics.py")
+        custom_metrics_module = _import_source_file(custom_metrics_path, "custom_metrics")
+        return [
+            getattr(custom_metrics_module, cm["function"])
+            for cm in self.step_config["metrics"].get("custom")
+        ]
+
     def _check_validation_criteria(self, metrics, validation_criteria):
-        custom_metrics_gib_map = {
-            m["name"]: m["greater_is_better"]
-            for m in (self.step_config.get("metrics") or {}).get("custom", [])
-        }
+        custom_metrics_gib_map = self._get_custom_metrics_gib_map() or {}
         gib_map = {**_BUILTIN_METRIC_TO_GREATER_IS_BETTER, **custom_metrics_gib_map}
         summary = {}
         for val_criterion in validation_criteria:
@@ -85,16 +102,6 @@ class EvaluateStep(BaseStep):
 
         mlflow.set_experiment("demo")  # hardcoded
 
-        custom_metrics_path = Path(self.pipeline_root, "steps", "custom_metrics.py")
-        if custom_metrics_path.exists():
-            custom_metrics_module = _import_source_file(custom_metrics_path, "custom_metrics")
-            custom_metrics = [
-                getattr(custom_metrics_module, cm["function"])
-                for cm in self.step_config["metrics"].get("custom")
-            ]
-        else:
-            custom_metrics = None
-
         with mlflow.start_run(run_id=run_id):
             model_uri = mlflow.get_artifact_uri("model")
             eval_result = mlflow.evaluate(
@@ -104,11 +111,10 @@ class EvaluateStep(BaseStep):
                 model_type="regressor",
                 evaluators="default",
                 dataset_name="validation",
-                custom_metrics=custom_metrics,
+                custom_metrics=self._get_custom_metric_functions(),
             )
             eval_result.save(output_directory)
 
-        # Apply metric success criteria and log `is_validated` result
         validation_criteria = self.step_config.get("validation_criteria")
         if validation_criteria:
             criteria_summary = self._check_validation_criteria(
