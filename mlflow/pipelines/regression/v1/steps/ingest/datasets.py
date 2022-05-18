@@ -180,8 +180,9 @@ class _LocationBasedDataset(_Dataset):
 class _DownloadThenConvertDataset(_LocationBasedDataset):
     """
     Base class representing a location-based ingestible dataset that is resolved in two distinct
-    phases: 1. Download the dataset files to the local filesystem. 2. Convert the dataset to parquet
-    format. `_DownloadThenConvertDataset` implements phase (1) and provides an abstract method
+    phases: 1. Download the dataset files to the local filesystem. 2. Convert the dataset files to
+    parquet format, aggregating them together as a single parquet file.
+    `_DownloadThenConvertDataset` implements phase (1) and provides an abstract method
     for phase (2).
     """
 
@@ -195,10 +196,10 @@ class _DownloadThenConvertDataset(_LocationBasedDataset):
             if os.path.isdir(local_dataset_path):
                 # NB: Sort the file names alphanumerically to ensure a consistent
                 # ordering across invocations
-                data_file_paths = sorted(
+                dataset_file_paths = sorted(
                     list(pathlib.Path(local_dataset_path).glob(f"*.{self.dataset_format}"))
                 )
-                if len(data_file_paths) == 0:
+                if len(dataset_file_paths) == 0:
                     raise MlflowException(
                         message=(
                             "Did not find any data files with the specified format"
@@ -217,7 +218,7 @@ class _DownloadThenConvertDataset(_LocationBasedDataset):
                         ),
                         error_code=INVALID_PARAMETER_VALUE,
                     )
-                data_file_paths = [local_dataset_path]
+                dataset_file_paths = [local_dataset_path]
 
             _logger.info("Resolved input data to '%s'", local_dataset_path)
             _logger.info("Converting dataset to parquet format, if necessary")
