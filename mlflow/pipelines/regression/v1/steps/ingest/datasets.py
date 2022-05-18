@@ -304,10 +304,10 @@ class CustomDataset(_PandasParseableDataset):
                 message=(
                     "Failed to import custom dataset loader function"
                     f" '{self.custom_loader_module_name}.{self.custom_loader_method_name}' for"
-                    f" ingesting dataset with format '{self.dataset_format}'. Exception: {e}",
+                    f" ingesting dataset with format '{self.dataset_format}'.",
                 ),
                 error_code=BAD_REQUEST,
-            ) from None
+            ) from e
 
         try:
             return custom_loader_method(local_data_file_path, self.dataset_format)
@@ -327,10 +327,10 @@ class CustomDataset(_PandasParseableDataset):
                 message=(
                     f"Unable to load data file at path '{local_data_file_path}' with format"
                     f" '{self.dataset_format}' using custom loader method"
-                    f" '{custom_loader_method.__name__}'. Encountered exception: {e}"
+                    f" '{custom_loader_method.__name__}'."
                 ),
                 error_code=BAD_REQUEST,
-            ) from None
+            ) from e
 
     @classmethod
     def _from_config(cls, dataset_config: Dict[str, Any], pipeline_root: str) -> _DatasetType:
@@ -399,8 +399,8 @@ class SparkSqlDataset(_SparkDatasetMixin, _Dataset):
 
     def __init__(self, sql: str, dataset_format: str):
         """
-        :param location: The Spark SQL query string that defines the dataset
-                         (e.g. 'SELECT * FROM my_spark_table').
+        :param sql: The Spark SQL query string that defines the dataset
+                    (e.g. 'SELECT * FROM my_spark_table').
         :param dataset_format: The format of the dataset (e.g. 'csv', 'parquet', ...).
         """
         super().__init__(dataset_format=dataset_format)
