@@ -6,8 +6,10 @@ import pandas as pd
 from pyspark.sql import SparkSession
 
 from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
+from mlflow.store.artifact.s3_artifact_repo import S3ArtifactRepository
 from mlflow.utils.file_utils import TempDir
 
+from tests.helper_functions import mock_s3_bucket
 from tests.pipelines.helper_functions import (
     enter_pipeline_example_directory,
 )
@@ -164,6 +166,28 @@ def test_ingests_custom_format_successfully(
                 "format": "fooformat",
                 "location": str(dataset_path),
                 "custom_loader_method": "tests.pipelines.test_ingest_step.custom_load_file_as_dataframe",
+            }
+        },
+        pipeline_root=ingest_test_pipeline_root_path,
+    ).run(output_directory=tmp_path)
+
+    reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
+    pd.testing.assert_frame_equal(reloaded_df, pandas_df)
+
+
+def test_ingests_remote_datasets_successfully(
+    enter_ingest_test_pipeline_directory, mock_s3_bucket, pandas_df, tmp_path
+):
+    ingest_test_pipeline_root_path = enter_ingest_test_pipeline_directory
+    dataset_path = tmp_path / "df.parquet"
+    pandas_df.to_parquet(dataset_path)
+    S3ArtifactRepository(f"s3://{mock_s3_bucket}").log_artifact(str(dataset_path))
+
+    IngestStep.from_pipeline_config(
+        pipeline_config={
+            "data": {
+                "format": "parquet",
+                "location": f"s3://{mock_s3_bucket}/df.parquet",
             }
         },
         pipeline_root=ingest_test_pipeline_root_path,
