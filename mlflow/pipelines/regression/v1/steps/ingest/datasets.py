@@ -327,10 +327,10 @@ class CustomDataset(_PandasParseableDataset):
                 message=(
                     f"Unable to load data file at path '{local_data_file_path}' with format"
                     f" '{self.dataset_format}' using custom loader method"
-                    f" '{custom_loader_method.__name__}'. Encountered exception: {e}"
+                    f" '{custom_loader_method.__name__}'."
                 ),
                 error_code=BAD_REQUEST,
-            ) from None
+            ) from e
 
     @classmethod
     def _from_config(cls, dataset_config: Dict[str, Any], pipeline_root: str) -> _DatasetType:

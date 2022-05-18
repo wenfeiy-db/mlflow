@@ -172,6 +172,74 @@ def test_ingests_custom_format_successfully(use_relative_path, multiple_files, p
 
 
 @pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingest_throws_for_custom_dataset_when_custom_loader_function_cannot_be_imported(
+    pandas_df, tmp_path
+):
+    dataset_path = tmp_path / "df.fooformat"
+    pandas_df.to_csv(dataset_path, sep="#")
+
+    with pytest.raises(MlflowException, match="Failed to import custom dataset loader function"):
+        IngestStep.from_pipeline_config(
+            pipeline_config={
+                "data": {
+                    "format": "fooformat",
+                    "location": str(dataset_path),
+                    "custom_loader_method": "non.existent.module.non.existent.method",
+                }
+            },
+            pipeline_root=os.getcwd(),
+        ).run(output_directory=tmp_path)
+
+
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingest_throws_for_custom_dataset_when_custom_loader_function_not_implemented_for_format(
+    pandas_df, tmp_path
+):
+    dataset_path = tmp_path / "df.fooformat"
+    pandas_df.to_csv(dataset_path, sep="#")
+
+    with pytest.raises(
+        MlflowException, match="Please update the custom loader method to support this format"
+    ):
+        IngestStep.from_pipeline_config(
+            pipeline_config={
+                "data": {
+                    "format": "fooformat",
+                    "location": str(dataset_path),
+                    "custom_loader_method": "steps.ingest.load_file_as_dataframe",
+                }
+            },
+            pipeline_root=os.getcwd(),
+        ).run(output_directory=tmp_path)
+
+
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingest_throws_for_custom_dataset_when_custom_loader_function_throws_unexpectedly(
+    pandas_df, tmp_path
+):
+    dataset_path = tmp_path / "df.fooformat"
+    pandas_df.to_csv(dataset_path, sep="#")
+
+    with mock.patch(
+        "tests.pipelines.test_ingest_step.custom_load_file_as_dataframe",
+        side_effect=Exception("Failed to load!"),
+    ) as mock_custom_loader, pytest.raises(
+        MlflowException, match="Unable to load data file at path.*using custom loader method"
+    ):
+        setattr(mock_custom_loader, "__name__", "custom_load_file_as_dataframe")
+        IngestStep.from_pipeline_config(
+            pipeline_config={
+                "data": {
+                    "format": "fooformat",
+                    "location": str(dataset_path),
+                    "custom_loader_method": "tests.pipelines.test_ingest_step.custom_load_file_as_dataframe",
+                }
+            },
+            pipeline_root=os.getcwd(),
+        ).run(output_directory=tmp_path)
+
+
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
 def test_ingests_remote_datasets_successfully(mock_s3_bucket, pandas_df, tmp_path):
     dataset_path = tmp_path / "df.parquet"
     pandas_df.to_parquet(dataset_path)
@@ -229,6 +297,28 @@ def test_ingests_delta_successfully(use_relative_path, spark_df, tmp_path):
 
     reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
     pd.testing.assert_frame_equal(reloaded_df, spark_df.toPandas())
+
+
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingest_throws_when_spark_unavailable_for_spark_based_dataset(spark_df, tmp_path):
+    dataset_path = tmp_path / "test.delta"
+    spark_df.write.format("delta").save(str(dataset_path))
+
+    with mock.patch(
+        "mlflow.pipelines.regression.v1.steps.ingest.datasets._get_active_spark_session",
+        side_effect=Exception("Spark unavailable"),
+    ), pytest.raises(
+        MlflowException, match="Encountered an error while searching for an active Spark session"
+    ):
+        IngestStep.from_pipeline_config(
+            pipeline_config={
+                "data": {
+                    "format": "delta",
+                    "location": str(dataset_path),
+                }
+            },
+            pipeline_root=os.getcwd(),
+        ).run(output_directory=tmp_path)
 
 
 @pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
@@ -290,25 +380,3 @@ def test_ingest_throws_when_required_dataset_config_keys_are_missing():
             },
             pipeline_root=os.getcwd(),
         )
-
-
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
-def test_ingest_throws_when_spark_unavailable_for_spark_based_dataset(spark_df, tmp_path):
-    dataset_path = tmp_path / "test.delta"
-    spark_df.write.format("delta").save(str(dataset_path))
-
-    with mock.patch(
-        "mlflow.pipelines.regression.v1.steps.ingest.datasets._get_active_spark_session",
-        side_effect=Exception("Spark unavailable"),
-    ), pytest.raises(
-        MlflowException, match="Encountered an error while searching for an active Spark session"
-    ):
-        IngestStep.from_pipeline_config(
-            pipeline_config={
-                "data": {
-                    "format": "delta",
-                    "location": str(dataset_path),
-                }
-            },
-            pipeline_root=os.getcwd(),
-        ).run(output_directory=tmp_path)
