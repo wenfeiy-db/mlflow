@@ -1,126 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
-<body>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/9.1.1/mermaid.min.js" type="text/javascript" charset="utf-8"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.5.0/ace.js" type="text/javascript" charset="utf-8"></script>
-  <style>
-    .mermaidTooltip{
-      display: none;
-    }
-    .wrapper {
-      display: flex;
-    }
-    .mermaid {
-      width: 80%;
-    }
-    #editor {
-      font-size: 13px;
-      width: 20%;
-    }
-  </style>
-
-  <div class="wrapper">
-    <div class="mermaid">
-        flowchart TB
-          pipeline(pipeline.yaml)
-        subgraph ingest step
-          ingestUserCode([steps/ingest.py]) --> ingestMLPStep[["ingest(data-source, steps/ingest.py)"]]
-          ingestMLPStep --> dataParquet[(data.parquet)]
-        end
-        data[(data.parquet)] --> splitStep[["split(data.parquet, target_column,<br/> split_ratio=(80,20,20), random_seed=42)"]]
-        subgraph split step
-          splitStep --> splitSummary{{train_summary.html <br/> validation_summary.html <br/> test_summary.html}}
-          splitStep --> splitData1[train.parquet, <br> validation.parquet]
-          splitStep --> splitData2[test.parquet]
-        end
-        subgraph transform step
-          splitData1 --> transformMLPStep[["transform(train.parquet, <br/> validation.parquet, <br/> steps/transform.py)"]]
-          transformUserCode([steps/transform.py]) --> transformMLPStep
-          transformMLPStep --> transformSummary{{transform_report.html}}
-          transformMLPStep --> transformedParquet[train_transform.parquet, <br/> validation_transform.parquet]
-          transformMLPStep --> transformer[transformer]
-        end
-        subgraph train step
-          transformedParquet --> trainMLPStep[["train(train_transform.parquet, <br/> validation_transform.parquet, target_column, <br/> transformer, steps/train.py)"]]
-          trainUserCode([steps/train.py]) --> trainMLPStep
-          transformer --> trainMLPStep
-          trainMLPStep --> run{{run}}
-          trainMLPStep --> model{{model}}
-        end
-        subgraph evaluate step
-          model --> evaluateMLPStep[["evaluate(test.parquet, <br/> target_col, <br/> run_id, <br/> transformer, <br/> steps/evaluate.py)"]]
-          evaluateUserCode([steps/evaluate.py]) --> evaluateMLPStep
-          transformer --> evaluateMLPStep
-          splitData2 --> evaluateMLPStep
-          evaluateMLPStep --> evaluateSummary{{eval_summary.html}}
-        end
-
-        click ingestMLPStep renderMoreInformation "def ingest(&#013; data-source: str, &#013; steps/ingest.py: str&#013;)"
-        click ingestUserCode renderMoreInformation "def load_file_as_dataframe(&#013; file_path: str, &#013; file_format: str&#013;) -> Pandas.parquet"
-        click splitStep renderMoreInformation "def split_data(&#013; data: Pandas.parquet, &#013; target_column: str, &#013; split_ratio=(80,20,20), &#013; random_seed=42 &#013;) --> (&#013; train.parquet, &#013; validation.parquet, &#013; test.parquet &#013;)"
-        click transformMLPStep renderMoreInformation "def transform(&#013; train.parquet: Pandas.parquet, &#013; validation.parquet: Pandas.parquet, &#013; steps/transform.py: str&#013;) --> (&#013; train_transform.parquet, &#013; validation_transform.parquet, &#013; transformer &#013;)"
-        click transformUserCode renderMoreInformation "def transform() -> transformer"
-        click trainMLPStep renderMoreInformation "def train(&#013; train_transform.parquet: Pandas.parquet, &#013; validation_transform.parquet: Pandas.parquet, &#013; target_column: str, &#013; transformer, &#013; steps/train.py: str&#013;) --> (model)"
-        click trainUserCode renderMoreInformation "def train() -> model"
-        click evaluateMLPStep renderMoreInformation "def evaluate(&#013; test.parquet: Pandas.parquet, &#013; target_col: str, &#013; run_id: str, &#013; transformer, &#013; steps/evaluate.py: str &#013;) --> (eval_summary.html)"
-        click evaluateUserCode renderMoreInformation "def custom_metric_fns() -> List[Callable]"
-    </div>
-    <div id="editor"></div>
-  </div>
-
-  <script>
-    mermaid.initialize({
-      startOnLoad:true,
-      securityLevel:'loose',
-      theme: (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "default",
-      flowchart:{
-          useMaxWidth:true,
-          htmlLabels:true,
+  <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/9.1.1/mermaid.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.5.0/ace.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+      .mermaidTooltip{
+        display: none;
       }
-    });
-    window.addEventListener('load', function () {
-      const nodes = document.querySelectorAll(".node");
-      [...nodes].forEach((node) => {
-        const nodeTitle = node.getAttribute('title');
-        if(nodeTitle) {
-          const nodeLabel = node.querySelector(".nodeLabel");
-          nodeLabel.setAttribute("title", nodeTitle)
-        }
-      })
-    });
+      .wrapper {
+        display: flex;
+      }
+      .mermaid {
+        width: 60%;
+      }
+      #editor {
+        font-size: 13px;
+        width: 40%;
+      }
+    </style>
 
-    var renderMoreInformation = function(nodeId) {
-      const allNodes = document.querySelector('.nodes').querySelectorAll('[id^="flowchart-"]');
-      [...allNodes].forEach(nodes => {
-        const rect = nodes.firstChild
-        if (rect) {
-          rect.style.stroke = "";
-          rect.style.strokeWidth = "";
-          rect.style.color = "";
-          rect.style.strokeDasharray = "";
+    <div class="wrapper">
+      <div class="mermaid">
+          flowchart TB
+          classDef defaultCursor cursor:help;
+            pipeline(pipeline.yaml)
+          subgraph ingest step
+            direction TB
+            ingestUserCode([steps/ingest.py]) --> ingestMLPStep[["ingest"]]
+            ingestMLPStep --> dataParquet[(data.parquet)]
+          end
+          data[(data.parquet)] --> splitStep[["split"]]
+          subgraph split step
+            splitStep --> splitData1[train.parquet, <br> validation.parquet]
+            splitStep --> splitData2[test.parquet]
+          end
+          subgraph transform step
+            splitData1 --> transformMLPStep[["transform"]]
+            transformUserCode([steps/transform.py]) --> transformMLPStep
+            transformMLPStep --> transformedParquet[transformed_train.parquet, <br/> transformed_validation.parquet]
+          end
+          subgraph train step
+            transformedParquet --> trainMLPStep[["train"]]
+            trainUserCode([steps/train.py]) --> trainMLPStep
+            trainMLPStep --> run{{run}}
+            trainMLPStep --> model{{model}}
+          end
+          subgraph evaluate step
+            model --> evaluateMLPStep[["evaluate"]]
+            evaluateUserCode([steps/evaluate.py]) --> evaluateMLPStep
+            splitData2 --> evaluateMLPStep
+          end
+          class pipeline,data,splitData1,splitData2,transformedParquet,run,model defaultCursor
+
+          click ingestMLPStep renderMoreInformation "  # Dataset locations on the local filesystem are supported, as well as any remote
+  # locations resolvable by MLflow, such as those listed in
+  # https://mlflow.org/docs/latest/tracking.html#artifact-stores
+  location: ./datasets/autos.parquet
+  # The `spark_sql` and `delta` formats are also natively supported for use with Spark
+  format: parquet"
+          click ingestUserCode renderMoreInformation "def load_file_as_dataframe(&#013; file_path: str, &#013; file_format: str&#013;) -> Pandas.parquet"
+          click splitStep renderMoreInformation "  # Should be an array where each value corresponds to [train, validation, test] dataset split.
+  # Each value should be between 0.0 and 1.0 which represent the respective proportion of the dataset to include.
+  split_ratio: [0.75, 0.125, 0.125]"
+          click transformMLPStep renderMoreInformation "# Please override the steps/transform.py for customization"
+          click transformUserCode renderMoreInformation "def transform() -> transformer"
+          click trainMLPStep renderMoreInformation "# Please override the steps/train.py for customization"
+          click trainUserCode renderMoreInformation "def train() -> model"
+          click evaluateMLPStep renderMoreInformation "# Please override the steps/evaluate.py for customization"
+          click evaluateUserCode renderMoreInformation "def custom_metric_fns() -> List[Callable]"
+
+          click pipeline noOp "initial config for the pipeline"
+          click data noOp "data ingested from source"
+          click splitData1 noOp "Outputs splits for training and validation"
+          click splitData2 noOp "Output split for evaluating the model"
+          click transformedParquet noOp "Transformed output of training and validation needed for training"
+          click run noOp "Output run which is tracked in MLFlow"
+          click model noOp "Output model form training"
+
+      </div>
+      <div id="editor"></div>
+    </div>
+
+    <script>
+      mermaid.initialize({
+        startOnLoad:true,
+        securityLevel:'loose',
+        theme: (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "default",
+        flowchart:{
+            useMaxWidth:true,
+            htmlLabels:true,
         }
       });
+      window.addEventListener('load', function () {
+        const nodes = document.querySelectorAll(".node");
+        [...nodes].forEach((node) => {
+          const nodeTitle = node.getAttribute('title');
+          if(nodeTitle) {
+            const nodeLabel = node.querySelector(".nodeLabel");
+            nodeLabel.setAttribute("title", nodeTitle)
+          }
+        })
+      });
 
-      regex = `[id^="flowchart-${nodeId}-"]`
-      const node = document.querySelector(regex);
-      const title = node.getAttribute('title');
+      var noOp = function() {}
+      var renderMoreInformation = function(nodeId) {
+        const allNodes = document.querySelector('.nodes').querySelectorAll('[id^="flowchart-"]');
+        [...allNodes].forEach(nodes => {
+          const rect = nodes.firstChild
+          if (rect) {
+            rect.style.stroke = "";
+            rect.style.strokeWidth = "";
+            rect.style.color = "";
+            rect.style.strokeDasharray = "";
+          }
+        });
 
-      const rect = node.firstChild;
-      rect.style.stroke = "#f66";
-      rect.style.strokeWidth = "2px";
-      rect.style.color = "#fff";
-      rect.style.strokeDasharray = "5 5";
+        regex = `[id^="flowchart-${nodeId}-"]`
+        const node = document.querySelector(regex);
+        const title = node.getAttribute('title');
 
-      if (!window.editor.session) {
-        const editor = ace.edit("editor");
-        editor.setTheme("ace/theme/monokai");
-        editor.session.setMode("ace/mode/python");
-        editor.setReadOnly(true);
-        window.editor = editor;
+        const rect = node.firstChild;
+        rect.style.stroke = "#f66";
+        rect.style.strokeWidth = "2px";
+        rect.style.color = "#fff";
+        rect.style.strokeDasharray = "5 5";
+
+        if (!window.editor.session) {
+          const editor = ace.edit("editor");
+          editor.setTheme("ace/theme/monokai");
+          editor.session.setMode("ace/mode/python");
+          editor.setReadOnly(true);
+          window.editor = editor;
+        }
+        window.editor.setValue(title)
       }
-      window.editor.setValue(title)
-    }
-  </script>
+    </script>
 
-</body>
+  </body>
 </html>

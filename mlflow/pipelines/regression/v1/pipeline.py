@@ -128,10 +128,10 @@ class Pipeline:
         _logger.info("in evaluate step")
 
     def inspect(self) -> None:
-        from IPython.core.display import display, HTML
+        from IPython.display import display, HTML
 
         path = os.path.join(os.path.dirname(__file__), "DAG/DAG.html")
-        filePath = f"file:///{path}?"
+        filePath = f"file:///{path}"
 
         if _is_running_from_ipython():
             display(HTML(filename=path))
@@ -139,4 +139,4 @@ class Pipeline:
             import webbrowser
 
             webbrowser.open_new(filePath)
-            _logger.info(f"The path: {filePath}")
+            _logger.info(f"MLFlow regression v1 pipeline snapshot DAG: {filePath}")
