@@ -4,6 +4,7 @@ import os
 import pathlib
 import sys
 from abc import abstractmethod
+from typing import Dict, Any, TypeVar
 
 from mlflow.artifacts import download_artifacts
 from mlflow.exceptions import MlflowException
@@ -19,47 +20,111 @@ from mlflow.utils._spark_utils import _get_active_spark_session
 
 _logger = logging.getLogger(__name__)
 
+_DatasetType = TypeVar("_Dataset")
+
 
 class _Dataset:
-    def __init__(self, dataset_format):
+    """
+    Base class representing an ingestable dataset.
+    """
+
+    def __init__(self, dataset_format: str):
+        """
+        :param dataset_format: The format of the dataset (e.g. 'csv', 'parquet', ...).
+        """
         self.dataset_format = dataset_format
 
     @abstractmethod
-    def resolve_to_parquet(self, dst_path):
+    def resolve_to_parquet(self, dst_path: str):
+        """
+        Fetches the dataset, converts it to parquet, and stores it at the specified `dst_path`.
+
+        :param dst_path: The local filesystem path at which to store the resolved parquet dataset
+                         (e.g. `<execution_directory_path>/steps/ingest/outputs/dataset.parquet`).
+        """
         pass
 
     @classmethod
-    def from_config(cls, config, pipeline_root):
-        if not cls.matches_format(config.get("format")):
+    def from_config(cls, dataset_config: Dict[str, Any], pipeline_root: str) -> _DatasetType:
+        """
+        Constructs a dataset instance from the specified dataset configuration
+        and pipeline root path.
+
+        :param dataset_config: Dictionary representation of the pipeline dataset configuration
+                               (i.e. the `data` section of pipeline.yaml).
+        :param pipeline_root: The absolute path of the associated pipeline root directory on the
+                              local filesystem.
+        :return: A `_Dataset` instance representing the configured dataset.
+        """
+        if not cls.matches_format(dataset_config.get("format")):
             raise MlflowException(
-                f"Invalid format {config.get('format')} for dataset {cls}",
+                f"Invalid format {dataset_config.get('format')} for dataset {cls}",
                 error_code=INTERNAL_ERROR,
             )
-        return cls._from_config(config, pipeline_root)
+        return cls._from_config(dataset_config, pipeline_root)
 
     @classmethod
     @abstractmethod
-    def _from_config(cls, config, pipeline_root):
+    def _from_config(cls, dataset_config, pipeline_root) -> _DatasetType:
+        """
+        Constructs a dataset instance from the specified dataset configuration
+        and pipeline root path.
+
+        :param dataset_config: Dictionary representation of the pipeline dataset configuration
+                               (i.e. the `data` section of pipeline.yaml).
+        :param pipeline_root: The absolute path of the associated pipeline root directory on the
+                              local filesystem.
+        :return: A `_Dataset` instance representing the configured dataset.
+        """
         pass
 
     @staticmethod
     @abstractmethod
-    def matches_format(dataset_format):
+    def matches_format(dataset_format: str) -> bool:
+        """
+        Determines whether or not the dataset class is a compatible representation of the
+        specified dataset format.
+
+        :param dataset_format: The format of the dataset (e.g. 'csv', 'parquet', ...).
+        :return: `True` if the dataset class is a compatible representation of the specified
+                 dataset format, `False` otherwise.
+        """
         pass
 
     @classmethod
-    def _get_required_config(cls, config, key):
+    def _get_required_config(cls, dataset_config: Dict[str, Any], key: str) -> Any:
+        """
+        Obtains the value associated with the specified dataset configuration key, first verifying
+        that the key is present in the config and throwing if it is not.
+
+        :param dataset_config: Dictionary representation of the pipeline dataset configuration
+                               (i.e. the `data` section of pipeline.yaml).
+        :param key: The key within the dataset configuration for which to fetch the associated
+                    value.
+        :return: The value associated with the specified configuration key. 
+        """
         try:
-            return config[key]
+            return dataset_config[key]
         except KeyError:
             raise MlflowException(
                 f"The `{key}` configuration key must be specified for dataset with"
-                f" format '{config.get('format')}'"
+                f" format '{dataset_config.get('format')}'"
             ) from None
 
 
 class _LocationBasedDataset(_Dataset):
-    def __init__(self, location, dataset_format, pipeline_root):
+    """
+    Base class representing an ingestable dataset with a configurable `location` attribute.
+    """
+
+    def __init__(self, location: str, dataset_format: str, pipeline_root: str):
+        """
+        :param location: The location of the dataset
+                         (e.g. '/tmp/myfile.parquet', './mypath', 's3://mybucket/mypath', ...).
+        :param dataset_format: The format of the dataset (e.g. 'csv', 'parquet', ...).
+        :param pipeline_root: The absolute path of the associated pipeline root directory on the
+                              local filesystem.
+        """
         super().__init__(dataset_format=dataset_format)
         self.location = _LocationBasedDataset._sanitize_local_dataset_location_if_necessary(
             dataset_location=location,
@@ -67,19 +132,28 @@ class _LocationBasedDataset(_Dataset):
         )
 
     @abstractmethod
-    def resolve_to_parquet(self, dst_path):
+    def resolve_to_parquet(self, dst_path: str):
         pass
 
     @classmethod
-    def _from_config(cls, config, pipeline_root):
+    def _from_config(cls, dataset_config: Dict[str, Any], pipeline_root: str) -> _DatasetType:
         return cls(
-            location=cls._get_required_config(config=config, key="location"),
+            location=cls._get_required_config(dataset_config=dataset_config, key="location"),
             pipeline_root=pipeline_root,
-            dataset_format=cls._get_required_config(config=config, key="format"),
+            dataset_format=cls._get_required_config(dataset_config=dataset_config, key="format"),
         )
 
     @staticmethod
-    def _sanitize_local_dataset_location_if_necessary(dataset_location, pipeline_root):
+    def _sanitize_local_dataset_location_if_necessary(dataset_location: str, pipeline_root: str) -> str:
+        """
+        Checks whether or not the specified `dataset_location` is a local filesystem location and,
+        if it is, converts it to an absolute path if it is not already absolute.
+
+        :param dataset_location: The dataset location from the pipeline dataset configuration.
+        :param pipeline_root: The absolute path of the pipeline root directory on the local
+                              filesystem.
+        :return: The sanitized dataset location.
+        """
         local_dataset_path_or_uri_or_none = get_local_path_or_none(path_or_uri=dataset_location)
         if local_dataset_path_or_uri_or_none is None:
             return dataset_location
@@ -97,12 +171,17 @@ class _LocationBasedDataset(_Dataset):
 
     @staticmethod
     @abstractmethod
-    def matches_format(dataset_format):
+    def matches_format(dataset_format: str) -> bool:
         pass
 
 
 class _PandasParseableDataset(_LocationBasedDataset):
-    def resolve_to_parquet(self, dst_path):
+    """
+    Base class representing a location-based ingestable dataset that can be parsed and converted to
+    parquet using a series of Pandas DataFrame ``read_*`` and ``concat`` operations.
+    """
+
+    def resolve_to_parquet(self, dst_path: str):
         import pandas as pd
 
         with TempDir(chdr=True) as tmpdir:
@@ -120,9 +199,10 @@ class _PandasParseableDataset(_LocationBasedDataset):
                 if len(data_file_paths) == 0:
                     raise MlflowException(
                         message=(
-                            f"Did not find any data files with the specified format '{self.dataset_format}'"
-                            f" in the resolved data directory with path '{local_dataset_path}'."
-                            f" Directory contents: {os.listdir(local_dataset_path)}."
+                            "Did not find any data files with the specified format"
+                           f" '{self.dataset_format}' in the resolved data directory with path"
+                           f" '{local_dataset_path}'. Directory contents:"
+                           f" {os.listdir(local_dataset_path)}."
                         ),
                         error_code=INVALID_PARAMETER_VALUE,
                     )
@@ -153,25 +233,52 @@ class _PandasParseableDataset(_LocationBasedDataset):
             write_pandas_df_as_parquet(df=aggregated_dataframe, data_parquet_path=dst_path)
 
     @abstractmethod
-    def _load_file_as_pandas_dataframe(self, local_data_file_path):
+    def _load_file_as_pandas_dataframe(self, local_data_file_path: str):
+        """
+        Loads the specified file as a Pandas DataFrame. 
+
+        :param local_data_file_path: The local filesystem path of the file to load.
+        :return: A Pandas DataFrame representation of the specified file.
+        """
         pass
 
     @staticmethod
     @abstractmethod
-    def matches_format(dataset_format):
+    def matches_format(dataset_format: str) -> bool:
         pass
 
 
 class ParquetDataset(_PandasParseableDataset):
-    def _load_file_as_pandas_dataframe(self, local_data_file_path):
+    """
+    Representation of a dataset in parquet format with files having the `.parquet` extension. 
+    """
+
+    def _load_file_as_pandas_dataframe(self, local_data_file_path: str):
         return read_parquet_as_pandas_df(data_parquet_path=local_data_file_path)
 
-    def matches_format(dataset_format):
+    @staticmethod
+    def matches_format(dataset_format: str) -> bool:
         return dataset_format == "parquet"
 
 
 class CustomDataset(_PandasParseableDataset):
-    def __init__(self, location, dataset_format, custom_loader_method, pipeline_root):
+    """
+    Representation of a location-based dataset with files containing a consistent, custom
+    extension (e.g. 'csv', 'csv.gz', 'json', ...), as well as a custom function used to load
+    and convert the dataset to parquet format.
+    """
+
+    def __init__(self, location: str, dataset_format: str, custom_loader_method: str, pipeline_root: str):
+        """
+        :param location: The location of the dataset
+                         (e.g. '/tmp/myfile.parquet', './mypath', 's3://mybucket/mypath', ...).
+        :param dataset_format: The format of the dataset (e.g. 'csv', 'parquet', ...).
+        :param custom_loader_method: The fully qualified name of the custom loader method used to
+                                     load and convert the dataset to parquet format, e.g.
+                                     `steps.ingest.load_file_as_dataframe`.
+        :param pipeline_root: The absolute path of the associated pipeline root directory on the
+                              local filesystem.
+        """
         super().__init__(
             location=location, dataset_format=dataset_format, pipeline_root=pipeline_root
         )
@@ -181,18 +288,22 @@ class CustomDataset(_PandasParseableDataset):
             self.custom_loader_method_name,
         ) = custom_loader_method.rsplit(".", 1)
 
-    def _load_file_as_pandas_dataframe(self, local_data_file_path):
+    def _load_file_as_pandas_dataframe(self, local_data_file_path: str):
         try:
             sys.path.append(self.pipeline_root)
             custom_loader_method = getattr(
                 importlib.import_module(self.custom_loader_module_name),
                 self.custom_loader_method_name,
             )
-        except Exception:
+        except Exception as e:
             raise MlflowException(
-                message="TODO: FAILED TO LOAD LOADER FUNCTION....",
+                message=(
+                    "Failed to import custom dataset loader function"
+                   f" '{self.custom_loader_module_name}.{self.custom_loader_method_name}' for"
+                   f" ingesting dataset with format '{self.dataset_format}'. Exception: {e}",
+                ),
                 error_code=BAD_REQUEST,
-            )
+            ) from None
 
         try:
             return custom_loader_method(local_data_file_path, self.dataset_format)
@@ -218,27 +329,33 @@ class CustomDataset(_PandasParseableDataset):
             ) from None
 
     @classmethod
-    def _from_config(cls, config, pipeline_root):
+    def _from_config(cls, dataset_config: Dict[str, Any], pipeline_root: str) -> _DatasetType:
         return cls(
-            location=cls._get_required_config(config=config, key="location"),
-            dataset_format=cls._get_required_config(config=config, key="format"),
+            location=cls._get_required_config(dataset_config=dataset_config, key="location"),
+            dataset_format=cls._get_required_config(dataset_config=dataset_config, key="format"),
             custom_loader_method=cls._get_required_config(
-                config=config, key="custom_loader_method"
+                dataset_config=dataset_config, key="custom_loader_method"
             ),
             pipeline_root=pipeline_root,
         )
 
     @staticmethod
-    def matches_format(dataset_format):
+    def matches_format(dataset_format: str) -> bool:
         return dataset_format is not None
 
 
 class _SparkDatasetMixin:
     """
-    TODO: DOCS: MUST BE MIXED INTO A SUBCLASS OF `_DATASET`
+    Mixin class providing Spark-related utilities for Datasets that use Spark for resolution
+    and conversion to parquet format.
     """
 
     def _get_spark_session(self):
+        """
+        Obtains the active Spark session, throwing if a session does not exist.
+
+        :return: The active Spark session.
+        """
         try:
             return _get_active_spark_session()
         except Exception as e:
@@ -253,7 +370,11 @@ class _SparkDatasetMixin:
 
 
 class DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
-    def resolve_to_parquet(self, dst_path):
+    """
+    Representation of a dataset in delta format with files having the `.delta` extension. 
+    """
+
+    def resolve_to_parquet(self, dst_path: str):
         spark_session = self._get_spark_session()
         spark_df = spark_session.read.format("delta").load(self.location)
         if len(spark_df.columns) > 0:
@@ -262,27 +383,37 @@ class DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
         spark_df.write.parquet(dst_path)
 
     @staticmethod
-    def matches_format(dataset_format):
+    def matches_format(dataset_format: str) -> bool:
         return dataset_format == "delta"
 
 
 class SparkSqlDataset(_SparkDatasetMixin, _Dataset):
-    def __init__(self, sql, dataset_format):
+    """
+    Representation of a Spark SQL dataset defined by a Spark SQL query string
+    (e.g. `SELECT * FROM my_spark_table`). 
+    """
+
+    def __init__(self, sql: str, dataset_format: str):
+        """
+        :param location: The Spark SQL query string that defines the dataset
+                         (e.g. 'SELECT * FROM my_spark_table').
+        :param dataset_format: The format of the dataset (e.g. 'csv', 'parquet', ...).
+        """
         super().__init__(dataset_format=dataset_format)
         self.sql = sql
 
-    def resolve_to_parquet(self, dst_path):
+    def resolve_to_parquet(self, dst_path: str):
         spark_session = self._get_spark_session()
         spark_df = spark_session.sql(self.sql)
         spark_df.write.parquet(dst_path)
 
     @classmethod
-    def _from_config(cls, config, pipeline_root):
+    def _from_config(cls, dataset_config: Dict[str, Any], pipeline_root: str) -> _DatasetType:
         return cls(
-            sql=cls._get_required_config(config=config, key="sql"),
-            dataset_format=cls._get_required_config(config=config, key="format"),
+            sql=cls._get_required_config(dataset_config=dataset_config, key="sql"),
+            dataset_format=cls._get_required_config(dataset_config=dataset_config, key="format"),
         )
 
     @staticmethod
-    def matches_format(dataset_format):
+    def matches_format(dataset_format: str) -> bool:
         return dataset_format == "spark_sql"

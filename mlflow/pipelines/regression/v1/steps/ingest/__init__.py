@@ -39,20 +39,23 @@ class IngestStep(BaseStep):
         dataset_format = step_config.get("format")
         if not dataset_format:
             raise MlflowException(
-                message="TODO: NEED FORMAT",
+                message=(
+                    "Dataset format must be specified via the `format` key within the `data`"
+                    " section of pipeline.yaml"
+                ),
                 error_code=INVALID_PARAMETER_VALUE,
             )
 
         for dataset_class in IngestStep._SUPPORTED_DATASETS:
             if dataset_class.matches_format(dataset_format):
                 self.dataset = dataset_class.from_config(
-                    config=step_config,
+                    dataset_config=step_config,
                     pipeline_root=pipeline_root,
                 )
                 break
         else:
             raise MlflowException(
-                "TODO: UNRECOGNIZED FORMAT CATCH-ALL",
+                message=f"Unrecognized dataset format: {dataset_format}",
                 error_code=INVALID_PARAMETER_VALUE,
             )
 
@@ -76,7 +79,13 @@ class IngestStep(BaseStep):
         ingested_parquet_dataset_path, dataset_src_location=None, dataset_sql=None
     ):
         if dataset_src_location is None and dataset_sql is None:
-            raise MlflowException("TODO: MUST SPECIFY ONE", error_code=INTERNAL_ERROR)
+            raise MlflowException(
+                message=(
+                    "Failed to build step card because neither a dataset location nor a"
+                    " dataset Spark SQL query were specified"
+                ),
+                error_code=INTERNAL_ERROR,
+            )
 
         dataset_df = read_parquet_as_pandas_df(data_parquet_path=ingested_parquet_dataset_path)
         card = IngestCard()
@@ -166,7 +175,7 @@ class IngestStep(BaseStep):
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
         if "data" not in pipeline_config:
             raise MlflowException(
-                message="TODO: NEED DATA",
+                message="The `data` section of pipeline.yaml must be specified",
                 error_code=INVALID_PARAMETER_VALUE,
             )
 
