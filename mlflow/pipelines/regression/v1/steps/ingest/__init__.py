@@ -12,6 +12,7 @@ from mlflow.pipelines.regression.v1.steps.ingest.datasets import (
     SparkSqlDataset,
     CustomDataset,
 )
+from typing import Dict, Any
 
 _logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class IngestStep(BaseStep):
         CustomDataset,
     ]
 
-    def __init__(self, step_config, pipeline_root):
+    def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         super().__init__(step_config, pipeline_root)
 
         dataset_format = step_config.get("format")
@@ -58,7 +59,7 @@ class IngestStep(BaseStep):
                 error_code=INVALID_PARAMETER_VALUE,
             )
 
-    def _run(self, output_directory):
+    def _run(self, output_directory: str):
         dataset_dst_path = os.path.abspath(
             os.path.join(output_directory, IngestStep._DATASET_OUTPUT_NAME)
         )
@@ -75,8 +76,23 @@ class IngestStep(BaseStep):
 
     @staticmethod
     def _build_step_card(
-        ingested_parquet_dataset_path, dataset_src_location=None, dataset_sql=None
+        ingested_parquet_dataset_path: str, dataset_src_location: str = None, dataset_sql: str = None
     ):
+        """
+        Constructs a step card instance corresponding to the current ingest step state.
+
+        :param ingested_parquet_dataset_path: The local filesystem path to the ingested parquet
+                                              dataset file.
+        :param dataset_src_location: The source location of the dataset
+                                     (e.g. '/tmp/myfile.parquet', 's3://mybucket/mypath', ...),
+                                     if the dataset is a location-based dataset. Either
+                                     ``dataset_src_location`` or ``dataset_sql`` must be specified.
+        :param dataset_sql: The Spark SQL query string that defines the dataset
+                            (e.g. 'SELECT * FROM my_spark_table'), if the dataset is a Spark SQL
+                            dataset. Either ``dataset_src_location`` or ``dataset_sql`` must be
+                            specified.
+        :return: An IngestCard instance corresponding to the current ingest step state.
+        """
         if dataset_src_location is None and dataset_sql is None:
             raise MlflowException(
                 message=(

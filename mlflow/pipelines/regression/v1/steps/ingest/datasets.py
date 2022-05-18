@@ -399,8 +399,8 @@ class SparkSqlDataset(_SparkDatasetMixin, _Dataset):
 
     def __init__(self, sql: str, dataset_format: str):
         """
-        :param location: The Spark SQL query string that defines the dataset
-                         (e.g. 'SELECT * FROM my_spark_table').
+        :param sql: The Spark SQL query string that defines the dataset
+                    (e.g. 'SELECT * FROM my_spark_table').
         :param dataset_format: The format of the dataset (e.g. 'csv', 'parquet', ...).
         """
         super().__init__(dataset_format=dataset_format)
