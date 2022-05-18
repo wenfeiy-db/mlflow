@@ -12,7 +12,7 @@ version = (
 )
 
 
-# Get a list of all files in the JS directory to include in our module
+# Get a list of all files in the directory to include in our module
 def package_files(directory):
     paths = []
     for (path, _, filenames) in os.walk(directory):
@@ -34,7 +34,7 @@ extra_files = [
     "pypi_package_index.json",
     "pyspark/ml/log_model_allowlist.txt",
 ]
-pipelines_DAG_files = package_files("mlflow/pipelines/regression/v1/DAG")
+pipelines_dag_files = package_files("mlflow/pipelines/regression/v1/resources")
 
 """
 Minimal requirements for the skinny MLflow client which provides a limited
@@ -122,7 +122,7 @@ setup(
             + models_container_server_files
             + alembic_files
             + extra_files
-            + pipelines_DAG_files
+            + pipelines_dag_files
         ),
     }
     if not _is_mlflow_skinny
