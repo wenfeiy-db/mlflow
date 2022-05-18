@@ -30,7 +30,8 @@ def _import_source_file(fname, modname):
     return module
 
 
-_GREATER_IS_BETTER_MAP = {
+_BUILTIN_METRIC_TO_GREATER_IS_BETTER = {
+    # metric_name: greater_is_better
     "mean_absolute_error": False,
     "mean_squared_error": False,
     "root_mean_squared_error": False,
@@ -51,7 +52,7 @@ class EvaluateStep(BaseStep):
             m["name"]: m["greater_is_better"]
             for m in (self.step_config.get("metrics") or {}).get("custom", [])
         }
-        gib_map = {**_GREATER_IS_BETTER_MAP, **custom_metrics_gib_map}
+        gib_map = {**_BUILTIN_METRIC_TO_GREATER_IS_BETTER, **custom_metrics_gib_map}
         summary = {}
         for val_criterion in validation_criteria:
             metric_name = val_criterion["metric"]
