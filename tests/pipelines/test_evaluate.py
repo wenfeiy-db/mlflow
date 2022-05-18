@@ -17,7 +17,6 @@ from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep
 @pytest.fixture
 def temp_pipelines_execution_directory(monkeypatch, tmp_path):
     monkeypatch.setenv(_MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR, str(tmp_path))
-    return
 
 
 use_tmp_pipelines_execution_directory = pytest.mark.usefixtures(
