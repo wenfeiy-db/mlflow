@@ -238,7 +238,7 @@ def test_ingest_throws_for_custom_dataset_when_custom_loader_function_throws_une
 
 
 @pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
-def test_ingests_remote_datasets_successfully(mock_s3_bucket, pandas_df, tmp_path):
+def test_ingests_remote_s3_datasets_successfully(mock_s3_bucket, pandas_df, tmp_path):
     dataset_path = tmp_path / "df.parquet"
     pandas_df.to_parquet(dataset_path)
     S3ArtifactRepository(f"s3://{mock_s3_bucket}").log_artifact(str(dataset_path))
@@ -255,6 +255,24 @@ def test_ingests_remote_datasets_successfully(mock_s3_bucket, pandas_df, tmp_pat
 
     reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
     pd.testing.assert_frame_equal(reloaded_df, pandas_df)
+
+
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingests_remote_http_datasets_successfully(tmp_path):
+    dataset_url = "https://raw.githubusercontent.com/mlflow/mlflow/594a08f2a49c5754bb65d76cd719c15c5b8266e9/examples/sklearn_elasticnet_wine/wine-quality.csv"
+    IngestStep.from_pipeline_config(
+        pipeline_config={
+            "data": {
+                "format": "csv",
+                "location": dataset_url,
+                "custom_loader_method": "steps.ingest.load_file_as_dataframe",
+            }
+        },
+        pipeline_root=os.getcwd(),
+    ).run(output_directory=tmp_path)
+
+    reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
+    pd.testing.assert_frame_equal(reloaded_df, pd.read_csv(dataset_url, index_col=0))
 
 
 @pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")

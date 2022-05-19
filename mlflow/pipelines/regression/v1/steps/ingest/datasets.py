@@ -2,9 +2,11 @@ import importlib
 import logging
 import os
 import pathlib
+import posixpath
 import sys
 from abc import abstractmethod
 from typing import Dict, Any, List, TypeVar
+from urllib.parse import urlparse
 
 from mlflow.artifacts import download_artifacts
 from mlflow.exceptions import MlflowException
@@ -16,6 +18,7 @@ from mlflow.utils.file_utils import (
     write_pandas_df_as_parquet,
     read_parquet_as_pandas_df,
 )
+from mlflow.utils.rest_utils import cloud_storage_http_request
 from mlflow.utils._spark_utils import _get_active_spark_session
 
 _logger = logging.getLogger(__name__)
@@ -189,8 +192,8 @@ class _DownloadThenConvertDataset(_LocationBasedDataset):
     def resolve_to_parquet(self, dst_path: str):
         with TempDir(chdr=True) as tmpdir:
             _logger.info("Resolving input data from '%s'", self.location)
-            local_dataset_path = download_artifacts(
-                artifact_uri=self.location, dst_path=tmpdir.path()
+            local_dataset_path = _DownloadThenConvertDataset._download_dataset(
+                dataset_location=self.location, dst_path=tmpdir.path(),
             )
 
             if os.path.isdir(local_dataset_path):
@@ -226,6 +229,20 @@ class _DownloadThenConvertDataset(_LocationBasedDataset):
                 dataset_file_paths=dataset_file_paths,
                 dst_path=dst_path,
             )
+
+    @staticmethod
+    def _download_dataset(dataset_location: str, dst_path: str):
+        parsed_location_uri = urlparse(dataset_location)
+        if parsed_location_uri.scheme in ["http", "https"]:
+            dst_file_name = posixpath.basename(parsed_location_uri.path)
+            dst_file_path = os.path.join(dst_path, dst_file_name)
+            with cloud_storage_http_request(url=dataset_location, method="get", stream=True) as r:
+                with open(dst_file_path, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+            return dst_file_path
+        else:
+            return download_artifacts(artifact_uri=dataset_location, dst_path=dst_path)
 
     @abstractmethod
     def _convert_to_parquet(self, dataset_file_paths: List[str], dst_path: str):
