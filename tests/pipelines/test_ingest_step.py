@@ -11,10 +11,8 @@ from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 from mlflow.store.artifact.s3_artifact_repo import S3ArtifactRepository
 from mlflow.utils.file_utils import TempDir
 
-from tests.helper_functions import mock_s3_bucket
-from tests.pipelines.helper_functions import (
-    enter_pipeline_example_directory,
-)
+from tests.helper_functions import mock_s3_bucket  # pylint: disable=unused-import
+from tests.pipelines.helper_functions import enter_pipeline_example_directory  # pylint: disable=unused-import
 
 
 @pytest.fixture
