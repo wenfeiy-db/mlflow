@@ -122,6 +122,7 @@ class EvaluateStep(BaseStep):
             model_validation_status = "UNKNOWN"
 
         Path(output_directory, "model_validation_status").write_text(model_validation_status)
+        self.status = "DONE"
 
     def inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
