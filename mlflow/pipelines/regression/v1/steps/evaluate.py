@@ -6,26 +6,12 @@ from pathlib import Path
 from typing import Dict, Any
 
 import mlflow
+from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, BAD_REQUEST
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 
 _logger = logging.getLogger(__name__)
-
-
-# ref: https://stackoverflow.com/a/41595552/6943581
-def _import_source_file(fname, modname):
-    # https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
-    spec = importlib.util.spec_from_file_location(modname, fname)
-    if spec is None:
-        raise ImportError(f"Could not load spec for module '{modname}' at: {fname}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[modname] = module
-    try:
-        spec.loader.exec_module(module)
-    except FileNotFoundError as e:
-        raise ImportError(f"{e.strerror}: {fname}") from e
-    return module
 
 
 _BUILTIN_METRIC_TO_GREATER_IS_BETTER = {
@@ -53,16 +39,18 @@ class EvaluateStep(BaseStep):
             return None
         return {cm["name"]: cm["greater_is_better"] for cm in custom_metrics}
 
-    def _get_custom_metric_functions(self):
-        custom_metrics = self._get_custom_metrics()
-        if not custom_metrics:
-            return None
-        custom_metrics_path = Path(self.pipeline_root, "steps", "custom_metrics.py")
-        custom_metrics_module = _import_source_file(custom_metrics_path, "custom_metrics")
-        return [
-            getattr(custom_metrics_module, cm["function"])
-            for cm in self.step_config["metrics"].get("custom")
-        ]
+    def _load_custom_metric_functions(self):
+        try:
+            sys.path.append(self.pipeline_root)
+            custom_metrics_mod = importlib.import_module("steps.custom_metrics")
+            return [
+                getattr(custom_metrics_mod, cm["function"]) for cm in self._get_custom_metrics()
+            ]
+        except Exception as e:
+            raise MlflowException(
+                message="Failed to load custom metric functions",
+                error_code=BAD_REQUEST,
+            ) from e
 
     def _check_validation_criteria(self, metrics, validation_criteria):
         custom_metrics_gib_map = self._get_custom_metrics_gib_map() or {}
@@ -108,7 +96,7 @@ class EvaluateStep(BaseStep):
                 model_type="regressor",
                 evaluators="default",
                 dataset_name="test",
-                custom_metrics=self._get_custom_metric_functions(),
+                custom_metrics=self._load_custom_metric_functions(),
             )
             eval_result.save(output_directory)
 
