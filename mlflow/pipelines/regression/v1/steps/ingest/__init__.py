@@ -138,6 +138,7 @@ class IngestStep(BaseStep):
             column_name: max(
                 dataset_types[column_name].astype(bytes).str.len().max(),
                 dataset_sample[column_name].astype(bytes).str.len().max(),
+                len(column_name),
             )
             for column_name in dataset_sample.columns
         }
