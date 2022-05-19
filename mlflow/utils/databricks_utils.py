@@ -416,3 +416,9 @@ def get_databricks_host_creds(server_uri=None):
     elif config.token:
         return MlflowHostCreds(config.host, token=config.token, ignore_tls_verification=insecure)
     _fail_malformed_databricks_auth(profile)
+
+
+def is_running_in_ipython_environment():
+    from IPython import get_ipython
+
+    return get_ipython() is not None
