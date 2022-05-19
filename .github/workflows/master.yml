@@ -377,11 +377,11 @@ jobs:
       - name: Set up Hadoop for Spark
         run: |
           git clone https://github.com/cdarlint/winutils
-          export HADOOP_HOME=winutils/hadoop-3.2.2
-          export PATH=$PATH:$HADOOP_HOME/bin
       - name: Run tests
         run: |
           export MLFLOW_HOME=$(pwd)
+          export HADOOP_HOME=winutils/hadoop-3.2.2
+          export PATH=$PATH:$HADOOP_HOME/bin
           pytest tests/pipelines
 
   sagemaker:
