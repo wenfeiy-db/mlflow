@@ -167,7 +167,7 @@ class IngestStep(BaseStep):
 
         :param df: A Pandas DataFrame to be included in the ingest step card.
         :param column_widths_ch: A mapping from DataFrame column name to the desired column
-                                 width in ``ch``.
+                                 width in ``ch`` units.
         :return: A Pandas Styler instance containing styles for the associated DataFrame.
         """
         max_width_ch = 50
