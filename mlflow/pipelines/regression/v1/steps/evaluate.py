@@ -33,7 +33,7 @@ class EvaluateStep(BaseStep):
     def _get_custom_metrics(self):
         return (self.step_config.get("metrics") or {}).get("custom")
 
-    def _get_custom_metrics_gib_map(self):
+    def _get_custom_metric_greater_is_better(self):
         custom_metrics = self._get_custom_metrics()
         return (
             {cm["name"]: cm["greater_is_better"] for cm in custom_metrics} if custom_metrics else {}
@@ -53,8 +53,19 @@ class EvaluateStep(BaseStep):
             ) from e
 
     def _check_validation_criteria(self, metrics, validation_criteria):
-        custom_metrics_gib_map = self._get_custom_metrics_gib_map()
-        gib_map = {**_BUILTIN_METRIC_TO_GREATER_IS_BETTER, **custom_metrics_gib_map}
+        custom_metric_greater_is_better = self._get_custom_metric_greater_is_better()
+        overridden_builtin_metrics = set(custom_metric_greater_is_better.keys()).intersection(
+            _BUILTIN_METRIC_TO_GREATER_IS_BETTER.keys()
+        )
+        if overridden_builtin_metrics:
+            _logger.warning(
+                "Custom metrics overrode the following built-in metrics: %s",
+                sorted(overridden_builtin_metrics),
+            )
+        metric_to_greater_is_better = {
+            **_BUILTIN_METRIC_TO_GREATER_IS_BETTER,
+            **custom_metric_greater_is_better,
+        }
         summary = {}
         for val_criterion in validation_criteria:
             metric_name = val_criterion["metric"]
@@ -62,7 +73,7 @@ class EvaluateStep(BaseStep):
             if metric_val is None:
                 summary[metric_name] = False
                 continue
-            comp_func = operator.ge if gib_map[metric_name] else operator.le
+            comp_func = operator.ge if metric_to_greater_is_better[metric_name] else operator.le
             threshold = val_criterion["threshold"]
             summary[metric_name] = comp_func(metric_val, threshold)
         return summary
