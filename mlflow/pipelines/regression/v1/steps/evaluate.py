@@ -5,8 +5,6 @@ import operator
 from pathlib import Path
 from typing import Dict, Any
 
-import cloudpickle
-
 import mlflow
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
@@ -109,7 +107,7 @@ class EvaluateStep(BaseStep):
                 targets=self.target_col,
                 model_type="regressor",
                 evaluators="default",
-                dataset_name="validation",
+                dataset_name="test",
                 custom_metrics=self._get_custom_metric_functions(),
             )
             eval_result.save(output_directory)
