@@ -66,7 +66,6 @@ class IngestStep(BaseStep):
         self.dataset.resolve_to_parquet(dst_path=dataset_dst_path)
         _logger.info("Successfully stored data in parquet format at '%s'", dataset_dst_path)
 
-        step_card = self.inspect(output_directory=output_directory)
         step_card = IngestStep._build_step_card(
             ingested_parquet_dataset_path=dataset_dst_path,
             dataset_src_location=getattr(self.dataset, "location", None),
@@ -187,6 +186,8 @@ class IngestStep(BaseStep):
             return f"{size} B"
 
     def inspect(self, output_directory: str):
+        # TODO: Update the implementation of inspect to conform to expected behaviors and handle
+        # the case where the last execution of the step failed
         parquet_dataset_path = os.path.join(output_directory, IngestStep._DATASET_OUTPUT_NAME)
         return IngestStep._build_step_card(
             ingested_parquet_dataset_path=parquet_dataset_path,
