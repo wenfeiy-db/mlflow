@@ -1,5 +1,7 @@
+import sys
 from unittest import mock
 from pathlib import Path
+import shutil
 
 import pytest
 from sklearn.datasets import load_diabetes
@@ -14,19 +16,28 @@ from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep
 from mlflow.exceptions import MlflowException
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def tmp_pipeline_exec_path(monkeypatch, tmp_path) -> Path:
     path = tmp_path.joinpath("pipeline_execution")
     path.mkdir(parents=True)
     monkeypatch.setenv(_MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR, str(path))
-    return path
+    yield path
+    shutil.rmtree(path)
 
 
 @pytest.fixture
 def tmp_pipeline_root_path(tmp_path) -> Path:
     path = tmp_path.joinpath("pipeline_root")
     path.mkdir(parents=True)
-    return path
+    yield path
+    shutil.rmtree(path)
+
+
+@pytest.fixture(autouse=True)
+def clear_custom_metrics_module_cache():
+    key = "steps.custom_metrics"
+    if key in sys.modules:
+        del sys.modules[key]
 
 
 def train_and_log_model():
@@ -38,7 +49,10 @@ def train_and_log_model():
     return run.info.run_id
 
 
-def test_evaluate_step_run(tmp_pipeline_root_path: Path, tmp_pipeline_exec_path: Path):
+@pytest.mark.parametrize("mae_threshold", [-1, 1_000_000])
+def test_evaluate_step_run(
+    tmp_pipeline_root_path: Path, tmp_pipeline_exec_path: Path, mae_threshold: int
+):
     split_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "split", "outputs")
     split_step_output_dir.mkdir(parents=True)
     X, y = load_diabetes(as_frame=True, return_X_y=True)
@@ -62,26 +76,27 @@ steps:
   evaluate:
     validation_criteria:
       - metric: root_mean_squared_error
-        threshold: 100
+        threshold: 1_000_000
       - metric: mean_absolute_error
-        threshold: -1
+        threshold: {mae_threshold}
       - metric: weighted_mean_squared_error
-        threshold: 100
+        threshold: 1_000_000
 metrics:
   custom:
     - name: weighted_mean_squared_error
       function: weighted_mean_squared_error
       greater_is_better: False
-"""
+""".format(
+            mae_threshold=mae_threshold
+        )
     )
     pipeline_steps_dir = tmp_pipeline_root_path.joinpath("steps")
     pipeline_steps_dir.mkdir(parents=True)
     pipeline_steps_dir.joinpath("custom_metrics.py").write_text(
         """
-from sklearn.metrics import mean_squared_error
-
-
 def weighted_mean_squared_error(eval_df, builtin_metrics):
+    from sklearn.metrics import mean_squared_error
+
     return {
         "weighted_mean_squared_error": mean_squared_error(
             eval_df["prediction"],
@@ -100,7 +115,8 @@ def weighted_mean_squared_error(eval_df, builtin_metrics):
     assert "weighted_mean_squared_error" in logged_metrics
     model_validation_status_path = evaluate_step_output_dir.joinpath("model_validation_status")
     assert model_validation_status_path.exists()
-    assert model_validation_status_path.read_text() == "REJECTED"
+    expected_status = "REJECTED" if mae_threshold < 0 else "VALIDATED"
+    assert model_validation_status_path.read_text() == expected_status
 
 
 def test_validation_criteria_contain_undefined_metrics(tmp_pipeline_root_path: Path):
@@ -259,7 +275,7 @@ def root_mean_squared_error(eval_df, builtin_metrics):
     assert "root_mean_squared_error" in logged_metrics
     assert logged_metrics["root_mean_squared_error"] == 1
     assert "mean_absolute_error" in logged_metrics
-    assert logged_metrics["root_mean_squared_error"] == 1
+    assert logged_metrics["mean_absolute_error"] == 1
     model_validation_status_path = evaluate_step_output_dir.joinpath("model_validation_status")
     assert model_validation_status_path.exists()
     assert model_validation_status_path.read_text() == "VALIDATED"
