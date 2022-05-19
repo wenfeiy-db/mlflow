@@ -126,15 +126,27 @@ class IngestStep(BaseStep):
             markdown=f"**Size:** {dataset_size}",
         )
         dataset_types = dataset_df.dtypes.to_frame().transpose()
-        dataset_types_styler = IngestStep._style_dataframe_for_step_card(df=dataset_types)
+        dataset_sample = dataset_df.sample(n=min(len(dataset_df), 10), random_state=42).sort_index()
+
+        # To ensure that the column widths of the schema dataframe and the sample dataframe are
+        # consistent, we compute the maximum content length for each column across both dataframes
+        # and use this information to set the minimum cell width in `ch` units for the rendered
+        # step card
+        column_widths_ch = {
+            column_name: max(
+                dataset_types[column_name].astype(bytes).str.len().max(),
+                dataset_sample[column_name].astype(bytes).str.len().max(),
+            )
+            for column_name in dataset_sample.columns
+        }
+        dataset_types_styler = IngestStep._style_dataframe_for_step_card(df=dataset_types, column_widths_ch=column_widths_ch)
         card.add_artifact(
             name="DATASET_SCHEMA",
             artifact=dataset_types_styler.to_html(),
             artifact_format="html",
         )
-        dataset_sample = dataset_df.sample(n=min(len(dataset_df), 10), random_state=42).sort_index()
         dataset_sample_styler = (
-            IngestStep._style_dataframe_for_step_card(df=dataset_sample).format(precision=2)
+            IngestStep._style_dataframe_for_step_card(df=dataset_sample, column_widths_ch=column_widths_ch).format(precision=2)
         )
         card.add_artifact(
             name="DATASET_SAMPLE",
@@ -144,25 +156,49 @@ class IngestStep(BaseStep):
         return card
 
     @staticmethod
-    def _style_dataframe_for_step_card(df):
+    def _style_dataframe_for_step_card(df, column_widths_ch: Dict[str, int]):
         """
         Creates a Pandas Styler for the specified Pandas DataFrame with custom HTML / CSS table
         stylings to achieve a desired ingest step card aesthetic.
 
         :param df: A Pandas DataFrame to be included in the ingest step card.
+        :param column_widths_ch: A mapping from DataFrame column name to the desired column
+                                 width in ``ch``.
         :return: A Pandas Styler instance containing styles for the associated DataFrame.
         """
-        return (
+        max_width_ch = 50
+        styler = (
             df.style
                 .set_properties(**{"text-align": "center"})
                 .hide_index()
                 .set_table_styles(
                     [
+                        # Create a border around the whole table
                         {"selector": "", "props": [("border", "1px solid grey")]},
-                        {"selector": "th, tbody td", "props": [("border", "1px solid grey"), ("min-width", "100px"), ("padding", "10px 5px 10px 5px")]},
+                        # Apply custom stylings to the table header cells and table body cells
+                        {
+                            "selector": "th, tbody td",
+                            "props": [
+                                # Create a border around each cell
+                                ("border", "1px solid grey"),
+                                # Set padding for the content of each cell
+                                ("padding", "10px 5px 10px 5px"),
+                                # Set the maximum column width via `max-width` and, after it has
+                                # been reached, forcibly wrap text via `word-wrap: break-word`
+                                ("max-width", f"{max_width_ch}ch"),
+                                ("word-wrap", "break-word")
+                            ],
+                        },
                     ]
                 )
         )
+
+        # Set the minimum width of each column using the provided per-column widths
+        for column_name, column_width in column_widths_ch.items():
+            column_width = min(column_width, max_width_ch)
+            styler = styler.set_properties(subset=[column_name], **{"min-width": f"{column_width}ch"})
+
+        return styler
 
     @staticmethod
     def _get_dataset_size(dataset_path: str) -> str:
