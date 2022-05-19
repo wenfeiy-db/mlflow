@@ -125,20 +125,8 @@ class IngestStep(BaseStep):
             name="DATASET_SIZE",
             markdown=f"**Size:** {dataset_size}",
         )
-        dataset_types = dataset_df.dtypes.to_frame(name="column type").transpose()
-        dataset_types = dataset_types.reset_index(level=0)
-        dataset_types = dataset_types.rename(columns={"index": "column name"})
-        dataset_types_styler = (
-            dataset_types.style.set_properties(**{"text-align": "center"})
-            .hide_index()
-            .set_table_styles(
-                [
-                    {"selector": "", "props": [("border", "1px solid grey")]},
-                    {"selector": "tbody td", "props": [("border", "1px solid grey")]},
-                    {"selector": "th", "props": [("border", "1px solid grey")]},
-                ]
-            )
-        )
+        dataset_types = dataset_df.dtypes.to_frame().transpose()
+        dataset_types_styler = IngestStep._style_dataframe_for_step_card(df=dataset_types)
         card.add_artifact(
             name="DATASET_SCHEMA",
             artifact=dataset_types_styler.to_html(),
@@ -146,15 +134,7 @@ class IngestStep(BaseStep):
         )
         dataset_sample = dataset_df.sample(n=min(len(dataset_df), 10), random_state=42).sort_index()
         dataset_sample_styler = (
-            dataset_sample.style.set_properties(**{"text-align": "center"})
-            .format(precision=2)
-            .set_table_styles(
-                [
-                    {"selector": "", "props": [("border", "1px solid grey")]},
-                    {"selector": "tbody td", "props": [("border", "1px solid grey")]},
-                    {"selector": "th", "props": [("border", "1px solid grey")]},
-                ]
-            )
+            IngestStep._style_dataframe_for_step_card(df=dataset_sample).format(precision=2)
         )
         card.add_artifact(
             name="DATASET_SAMPLE",
@@ -162,6 +142,27 @@ class IngestStep(BaseStep):
             artifact_format="html",
         )
         return card
+
+    @staticmethod
+    def _style_dataframe_for_step_card(df):
+        """
+        Creates a Pandas Styler for the specified Pandas DataFrame with custom HTML / CSS table
+        stylings to achieve a desired ingest step card aesthetic.
+
+        :param df: A Pandas DataFrame to be included in the ingest step card.
+        :return: A Pandas Styler instance containing styles for the associated DataFrame.
+        """
+        return (
+            df.style
+                .set_properties(**{"text-align": "center"})
+                .hide_index()
+                .set_table_styles(
+                    [
+                        {"selector": "", "props": [("border", "1px solid grey")]},
+                        {"selector": "th, tbody td", "props": [("border", "1px solid grey"), ("min-width", "100px"), ("padding", "10px 5px 10px 5px")]},
+                    ]
+                )
+        )
 
     @staticmethod
     def _get_dataset_size(dataset_path: str) -> str:
