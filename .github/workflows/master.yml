@@ -380,7 +380,7 @@ jobs:
       - name: Run tests
         run: |
           export MLFLOW_HOME=$(pwd)
-          export HADOOP_HOME=winutils/hadoop-3.2.2
+          export HADOOP_HOME=`realpath winutils/hadoop-3.2.2`
           export PATH=$PATH:$HADOOP_HOME/bin
           pytest tests/pipelines
 
