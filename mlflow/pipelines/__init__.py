@@ -88,6 +88,16 @@ def evaluate():
     _maybe_open(os.path.join(evaluate_outputs_path, "metrics.json"))
 
 
+def register():
+    """
+    Register a model (explanations included)
+    """
+    register_outputs_path = _run_pipeline_step("register")
+
+    _logger.info("== Created the model register card ==\n")
+    _maybe_open(os.path.join(register_outputs_path, "explanations.html"))
+
+
 def clean():
     """
     Clean

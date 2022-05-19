@@ -32,6 +32,7 @@ def test_pipelines_api_flow_completes_successfully():
     mlflow.pipelines.transform()
     mlflow.pipelines.train()
     mlflow.pipelines.evaluate()
+    mlflow.pipelines.register()
 
 
 @pytest.mark.usefixtures("enter_pipeline_example_directory", "clean_up_pipeline")

@@ -129,3 +129,11 @@ class SplitCard(BaseCard):
             template_root=os.path.join(os.path.dirname(__file__), "templates"),
             template_name="split.html",
         )
+
+
+class RegisterCard(BaseCard):
+    def __init__(self):
+        super().__init__(
+            template_root=os.path.join(os.path.dirname(__file__), "templates"),
+            template_name="register.html",
+        )

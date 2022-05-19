@@ -7,6 +7,7 @@ from mlflow.pipelines.regression.v1.steps.split import SplitStep
 from mlflow.pipelines.regression.v1.steps.transform import TransformStep
 from mlflow.pipelines.regression.v1.steps.train import TrainStep
 from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep
+from mlflow.pipelines.regression.v1.steps.register import RegisterStep
 from mlflow.pipelines.utils.execution import run_pipeline_step
 from mlflow.pipelines.utils import get_pipeline_name
 
@@ -35,7 +36,7 @@ class Pipeline:
 
         pipeline_steps = [
             pipeline_class.from_pipeline_config(pipeline_config, self.pipeline_root)
-            for pipeline_class in (IngestStep, SplitStep, TransformStep, TrainStep, EvaluateStep)
+            for pipeline_class in (IngestStep, SplitStep, TransformStep, TrainStep, EvaluateStep, RegisterStep)
         ]
         return pipeline_name, pipeline_steps
 
@@ -45,12 +46,12 @@ class Pipeline:
         """
         (
             pipeline_name,
-            [ingestStep, splitStep, transformStep, trainStep, evaluateStep],
+            [ingestStep, splitStep, transformStep, trainStep, evaluateStep, registerStep],
         ) = self.resolve_pipeline_steps()
         run_pipeline_step(
             self.pipeline_root,
             pipeline_name,
-            [ingestStep, splitStep, transformStep, trainStep, evaluateStep],
+            [ingestStep, splitStep, transformStep, trainStep, evaluateStep, registerStep],
             ingestStep,
         )
         _logger.info("in ingest step")
@@ -61,12 +62,12 @@ class Pipeline:
         """
         (
             pipeline_name,
-            [ingestStep, splitStep, transformStep, trainStep, evaluateStep],
+            [ingestStep, splitStep, transformStep, trainStep, evaluateStep, registerStep],
         ) = self.resolve_pipeline_steps()
         run_pipeline_step(
             self.pipeline_root,
             pipeline_name,
-            [ingestStep, splitStep, transformStep, trainStep, evaluateStep],
+            [ingestStep, splitStep, transformStep, trainStep, evaluateStep, registerStep],
             splitStep,
         )
         _logger.info("in split step")
@@ -79,12 +80,12 @@ class Pipeline:
         """
         (
             pipeline_name,
-            [ingestStep, splitStep, transformStep, trainStep, evaluateStep],
+            [ingestStep, splitStep, transformStep, trainStep, evaluateStep, registerStep],
         ) = self.resolve_pipeline_steps()
         run_pipeline_step(
             self.pipeline_root,
             pipeline_name,
-            [ingestStep, splitStep, transformStep, trainStep, evaluateStep],
+            [ingestStep, splitStep, transformStep, trainStep, evaluateStep, registerStep],
             transformStep,
         )
         _logger.info("in transform step")
@@ -95,12 +96,12 @@ class Pipeline:
         """
         (
             pipeline_name,
-            [ingestStep, splitStep, transformStep, trainStep, evaluateStep],
+            [ingestStep, splitStep, transformStep, trainStep, evaluateStep, registerStep],
         ) = self.resolve_pipeline_steps()
         run_pipeline_step(
             self.pipeline_root,
             pipeline_name,
-            [ingestStep, splitStep, transformStep, trainStep, evaluateStep],
+            [ingestStep, splitStep, transformStep, trainStep, evaluateStep, registerStep],
             trainStep,
         )
         _logger.info("in train step")
@@ -111,12 +112,28 @@ class Pipeline:
         """
         (
             pipeline_name,
-            [ingestStep, splitStep, transformStep, trainStep, evaluateStep],
+            [ingestStep, splitStep, transformStep, trainStep, evaluateStep, registerStep],
         ) = self.resolve_pipeline_steps()
         run_pipeline_step(
             self.pipeline_root,
             pipeline_name,
-            [ingestStep, splitStep, transformStep, trainStep, evaluateStep],
+            [ingestStep, splitStep, transformStep, trainStep, evaluateStep, registerStep],
             evaluateStep,
         )
         _logger.info("in evaluate step")
+
+    def register(self) -> None:
+        """
+        Step to optionally register the model.
+        """
+        (
+            pipeline_name,
+            [ingestStep, splitStep, transformStep, trainStep, evaluateStep, registerStep],
+        ) = self.resolve_pipeline_steps()
+        run_pipeline_step(
+            self.pipeline_root,
+            pipeline_name,
+            [ingestStep, splitStep, transformStep, trainStep, evaluateStep, registerStep],
+            registerStep,
+        )
+        _logger.info("in register step")
