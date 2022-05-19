@@ -35,9 +35,9 @@ class EvaluateStep(BaseStep):
 
     def _get_custom_metrics_gib_map(self):
         custom_metrics = self._get_custom_metrics()
-        if not custom_metrics:
-            return None
-        return {cm["name"]: cm["greater_is_better"] for cm in custom_metrics}
+        return (
+            {cm["name"]: cm["greater_is_better"] for cm in custom_metrics} if custom_metrics else {}
+        )
 
     def _load_custom_metric_functions(self):
         try:
@@ -53,7 +53,7 @@ class EvaluateStep(BaseStep):
             ) from e
 
     def _check_validation_criteria(self, metrics, validation_criteria):
-        custom_metrics_gib_map = self._get_custom_metrics_gib_map() or {}
+        custom_metrics_gib_map = self._get_custom_metrics_gib_map()
         gib_map = {**_BUILTIN_METRIC_TO_GREATER_IS_BETTER, **custom_metrics_gib_map}
         summary = {}
         for val_criterion in validation_criteria:
