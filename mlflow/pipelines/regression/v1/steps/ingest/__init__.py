@@ -66,6 +66,7 @@ class IngestStep(BaseStep):
         self.dataset.resolve_to_parquet(dst_path=dataset_dst_path)
         _logger.info("Successfully stored data in parquet format at '%s'", dataset_dst_path)
 
+        step_card = self.inspect(output_directory=output_directory)
         step_card = IngestStep._build_step_card(
             ingested_parquet_dataset_path=dataset_dst_path,
             dataset_src_location=getattr(self.dataset, "location", None),
@@ -77,7 +78,7 @@ class IngestStep(BaseStep):
     @staticmethod
     def _build_step_card(
         ingested_parquet_dataset_path: str, dataset_src_location: str = None, dataset_sql: str = None
-    ):
+    ) -> IngestCard:
         """
         Constructs a step card instance corresponding to the current ingest step state.
 
@@ -185,16 +186,16 @@ class IngestStep(BaseStep):
         else:
             return f"{size} B"
 
-    def inspect(self, output_directory):
+    def inspect(self, output_directory: str):
         parquet_dataset_path = os.path.join(output_directory, IngestStep._DATASET_OUTPUT_NAME)
         return IngestStep._build_step_card(
             ingested_parquet_dataset_path=parquet_dataset_path,
             dataset_src_location=getattr(self.dataset, "location", None),
             dataset_sql=getattr(self.dataset, "sql", None),
-        ).display()
+        )
 
     @classmethod
-    def from_pipeline_config(cls, pipeline_config, pipeline_root):
+    def from_pipeline_config(cls, pipeline_config: Dict[str, Any], pipeline_root: str):
         if "data" not in pipeline_config:
             raise MlflowException(
                 message="The `data` section of pipeline.yaml must be specified",
@@ -207,5 +208,5 @@ class IngestStep(BaseStep):
         )
 
     @property
-    def name(self):
+    def name(self) -> str:
         return "ingest"
