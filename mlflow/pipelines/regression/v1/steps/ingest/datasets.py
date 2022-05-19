@@ -193,7 +193,8 @@ class _DownloadThenConvertDataset(_LocationBasedDataset):
         with TempDir(chdr=True) as tmpdir:
             _logger.info("Resolving input data from '%s'", self.location)
             local_dataset_path = _DownloadThenConvertDataset._download_dataset(
-                dataset_location=self.location, dst_path=tmpdir.path(),
+                dataset_location=self.location,
+                dst_path=tmpdir.path(),
             )
 
             if os.path.isdir(local_dataset_path):
@@ -237,7 +238,7 @@ class _DownloadThenConvertDataset(_LocationBasedDataset):
             dst_file_name = posixpath.basename(parsed_location_uri.path)
             dst_file_path = os.path.join(dst_path, dst_file_name)
             with cloud_storage_http_request(url=dataset_location, method="get", stream=True) as r:
-                with open(dst_file_path, 'wb') as f:
+                with open(dst_file_path, "wb") as f:
                     for chunk in r.iter_content(chunk_size=8192):
                         f.write(chunk)
             return dst_file_path

@@ -34,9 +34,8 @@ extra_files = [
     "pypi_package_index.json",
     "pyspark/ml/log_model_allowlist.txt",
 ]
-pipelines_files = (
-        package_files("mlflow/pipelines/cards/templates") +
-        package_files("mlflow/pipelines/regression/v1/resources")
+pipelines_files = package_files("mlflow/pipelines/cards/templates") + package_files(
+    "mlflow/pipelines/regression/v1/resources"
 )
 
 """
@@ -124,11 +123,7 @@ setup(
     packages=find_packages(exclude=["tests", "tests.*"]),
     package_data={
         "mlflow": (
-            js_files
-            + models_container_server_files
-            + alembic_files
-            + extra_files
-            + pipelines_files
+            js_files + models_container_server_files + alembic_files + extra_files + pipelines_files
         ),
     }
     if not _is_mlflow_skinny

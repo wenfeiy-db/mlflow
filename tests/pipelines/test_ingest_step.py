@@ -12,7 +12,9 @@ from mlflow.store.artifact.s3_artifact_repo import S3ArtifactRepository
 from mlflow.utils.file_utils import TempDir
 
 from tests.helper_functions import mock_s3_bucket  # pylint: disable=unused-import
-from tests.pipelines.helper_functions import enter_pipeline_example_directory  # pylint: disable=unused-import
+from tests.pipelines.helper_functions import (
+    enter_pipeline_example_directory,
+)  # pylint: disable=unused-import
 
 
 @pytest.fixture
@@ -293,7 +295,11 @@ def test_ingests_spark_sql_successfully(spark_df, tmp_path):
     # substantial performance cost. Accordingly, we sort the ingested DataFrame and the original
     # DataFrame on the `id` column and reset the DataFrame index to achieve a consistent ordering
     # before testing their equivalence
-    reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet")).sort_values(by="id").reset_index(drop=True)
+    reloaded_df = (
+        pd.read_parquet(str(tmp_path / "dataset.parquet"))
+        .sort_values(by="id")
+        .reset_index(drop=True)
+    )
     spark_to_pandas_df = spark_df.toPandas().sort_values(by="id").reset_index(drop=True)
     pd.testing.assert_frame_equal(reloaded_df, spark_to_pandas_df)
 
@@ -320,7 +326,11 @@ def test_ingests_delta_successfully(use_relative_path, spark_df, tmp_path):
     # substantial performance cost. Accordingly, we sort the ingested DataFrame and the original
     # DataFrame on the `id` column and reset the DataFrame index to achieve a consistent ordering
     # before testing their equivalence
-    reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet")).sort_values(by="id").reset_index(drop=True)
+    reloaded_df = (
+        pd.read_parquet(str(tmp_path / "dataset.parquet"))
+        .sort_values(by="id")
+        .reset_index(drop=True)
+    )
     spark_to_pandas_df = spark_df.toPandas().sort_values(by="id").reset_index(drop=True)
     pd.testing.assert_frame_equal(reloaded_df, spark_to_pandas_df)
 
