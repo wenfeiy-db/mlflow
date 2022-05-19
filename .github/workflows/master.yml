@@ -374,7 +374,7 @@ jobs:
           pip install --no-dependencies tests/resources/mlflow-test-plugin
           pip install -e .[extras]
           pip install -r mlflow/pipelines/requirements.txt
-      - name: Set up Hadoop for Spark
+      - name: Download Hadoop winutils for Spark
         run: |
           git clone https://github.com/cdarlint/winutils
       - name: Run tests
