@@ -117,7 +117,11 @@ class EvaluateStep(BaseStep):
             criteria_summary = self._check_validation_criteria(
                 eval_result.metrics, validation_criteria
             )
-            self.status = "VALIDATED" if all(criteria_summary.values()) else "REJECTED"
+            model_validation_status = "VALIDATED" if all(criteria_summary.values()) else "REJECTED"
+        else:
+            model_validation_status = "UNKNOWN"
+
+        Path(output_directory, "model_validation_status").write_text(model_validation_status)
 
     def inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
