@@ -52,6 +52,20 @@ class EvaluateStep(BaseStep):
                 error_code=BAD_REQUEST,
             ) from e
 
+    def _validate_validation_criteria(self):
+        """
+        Validates validation criteria don't contain undefined metrics
+        """
+        val_metrics = set(vc["metric"] for vc in self.step_config.get("validation_criteria"))
+        builtin_metrics = set(_BUILTIN_METRIC_TO_GREATER_IS_BETTER.keys())
+        custom_metrics = set(self._get_custom_metric_greater_is_better().keys())
+        undefined_metrics = val_metrics.difference(builtin_metrics.union(custom_metrics))
+        if undefined_metrics:
+            raise MlflowException(
+                f"Validation criteria contain undefined metrics: {sorted(undefined_metrics)}",
+                error_code=INVALID_PARAMETER_VALUE,
+            )
+
     def _check_validation_criteria(self, metrics, validation_criteria):
         custom_metric_greater_is_better = self._get_custom_metric_greater_is_better()
         overridden_builtin_metrics = set(custom_metric_greater_is_better.keys()).intersection(
@@ -80,6 +94,8 @@ class EvaluateStep(BaseStep):
 
     def _run(self, output_directory):
         import pandas as pd
+
+        self._validate_validation_criteria()
 
         test_data_path = get_step_output_path(
             pipeline_name=self.pipeline_name,

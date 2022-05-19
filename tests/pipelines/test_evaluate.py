@@ -103,6 +103,33 @@ def weighted_mean_squared_error(eval_df, builtin_metrics):
     assert model_validation_status_path.read_text() == "REJECTED"
 
 
+def test_validation_criteria_contain_undefined_metrics(tmp_pipeline_root_path: Path):
+    pipeline_yaml = tmp_pipeline_root_path.joinpath(_PIPELINE_CONFIG_FILE_NAME)
+    pipeline_yaml.write_text(
+        """
+template: "regression/v1"
+target_col: "y"
+steps:
+  evaluate:
+    validation_criteria:
+      - metric: root_mean_squared_error
+        threshold: 100
+      - metric: undefined_metric
+        threshold: 100
+"""
+    )
+    pipeline_steps_dir = tmp_pipeline_root_path.joinpath("steps")
+    pipeline_steps_dir.mkdir(parents=True)
+
+    pipeline_config = read_yaml(tmp_pipeline_root_path, _PIPELINE_CONFIG_FILE_NAME)
+    evaluate_step = EvaluateStep.from_pipeline_config(pipeline_config, str(tmp_pipeline_root_path))
+    with pytest.raises(
+        MlflowException,
+        match=r"Validation criteria contain undefined metrics: \['undefined_metric'\]",
+    ):
+        evaluate_step._validate_validation_criteria()
+
+
 def test_custom_metric_function_does_not_exist(tmp_pipeline_root_path: Path):
     pipeline_yaml = tmp_pipeline_root_path.joinpath(_PIPELINE_CONFIG_FILE_NAME)
     pipeline_yaml.write_text(
