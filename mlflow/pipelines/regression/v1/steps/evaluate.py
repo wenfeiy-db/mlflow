@@ -43,7 +43,6 @@ _BUILTIN_METRIC_TO_GREATER_IS_BETTER = {
 class EvaluateStep(BaseStep):
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str) -> None:
         super().__init__(step_config, pipeline_root)
-        self.metrics = self.step_config
         self.target_col = self.pipeline_config.get("target_col")
         self.status = "UNKNOWN"
 
