@@ -20,6 +20,7 @@ class ImageEvaluationArtifact(EvaluationArtifact):
         from PIL.Image import open as open_image
 
         self._content = open_image(local_artifact_path)
+        self._content.load()
         return self._content
 
 

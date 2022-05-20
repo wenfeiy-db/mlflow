@@ -82,7 +82,9 @@ def evaluate():
     evaluate_outputs_path = _run_pipeline_step("evaluate")
 
     _logger.info("== Created the model card ==\n")
-    _maybe_open(os.path.join(evaluate_outputs_path, "explanations.html"))
+    explanations_path = os.path.join(evaluate_outputs_path, "explanations.html")
+    if os.path.exists(explanations_path):
+        _maybe_open(explanations_path)
 
     _logger.info("== Produced evaluation metrics ==\n")
     _maybe_open(os.path.join(evaluate_outputs_path, "metrics.json"))
