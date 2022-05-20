@@ -228,7 +228,7 @@ class IngestStep(BaseStep):
 
     def inspect(self, output_directory: str):
         # TODO: Update the implementation of inspect to conform to expected behaviors and handle
-        # the case where the last execution of the step failed
+        # the case where the last execution of the step failed, or remove `inspect()` entirely
         parquet_dataset_path = os.path.join(output_directory, IngestStep._DATASET_OUTPUT_NAME)
         return IngestStep._build_step_card(
             ingested_parquet_dataset_path=parquet_dataset_path,
