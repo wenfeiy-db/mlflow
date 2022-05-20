@@ -119,6 +119,45 @@ def weighted_mean_squared_error(eval_df, builtin_metrics):
     assert model_validation_status_path.read_text() == expected_status
 
 
+def test_no_validation_criteria(tmp_pipeline_root_path: Path, tmp_pipeline_exec_path: Path):
+    split_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "split", "outputs")
+    split_step_output_dir.mkdir(parents=True)
+    X, y = load_diabetes(as_frame=True, return_X_y=True)
+    test_df = X.assign(y=y).sample(n=100, random_state=42)
+    test_df.to_parquet(split_step_output_dir.joinpath(_OUTPUT_TEST_FILE_NAME))
+
+    run_id = train_and_log_model()
+    train_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "train", "outputs")
+    train_step_output_dir.mkdir(parents=True)
+    train_step_output_dir.joinpath("run_id").write_text(run_id)
+
+    evaluate_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "evaluate", "outputs")
+    evaluate_step_output_dir.mkdir(parents=True)
+
+    pipeline_yaml = tmp_pipeline_root_path.joinpath(_PIPELINE_CONFIG_FILE_NAME)
+    pipeline_yaml.write_text(
+        """
+template: "regression/v1"
+target_col: "y"
+steps:
+  evaluate:
+"""
+    )
+    pipeline_steps_dir = tmp_pipeline_root_path.joinpath("steps")
+    pipeline_steps_dir.mkdir(parents=True)
+    pipeline_config = read_yaml(tmp_pipeline_root_path, _PIPELINE_CONFIG_FILE_NAME)
+    evaluate_step = EvaluateStep.from_pipeline_config(pipeline_config, str(tmp_pipeline_root_path))
+    evaluate_step._run(str(evaluate_step_output_dir))
+
+    logged_metrics = mlflow.tracking.MlflowClient().get_run(run_id).data.metrics
+    logged_metrics = {k.replace("_on_data_test", ""): v for k, v in logged_metrics.items()}
+    assert "mean_squared_error" in logged_metrics
+    assert "root_mean_squared_error" in logged_metrics
+    model_validation_status_path = evaluate_step_output_dir.joinpath("model_validation_status")
+    assert model_validation_status_path.exists()
+    assert model_validation_status_path.read_text() == "UNKNOWN"
+
+
 def test_validation_criteria_contain_undefined_metrics(tmp_pipeline_root_path: Path):
     pipeline_yaml = tmp_pipeline_root_path.joinpath(_PIPELINE_CONFIG_FILE_NAME)
     pipeline_yaml.write_text(

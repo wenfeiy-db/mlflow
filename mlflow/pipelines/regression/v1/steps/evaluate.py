@@ -40,12 +40,13 @@ class EvaluateStep(BaseStep):
         )
 
     def _load_custom_metric_functions(self):
+        custom_metrics = self._get_custom_metrics()
+        if not custom_metrics:
+            return None
         try:
             sys.path.append(self.pipeline_root)
             custom_metrics_mod = importlib.import_module("steps.custom_metrics")
-            return [
-                getattr(custom_metrics_mod, cm["function"]) for cm in self._get_custom_metrics()
-            ]
+            return [getattr(custom_metrics_mod, cm["function"]) for cm in custom_metrics]
         except Exception as e:
             raise MlflowException(
                 message="Failed to load custom metric functions",
@@ -56,7 +57,9 @@ class EvaluateStep(BaseStep):
         """
         Validates validation criteria don't contain undefined metrics
         """
-        val_metrics = set(vc["metric"] for vc in self.step_config.get("validation_criteria"))
+        val_metrics = set(vc["metric"] for vc in self.step_config.get("validation_criteria", []))
+        if not val_metrics:
+            return
         builtin_metrics = set(_BUILTIN_METRIC_TO_GREATER_IS_BETTER.keys())
         custom_metrics = set(self._get_custom_metric_greater_is_better().keys())
         undefined_metrics = val_metrics.difference(builtin_metrics.union(custom_metrics))
@@ -147,7 +150,7 @@ class EvaluateStep(BaseStep):
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
         try:
-            step_config = pipeline_config["steps"]["evaluate"]
+            step_config = pipeline_config["steps"].get("evaluate") or {}
         except KeyError:
             raise MlflowException(
                 "Config for evaluate step is not found.", error_code=INVALID_PARAMETER_VALUE
