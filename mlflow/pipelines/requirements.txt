@@ -9,3 +9,4 @@ click==8.0.*
 pandas-profiling==3.1.*
 ipython==7.0.*
 pyspark==3.*
+markdown==3.3.*
