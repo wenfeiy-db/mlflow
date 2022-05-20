@@ -164,7 +164,9 @@ def test_ingests_custom_format_successfully(use_relative_path, multiple_files, p
             "data": {
                 "format": "fooformat",
                 "location": str(dataset_path),
-                "custom_loader_method": "tests.pipelines.test_ingest_step.custom_load_file_as_dataframe",
+                "custom_loader_method": (
+                    "tests.pipelines.test_ingest_step.custom_load_file_as_dataframe"
+                ),
             }
         },
         pipeline_root=os.getcwd(),
@@ -235,7 +237,9 @@ def test_ingest_throws_for_custom_dataset_when_custom_loader_function_throws_une
                 "data": {
                     "format": "fooformat",
                     "location": str(dataset_path),
-                    "custom_loader_method": "tests.pipelines.test_ingest_step.custom_load_file_as_dataframe",
+                    "custom_loader_method": (
+                        "tests.pipelines.test_ingest_step.custom_load_file_as_dataframe"
+                    ),
                 }
             },
             pipeline_root=os.getcwd(),
