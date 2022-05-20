@@ -4,7 +4,7 @@ import os
 from mlflow.exceptions import MlflowException
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.cards import IngestCard
-from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, INTERNAL_ERROR
+from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 from mlflow.utils.file_utils import read_parquet_as_pandas_df
 from mlflow.pipelines.regression.v1.steps.ingest.datasets import (
     ParquetDataset,
@@ -101,7 +101,7 @@ class IngestStep(BaseStep):
                     "Failed to build step card because neither a dataset location nor a"
                     " dataset Spark SQL query were specified"
                 ),
-                error_code=INTERNAL_ERROR,
+                error_code=INVALID_PARAMETER_VALUE,
             )
 
         dataset_df = read_parquet_as_pandas_df(data_parquet_path=ingested_parquet_dataset_path)
