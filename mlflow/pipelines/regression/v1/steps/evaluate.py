@@ -9,6 +9,7 @@ import mlflow
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, BAD_REQUEST
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
+from mlflow.exceptions import MlflowException
 
 _logger = logging.getLogger(__name__)
 
