@@ -97,7 +97,10 @@ class BaseCard:
 
         :return: a HTML string
         """
-        j2_env = jinja2.Environment(loader=jinja2.FileSystemLoader(self.template_root))
+        baseTemplatePath = os.path.join(os.path.dirname(__file__), "templates")
+        j2_env = jinja2.Environment(
+            loader=jinja2.FileSystemLoader([self.template_root, baseTemplatePath])
+        )
         return j2_env.get_template(self.template_name).render(
             {**self._context, "pandas_profiles": self._pandas_profiles}
         )
@@ -136,19 +139,3 @@ class BaseCard:
             import pickle
 
             return pickle.load(f)
-
-
-class IngestCard(BaseCard):
-    def __init__(self):
-        super().__init__(
-            template_root=os.path.join(os.path.dirname(__file__), "templates"),
-            template_name="ingest.html",
-        )
-
-
-class SplitCard(BaseCard):
-    def __init__(self):
-        super().__init__(
-            template_root=os.path.join(os.path.dirname(__file__), "templates"),
-            template_name="split.html",
-        )
