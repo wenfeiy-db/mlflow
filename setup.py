@@ -34,7 +34,7 @@ extra_files = [
     "pypi_package_index.json",
     "pyspark/ml/log_model_allowlist.txt",
 ]
-pipelines_dag_files = package_files("mlflow/pipelines/regression/v1/resources")
+pipelines_regression_v1_files = package_files("mlflow/pipelines/regression/v1/resources")
 pipelines_files = package_files("mlflow/pipelines/cards/templates")
 
 """
@@ -125,7 +125,7 @@ setup(
             + models_container_server_files
             + alembic_files
             + extra_files
-            + pipelines_dag_files
+            + pipelines_regression_v1_files
             + pipelines_files
         ),
     }
