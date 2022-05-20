@@ -1,9 +1,12 @@
 import os
 import pathlib
-from collections import NamedTuple
 from typing import Dict, Any
 
 from mlflow.exceptions import MlflowException
+from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
+from mlflow.tracking.default_experiment import DEFAULT_EXPERIMENT_ID
+from mlflow.tracking.fluent import _get_experiment_id
+from mlflow.utils.databricks_utils import is_in_databricks_runtime
 from mlflow.utils.file_utils import read_yaml
 
 _PIPELINE_CONFIG_FILE_NAME = "pipeline.yaml"
@@ -122,25 +125,81 @@ def get_pipeline_root_path() -> str:
     # os.chdir(repo_root)
 
 
-class TrackingConfig(NamedTuple):
-    tracking_uri: str
-    experiment_name: str
+class TrackingConfig:
+
+    _KEY_EXPERIMENT_NAME = "mlflow_experiment_name"
+    _KEY_EXPERIMENT_ID = "mlflow_experiment_id"
+    _KEY_TRACKING_URI = "mlflow_tracking_uri"
+
+    def __init__(self, tracking_uri: str, experiment_name: str = None, experiment_id: str = None):
+        if tracking_uri is None:
+            raise MlflowException(
+                message="`tracking_uri` must not be None",
+                error_code=INVALID_PARAMETER_VALUE,
+            )
+
+        if (experiment_name, experiment_id).count(None) != 1:
+            raise MlflowException(
+                message="Exactly one of `experiment_name` or `experiment_id` must be specified",
+                error_code=INVALID_PARAMETER_VALUE,
+            )
+        self.tracking_uri = tracking_uri
+        self.experiment_name = experiment_name
+        self.experiment_id = experiment_id
+
+    def to_dict(self):
+        config_dict = {
+            TrackingConfig._KEY_TRACKING_URI: self.tracking_uri,
+        }
+        if self.experiment_name:
+            config_dict[TrackingConfig._KEY_EXPERIMENT_NAME] = self.experiment_name
+        elif self.experiment_id:
+            config_dict[TrackingConfig._KEY_EXPERIMENT_ID] = self.experiment_id
+        return config_dict
+
+    @classmethod
+    def from_dict(cls, config_dict):
+        return TrackingConfig(
+            tracking_uri=config_dict.get(TrackingConfig._KEY_TRACKING_URI),
+            experiment_name=config_dict.get(TrackingConfig._KEY_EXPERIMENT_NAME),
+            experiment_id=config_dict.get(TrackingConfig._KEY_EXPERIMENT_ID),
+        )
 
 
 def get_pipeline_tracking_config(pipeline_root_path: str = None) -> TrackingConfig:
+    default_tracking_uri = (
+        "databricks" if is_in_databricks_runtime()
+        else os.path.join(pipeline_root_path, "metadata", "runs")
+    )
+
     pipeline_config = get_pipeline_config(pipeline_root_path=pipeline_root_path)
     tracking_config = pipeline_config.get("experiment", {})
-    tracking_uri = tracking_config.get(
-        "tracking_uri",
-        os.path.join(pipeline_root_path, "metadata", "runs"),
-    )
-    experiment_name = tracking_config.get(
-        "name",
-        get_pipeline_name(pipeline_root_path=pipeline_root_path),
-    )
+    tracking_uri = tracking_config.get("tracking_uri", default_tracking_uri)
+
+    experiment_name = tracking_config.get("name")
+    if experiment_name is not None:
+        return TrackingConfig(
+            tracking_uri=tracking_uri,
+            experiment_name=experiment_name,
+        )
+   
+    experiment_id = tracking_config.get("id")
+    if experiment_id is not None:
+        return TrackingConfig(
+            tracking_uri=tracking_uri,
+            experiment_id=experiment_id,
+        )
+
+    experiment_id = _get_experiment_id()
+    if experiment_id != DEFAULT_EXPERIMENT_ID:
+        return TrackingConfig(
+            tracking_uri=tracking_uri,
+            experiment_id=experiment_id,
+        )
+
     return TrackingConfig(
         tracking_uri=tracking_uri,
-        experiment_name=experiment_name,
+        experiment_name=get_pipeline_name(pipeline_root_path=pipeline_root_path),
     )
 
 

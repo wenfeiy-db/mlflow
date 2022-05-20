@@ -1,11 +1,14 @@
 import os
 import pathlib
 import shutil
-from typing import List
+from typing import List, Dict
 
+from mlflow.pipelines.step import BaseStep
+from mlflow.pipelines.utils import get_pipeline_tracking_config
+from mlflow.projects.utils import get_databricks_env_vars
+from mlflow.tracking.fluent import _EXPERIMENT_NAME_ENV_VAR, _EXPERIMENT_ID_ENV_VAR
 from mlflow.utils.file_utils import read_yaml, write_yaml
 from mlflow.utils.process import _exec_cmd
-from mlflow.pipelines.step import BaseStep
 
 
 _MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR = "MLFLOW_PIPELINES_EXECUTION_DIRECTORY"
@@ -40,7 +43,16 @@ def run_pipeline_step(
     step_output_directory_path = _get_step_output_directory_path(
         execution_directory_path=execution_dir_path, step_name=target_step.name
     )
-    _run_make(execution_directory_path=execution_dir_path, rule_name=target_step.name)
+    _run_make(
+        execution_directory_path=execution_dir_path,
+        rule_name=target_step.name,
+        # Pass MLflow Tracking information to the Make child process as environment variables
+        # to ensure that Tracking configurations made in the parent process are properly applied.
+        # Note that a subset of this information is also stored within generated step configuration
+        # files, but we opt to pass potentially-sensitive information (e.g. auth credentials) as
+        # environment variables to avoid persisting them to disk
+        extra_env=_get_tracking_env_vars(pipeline_root_path=pipeline_root_path),
+    )
     return step_output_directory_path
 
 
@@ -179,7 +191,17 @@ def _get_step_output_directory_path(execution_directory_path: str, step_name: st
     )
 
 
-def _run_make(execution_directory_path, rule_name: str) -> None:
+def _get_tracking_env_vars(pipeline_root_path: str) -> Dict[str, str]:
+    pipeline_tracking_config = get_pipeline_tracking_config(pipeline_root_path=pipeline_root_path)
+    tracking_env_vars = get_databricks_env_vars(tracking_uri=pipeline_tracking_config.tracking_uri)
+    if pipeline_tracking_config.experiment_name is not None:
+        tracking_env_vars[_EXPERIMENT_NAME_ENV_VAR] = pipeline_tracking_config.experiment_name
+    if pipeline_tracking_config.experiment_id is not None:
+        tracking_env_vars[_EXPERIMENT_ID_ENV_VAR] = pipeline_tracking_config.experiment_id
+    return tracking_env_vars
+
+
+def _run_make(execution_directory_path, rule_name: str, extra_env: Dict[str, str]) -> None:
     """
     Runs the specified pipeline rule with Make. This method assumes that a Makefile named `Makefile`
     exists in the specified execution directory.
@@ -187,6 +209,7 @@ def _run_make(execution_directory_path, rule_name: str) -> None:
     :param execution_directory_path: The absolute path of the execution directory on the local
                                      filesystem for the relevant pipeline. The Makefile is created
                                      in this directory.
+    :param extra_env: Extra environment variables to be defined when running the Make child process.
     :param rule_name: The name of the Make rule to run.
     """
     _exec_cmd(
@@ -195,6 +218,7 @@ def _run_make(execution_directory_path, rule_name: str) -> None:
         stream_output=True,
         synchronous=True,
         cwd=execution_directory_path,
+        extra_env=extra_env,
     )
 
 

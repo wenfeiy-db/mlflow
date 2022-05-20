@@ -13,7 +13,6 @@ StepType = TypeVar("StepType", bound="BaseStep")
 
 
 class BaseStep(metaclass=abc.ABCMeta):
-    _TRACKING_URI_CONFIG_KEY = "tracking_uri"
 
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         """
@@ -26,11 +25,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         self.pipeline_root = pipeline_root
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
         self.pipeline_config = get_pipeline_config(pipeline_root_path=pipeline_root)
-
-    def _set_tracking_uri(self) -> None:
-        uri = self.step_config.get(self._TRACKING_URI_CONFIG_KEY)
-        if uri is not None:
-            mlflow.set_tracking_uri(uri)
 
     def _initialize_databricks_pyspark_connection_if_applicable(self) -> None:
         """
@@ -46,7 +40,7 @@ class BaseStep(metaclass=abc.ABCMeta):
                     "Encountered unexpected failure while initializing Spark connection. Spark"
                     " operations may not succeed. Exception: %s", e
                 )
-                
+
     def run(self, output_directory: str):
         """
         Executes the step by running common setup operations and invoking
@@ -56,7 +50,6 @@ class BaseStep(metaclass=abc.ABCMeta):
                                  outputs should be stored.
         :return: Results from executing the corresponding step.
         """
-        self._set_tracking_uri()
         self._initialize_databricks_pyspark_connection_if_applicable()
         return self._run(output_directory)
 

@@ -1,19 +1,31 @@
 import json
 import logging
 import os
+from typing import Dict, Any
 
 import cloudpickle
 
 import mlflow
 from mlflow.pipelines.step import BaseStep
+from mlflow.pipelines.utils import get_pipeline_tracking_config, TrackingConfig
 from mlflow.pipelines.utils.execution import get_step_output_path
 
 _logger = logging.getLogger(__name__)
 
 
 class EvaluateStep(BaseStep):
+    def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
+        super().__init__(step_config=step_config, pipeline_root=pipeline_root)
+        self.tracking_config = TrackingConfig.from_dict(step_config) 
+
     def _run(self, output_directory):
         import pandas as pd
+
+        mlflow.set_tracking_uri(self.tracking_config.tracking_uri)
+        mlflow.set_experiment(
+            experiment_name=self.tracking_config.experiment_name,
+            experiment_id=self.tracking_config.experiment_id,
+        )
 
         pipeline_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
@@ -44,8 +56,6 @@ class EvaluateStep(BaseStep):
         )
         with open(run_id_path, "r") as f:
             run_id = f.read()
-
-        mlflow.set_experiment("demo")  # hardcoded
 
         with mlflow.start_run(run_id=run_id):
             EvaluateStep._explain(pipeline, X_train, output_directory)
@@ -127,7 +137,7 @@ class EvaluateStep(BaseStep):
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
-        step_config = {EvaluateStep._TRACKING_URI_CONFIG_KEY: "/tmp/mlruns"}
+        step_config = get_pipeline_tracking_config(pipeline_root_path=pipeline_root).to_dict()
         return cls(step_config, pipeline_root)
 
     @property
