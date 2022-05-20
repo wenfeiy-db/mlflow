@@ -14,8 +14,10 @@ from mlflow.models.evaluation.base import EvaluationArtifact
 
 class ImageEvaluationArtifact(EvaluationArtifact):
     def _save(self, output_artifact_path):
-        self._content.save(output_artifact_path)
-        self._content.close()
+        try:
+            self._content.save(output_artifact_path)
+        finally:
+            self._content.close()
 
     def _load_content_from_file(self, local_artifact_path):
         from PIL.Image import open as open_image
