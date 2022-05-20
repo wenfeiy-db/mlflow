@@ -12,7 +12,7 @@ version = (
 )
 
 
-# Get a list of all files in the JS directory to include in our module
+# Get a list of all files in the directory to include in our module
 def package_files(directory):
     paths = []
     for (path, _, filenames) in os.walk(directory):
@@ -34,6 +34,8 @@ extra_files = [
     "pypi_package_index.json",
     "pyspark/ml/log_model_allowlist.txt",
 ]
+pipelines_dag_files = package_files("mlflow/pipelines/regression/v1/resources")
+pipelines_files = package_files("mlflow/pipelines/cards/templates")
 
 """
 Minimal requirements for the skinny MLflow client which provides a limited
@@ -115,7 +117,16 @@ setup(
     name="mlflow" if not _is_mlflow_skinny else "mlflow-skinny",
     version=version,
     packages=find_packages(exclude=["tests", "tests.*"]),
-    package_data={"mlflow": js_files + models_container_server_files + alembic_files + extra_files}
+    package_data={
+        "mlflow": (
+            js_files
+            + models_container_server_files
+            + alembic_files
+            + extra_files
+            + pipelines_dag_files
+            + pipelines_files
+        ),
+    }
     if not _is_mlflow_skinny
     # include alembic files to enable usage of the skinny client with SQL databases
     # if users install sqlalchemy, alembic, and sqlparse independently

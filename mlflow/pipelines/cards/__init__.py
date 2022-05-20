@@ -4,11 +4,14 @@ import pprint
 import os
 from jinja2 import meta as jinja2_meta
 from io import StringIO
-from IPython.display import display
-import ipywidgets as widgets
+from IPython.display import display, HTML
 from markdown import markdown as md_to_html
-from pandas_profiling import ProfileReport
 from typing import Any
+import html
+
+
+_CARD_PICKLE_NAME = "card.pkl"
+_CARD_HTML_NAME = "card.html"
 
 
 class BaseCard:
@@ -47,7 +50,7 @@ class BaseCard:
         self._context[name] = md_to_html(markdown)
         return self
 
-    def add_pandas_profile(self, name: str, profile: ProfileReport) -> BaseCard:
+    def add_pandas_profile(self, name: str, profile) -> BaseCard:
         """
         Add a new tab representing the provided pandas profile to the card.
 
@@ -55,7 +58,12 @@ class BaseCard:
         :param profile: the pandas profile object
         :return: the updated card instance
         """
-        self._pandas_profiles.append((name, profile))
+        profile_iframe = (
+            "<iframe srcdoc='"
+            + html.escape(profile.to_html())
+            + "' width='100%' height='500' frameborder='0'></iframe>"
+        )
+        self._pandas_profiles.append((name, profile_iframe))
         return self
 
     def add_artifact(self, name: str, artifact: Any) -> BaseCard:
@@ -90,7 +98,9 @@ class BaseCard:
         :return: a HTML string
         """
         j2_env = jinja2.Environment(loader=jinja2.FileSystemLoader(self.template_root))
-        return j2_env.get_template(self.template_name).render(self._context)
+        return j2_env.get_template(self.template_name).render(
+            {**self._context, "pandas_profiles": self._pandas_profiles}
+        )
 
     def to_text(self) -> str:
         """
@@ -102,17 +112,30 @@ class BaseCard:
         """
         Display the rendered card as a ipywidget
         """
-        if len(self._pandas_profiles) == 0:
-            display(widgets.HTML(self.to_html()))
-        else:
-            tab = widgets.Tab()
-            tab.children = [widgets.HTML(self.to_html())] + [
-                profile.widgets for _, profile in self._pandas_profiles
-            ]
-            titles = ["Summary"] + [name for name, _ in self._pandas_profiles]
-            for i in range(len(tab.children)):
-                tab.set_title(i, titles[i])
-            display(tab)
+        display(HTML(self.to_html()))
+
+    def save_as_html(self, path) -> None:
+        if os.path.isdir(path):
+            path = os.path.join(path, _CARD_HTML_NAME)
+        with open(path, "w") as f:
+            f.write(self.to_html())
+
+    def save(self, path: str) -> None:
+        if os.path.isdir(path):
+            path = os.path.join(path, _CARD_PICKLE_NAME)
+        with open(path, "wb") as out:
+            import pickle
+
+            pickle.dump(self, out)
+
+    @staticmethod
+    def load(path):
+        if os.path.isdir(path):
+            path = os.path.join(path, _CARD_PICKLE_NAME)
+        with open(path, "rb") as f:
+            import pickle
+
+            return pickle.load(f)
 
 
 class IngestCard(BaseCard):

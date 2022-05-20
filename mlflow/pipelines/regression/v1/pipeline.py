@@ -1,6 +1,7 @@
 import logging
 import os
 import mlflow.utils.file_utils
+import mlflow.utils.databricks_utils
 
 from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 from mlflow.pipelines.regression.v1.steps.split import SplitStep
@@ -120,3 +121,17 @@ class Pipeline:
             evaluateStep,
         )
         _logger.info("in evaluate step")
+
+    def inspect(self) -> None:
+        from IPython.display import display, HTML
+
+        path = os.path.join(os.path.dirname(__file__), "resources/pipeline_dag.html")
+        filePath = f"file:///{path}"
+
+        if mlflow.utils.databricks_utils.is_running_in_ipython_environment():
+            display(HTML(filename=path))
+        else:
+            import webbrowser
+
+            webbrowser.open_new(filePath)
+            _logger.info(f"MLFlow regression v1 pipeline snapshot DAG: {filePath}")
