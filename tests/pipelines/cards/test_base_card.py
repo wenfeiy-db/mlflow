@@ -1,6 +1,5 @@
 import html
 import os
-import pprint
 from mlflow.pipelines.cards import BaseCard
 
 
