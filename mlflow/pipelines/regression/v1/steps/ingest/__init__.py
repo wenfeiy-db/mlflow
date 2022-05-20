@@ -22,7 +22,9 @@ class IngestStep(BaseStep):
     _DATASET_FORMAT_DELTA = "delta"
     _DATASET_FORMAT_PARQUET = "parquet"
     _DATASET_OUTPUT_NAME = "dataset.parquet"
-    _STEP_CARD_OUTPUT_NAME = "card.html"
+    _DATASET_PROFILE_OUTPUT_NAME = "dataset_profile.html"
+    _STEP_CARD_HTML_OUTPUT_NAME = "card.html"
+    _STEP_CARD_OUTPUT_NAME = "card.pkl"
     _SUPPORTED_DATASETS = [
         ParquetDataset,
         DeltaTableDataset,
@@ -60,31 +62,48 @@ class IngestStep(BaseStep):
             )
 
     def _run(self, output_directory: str):
+        from pandas_profiling import ProfileReport
+
         dataset_dst_path = os.path.abspath(
             os.path.join(output_directory, IngestStep._DATASET_OUTPUT_NAME)
         )
         self.dataset.resolve_to_parquet(dst_path=dataset_dst_path)
         _logger.info("Successfully stored data in parquet format at '%s'", dataset_dst_path)
 
+        _logger.info("Profiling ingested dataset")
+        ingested_df = read_parquet_as_pandas_df(data_parquet_path=dataset_dst_path)
+        ingested_dataset_profile = ProfileReport(
+            ingested_df, title="Profile of Ingested Dataset", minimal=True
+        )
+        dataset_profile_path = os.path.join(
+            output_directory, IngestStep._DATASET_PROFILE_OUTPUT_NAME
+        )
+        ingested_dataset_profile.to_file(output_file=dataset_profile_path)
+        _logger.info(f"Wrote dataset profile to '{dataset_profile_path}'")
+
         step_card = IngestStep._build_step_card(
-            ingested_parquet_dataset_path=dataset_dst_path,
+            ingested_dataset_profile=ingested_dataset_profile,
+            ingested_dataset_path=dataset_dst_path,
             dataset_src_location=getattr(self.dataset, "location", None),
             dataset_sql=getattr(self.dataset, "sql", None),
         )
-        with open(os.path.join(output_directory, IngestStep._STEP_CARD_OUTPUT_NAME), "w") as f:
-            f.write(step_card.to_html())
+        step_card.save_as_html(
+            path=os.path.join(output_directory, IngestStep._STEP_CARD_HTML_OUTPUT_NAME)
+        )
+        step_card.save(path=os.path.join(output_directory, IngestStep._STEP_CARD_OUTPUT_NAME))
 
     @staticmethod
     def _build_step_card(
-        ingested_parquet_dataset_path: str,
+        ingested_dataset_profile: str,
+        ingested_dataset_path: str,
         dataset_src_location: str = None,
         dataset_sql: str = None,
     ) -> IngestCard:
         """
         Constructs a step card instance corresponding to the current ingest step state.
 
-        :param ingested_parquet_dataset_path: The local filesystem path to the ingested parquet
-                                              dataset file.
+        :param ingested_dataset_path: The local filesystem path to the ingested parquet dataset
+                                      file.
         :param dataset_src_location: The source location of the dataset
                                      (e.g. '/tmp/myfile.parquet', 's3://mybucket/mypath', ...),
                                      if the dataset is a location-based dataset. Either
@@ -104,7 +123,6 @@ class IngestStep(BaseStep):
                 error_code=INVALID_PARAMETER_VALUE,
             )
 
-        dataset_df = read_parquet_as_pandas_df(data_parquet_path=ingested_parquet_dataset_path)
         card = IngestCard()
         card.add_markdown(
             name="DATASET_SOURCE",
@@ -116,124 +134,14 @@ class IngestStep(BaseStep):
         )
         card.add_markdown(
             name="RESOLVED_DATASET_LOCATION",
-            markdown=f"**Ingested dataset path:** `{ingested_parquet_dataset_path}`",
+            markdown=f"**Ingested dataset path:** `{ingested_dataset_path}`",
         )
-        card.add_markdown(
-            name="DATASET_NUM_ROWS",
-            markdown=f"**Number of rows:** {len(dataset_df)}",
-        )
-        dataset_size = IngestStep._get_dataset_size(dataset_path=ingested_parquet_dataset_path)
-        card.add_markdown(
-            name="DATASET_SIZE",
-            markdown=f"**Size:** {dataset_size}",
-        )
-        dataset_types = dataset_df.dtypes.to_frame().transpose()
-        dataset_sample = dataset_df.sample(n=min(len(dataset_df), 10), random_state=42).sort_index()
-
-        # To ensure that the column widths of the schema dataframe and the sample dataframe are
-        # consistent, we compute the maximum content length for each column across both dataframes
-        # and use this information to set the minimum cell width in `ch` units for the rendered
-        # step card
-        column_widths_ch = {
-            column_name: max(
-                dataset_types[column_name].astype(bytes).str.len().max(),
-                dataset_sample[column_name].astype(bytes).str.len().max(),
-                len(column_name),
-            )
-            for column_name in dataset_sample.columns
-        }
-        dataset_types_styler = IngestStep._style_dataframe_for_step_card(
-            df=dataset_types, column_widths_ch=column_widths_ch
-        )
-        card.add_html(
-            name="DATASET_SCHEMA",
-            html=dataset_types_styler.to_html(),
-        )
-        dataset_sample_styler = IngestStep._style_dataframe_for_step_card(
-            df=dataset_sample, column_widths_ch=column_widths_ch
-        ).format(precision=2)
-        card.add_html(
-            name="DATASET_SAMPLE",
-            html=dataset_sample_styler.to_html(),
-        )
+        card.add_pandas_profile("Profile of Ingested Dataset", ingested_dataset_profile)
         return card
 
-    @staticmethod
-    def _style_dataframe_for_step_card(df, column_widths_ch: Dict[str, int]):
-        """
-        Creates a Pandas Styler for the specified Pandas DataFrame with custom HTML / CSS table
-        stylings to achieve a desired ingest step card aesthetic.
-
-        :param df: A Pandas DataFrame to be included in the ingest step card.
-        :param column_widths_ch: A mapping from DataFrame column name to the desired column
-                                 width in ``ch`` units.
-        :return: A Pandas Styler instance containing styles for the associated DataFrame.
-        """
-        max_width_ch = 50
-        styler = (
-            df.style.set_properties(**{"text-align": "center"})
-            .hide_index()
-            .set_table_styles(
-                [
-                    # Create a border around the whole table
-                    {"selector": "", "props": [("border", "1px solid grey")]},
-                    # Apply custom stylings to the table header cells and table body cells
-                    {
-                        "selector": "th, tbody td",
-                        "props": [
-                            # Create a border around each cell
-                            ("border", "1px solid grey"),
-                            # Set padding for the content of each cell
-                            ("padding", "10px 5px 10px 5px"),
-                            # Set the maximum column width via `max-width` and, after it has
-                            # been reached, forcibly wrap text via `word-wrap: break-word`
-                            ("max-width", f"{max_width_ch}ch"),
-                            ("word-wrap", "break-word"),
-                        ],
-                    },
-                ]
-            )
-        )
-
-        # Set the minimum width of each column using the provided per-column widths
-        for column_name, column_width in column_widths_ch.items():
-            column_width = min(column_width, max_width_ch)
-            styler = styler.set_properties(
-                subset=[column_name], **{"min-width": f"{column_width}ch"}
-            )
-
-        return styler
-
-    @staticmethod
-    def _get_dataset_size(dataset_path: str) -> str:
-        """
-        Obtains the size of the specified parquet dataset file.
-
-        :param dataset_path: The local filesystem path to the parquet dataset file.
-        :return: A human-readable string representation of the size of the specified dataset.
-        """
-        kb = 10**3
-        mb = 10**6
-        gb = 10**9
-
-        size = os.path.getsize(dataset_path)
-        if size >= gb:
-            return "{:0.2f} GB".format(size / gb)
-        elif size >= mb:
-            return "{:0.2f} MB".format(size / mb)
-        elif size >= kb:
-            return "{:0.2f} KB".format(size / kb)
-        else:
-            return f"{size} B"
-
     def inspect(self, output_directory: str):
-        # TODO: Update the implementation of inspect to conform to expected behaviors and handle
-        # the case where the last execution of the step failed, or remove `inspect()` entirely
-        parquet_dataset_path = os.path.join(output_directory, IngestStep._DATASET_OUTPUT_NAME)
-        return IngestStep._build_step_card(
-            ingested_parquet_dataset_path=parquet_dataset_path,
-            dataset_src_location=getattr(self.dataset, "location", None),
-            dataset_sql=getattr(self.dataset, "sql", None),
+        return IngestCard.load(
+            path=os.path.join(output_directory, IngestStep._STEP_CARD_OUTPUT_NAME)
         )
 
     @classmethod

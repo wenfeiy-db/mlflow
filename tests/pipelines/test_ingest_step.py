@@ -7,6 +7,7 @@ import pytest
 from pyspark.sql import SparkSession
 
 from mlflow.exceptions import MlflowException
+from mlflow.pipelines.cards import IngestCard
 from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 from mlflow.store.artifact.s3_artifact_repo import S3ArtifactRepository
 from mlflow.utils.file_utils import TempDir
@@ -336,6 +337,33 @@ def test_ingests_delta_successfully(use_relative_path, spark_df, tmp_path):
 
 
 @pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingest_directory_ignores_files_that_do_not_match_dataset_format(pandas_df, tmp_path):
+    dataset_path = tmp_path / "dataset"
+    dataset_path.mkdir()
+    pandas_df_part1 = pandas_df[:1]
+    pandas_df_part2 = pandas_df[1:]
+    pandas_df_part1.to_parquet(dataset_path / "df1.parquet")
+    pandas_df_part2.to_parquet(dataset_path / "df2.parquet")
+    # Ingest should ignore these files
+    pandas_df_part1.to_csv(dataset_path / "df1.csv")
+    with open(dataset_path / "README", "w") as f:
+        f.write("Interesting README content")
+
+    IngestStep.from_pipeline_config(
+        pipeline_config={
+            "data": {
+                "format": "parquet",
+                "location": str(dataset_path),
+            }
+        },
+        pipeline_root=os.getcwd(),
+    ).run(output_directory=tmp_path)
+
+    reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
+    pd.testing.assert_frame_equal(reloaded_df, pandas_df)
+
+
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
 def test_ingest_produces_expected_step_card(pandas_df, tmp_path):
     dataset_path = tmp_path / "df.parquet"
     pandas_df.to_parquet(dataset_path)
@@ -357,9 +385,35 @@ def test_ingest_produces_expected_step_card(pandas_df, tmp_path):
 
     assert "Dataset source location" in step_card_html_content
     assert "Ingested dataset path" in step_card_html_content
-    assert "Number of rows" in step_card_html_content
-    for column_name in pandas_df.columns:
-        assert column_name in step_card_html_content
+    assert "Profile of Ingested Dataset" in step_card_html_content
+
+
+@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+def test_ingest_run_and_inspect_return_expected_step_card(pandas_df, tmp_path):
+    dataset_path = tmp_path / "df.parquet"
+    pandas_df.to_parquet(dataset_path)
+
+    ingest_step = IngestStep.from_pipeline_config(
+        pipeline_config={
+            "data": {
+                "format": "parquet",
+                "location": str(dataset_path),
+            }
+        },
+        pipeline_root=os.getcwd(),
+    )
+
+    run_output = ingest_step.run(output_directory=tmp_path)
+    inspect_output = ingest_step.inspect(output_directory=tmp_path)
+
+    step_card_output_path = os.path.join(tmp_path, "card.html")
+    with open(step_card_output_path, "r") as f:
+        step_card_html_content = f.read()
+
+    assert isinstance(run_output, IngestCard)
+    assert isinstance(inspect_output, IngestCard)
+    assert run_output.to_html() == inspect_output.to_html()
+    assert run_output.to_html() == step_card_html_content
 
 
 @pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")

@@ -88,7 +88,6 @@ CORE_REQUIREMENTS = SKINNY_REQUIREMENTS + [
     "pandas-profiling",
     "pyarrow",
     "jinja2",
-    "ipywidgets",
     "Markdown",
 ]
 
