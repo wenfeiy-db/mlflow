@@ -114,7 +114,7 @@ class SplitStep(BaseStep):
         self, input_df, train_df, validation_df, test_df, output_directory
     ):
         from pandas_profiling import ProfileReport
-        from mlflow.pipelines.cards import SplitCard
+        from mlflow.pipelines.regression.v1.cards.split import SplitCard
 
         # Build profiles for input dataset, and train / validation / test splits
         input_df_profile = ProfileReport(input_df, title="Profile of Input Dataset", minimal=True)
