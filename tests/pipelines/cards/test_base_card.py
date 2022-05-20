@@ -26,7 +26,7 @@ def test_verify_card_information():
     ingest_card = (
         FakeCard()
         .add_markdown("MARKDOWN_1", "#### Hello, world!")
-        .add_artifact("ARTIFACT_1", ["1", "2", "3"])
+        .add_html("HTML_1", "<span style='color:blue'>blue</span>")
         .add_pandas_profile("Profile 1", profile1)
         .add_pandas_profile("Profile 2", profile2)
         .add_text("1,2,3.")
@@ -39,7 +39,7 @@ def test_verify_card_information():
     )
     assert ingest_card._context == {
         "MARKDOWN_1": md_to_html("#### Hello, world!"),
-        "ARTIFACT_1": pprint.pformat(["1", "2", "3"]),
+        "HTML_1": "<span style='color:blue'>blue</span>",
     }
     assert ingest_card._pandas_profiles == [
         ("Profile 1", profile_iframe(profile1)),
