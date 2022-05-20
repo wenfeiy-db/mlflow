@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import html
 import os
 from io import StringIO
-from __future__ import annotations
 
 
 _CARD_PICKLE_NAME = "card.pkl"
