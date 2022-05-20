@@ -1,19 +1,98 @@
+<!DOCTYPE html>
 <html>
-    <style>
-        h1.title {
+    <head>
+        <style>
+            h1.title {
             color: #4287f5;
-        }
-        h2.step-title {
-            color : #4287f5;
-        }
-        {% block CSS %} {% endblock %}
-    </style>
-    <header>
-        <h1 class="title">MLflow Pipeline</h1>
-        <h2 class="step-title">{% block STEP_TITLE %}{% endblock %}</h2>
-        <hr>
-    </header>
-    <body>
-        {% block BODY %}{% endblock %}
-    </body>
+            }
+            h2.step-title {
+                color : #4287f5;
+            }
+            .tab {
+                overflow: hidden;
+                border: 1px solid #ccc;
+                background-color: #f1f1f1;
+            }
+
+            .tab button {
+                background-color: inherit;
+                float: left;
+                border: none;
+                outline: none;
+                cursor: pointer;
+                padding: 14px 16px;
+                transition: 0.3s;
+            }
+
+            .tab button:hover {
+                background-color: #ddd;
+            }
+
+            .tab button.active {
+                background-color: #ccc;
+            }
+
+            .tabcontent {
+                display: block;
+                padding: 6px 12px;
+                border: 1px solid #ccc;
+                border-top: none;
+            }
+
+            .content-hide {
+                display: none;
+            }
+
+            .content-active {
+                display: block;
+            }
+            {% block CSS %} {% endblock %}
+        </style>
+    </head>
+   <body>
+        <header>
+            <h1 class="title">MLflow Pipeline</h1>
+            <h2 class="step-title">{% block STEP_TITLE %}{% endblock %}</h2>
+            <hr>
+        </header>
+        <div class="tab">
+            <div class="button-container">
+                <button id="0" class="tablinks active">
+                    Summary
+                </button>
+                {% for profile in pandas_profiles %}
+                    <button id={{loop.index}} class="tablinks">
+                        {{profile.0}}
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="tabcontent">
+            <div class="content content-active">{% block BODY %}{% endblock %}</div>
+            {% for profile in pandas_profiles %}
+                <div class="content content-hide">{{ profile.1 }}</div>
+            {% endfor %}
+        </div>
+        <script>
+            function onclickTab(event) {
+                 const tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace("active", "");
+                }
+                event.target.classList.add("active");
+
+                const tabId = event.target.id;
+                const tabContents = document.getElementsByClassName("content");
+                for (i = 0; i < tabContents.length; i++) {
+                    tabContents[i].className = tabContents[i].className.replace("content-active", "content-hide");
+                }
+                tabContents[tabId].classList.add("content-active");
+            }
+            (function() {
+                const buttonsContainer = document.getElementsByClassName("button-container")[0]
+                buttonsContainer.addEventListener("click", onclickTab);
+            })()
+        </script>
+   </body>
 </html>
+

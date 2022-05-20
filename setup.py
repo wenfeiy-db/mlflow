@@ -35,6 +35,7 @@ extra_files = [
     "pyspark/ml/log_model_allowlist.txt",
 ]
 pipelines_dag_files = package_files("mlflow/pipelines/regression/v1/resources")
+pipelines_files = package_files("mlflow/pipelines/cards/templates")
 
 """
 Minimal requirements for the skinny MLflow client which provides a limited
@@ -123,6 +124,7 @@ setup(
             + alembic_files
             + extra_files
             + pipelines_dag_files
+            + pipelines_files
         ),
     }
     if not _is_mlflow_skinny
