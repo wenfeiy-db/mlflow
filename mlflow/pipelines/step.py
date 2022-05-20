@@ -1,10 +1,13 @@
 import abc
+import logging
 import yaml
 from typing import TypeVar, Dict, Any
 
 import mlflow
 from mlflow.pipelines.utils import get_pipeline_name, get_pipeline_config
+from mlflow.utils.databricks_utils import is_in_databricks_runtime
 
+_logger = logging.getLogger(__name__)
 
 StepType = TypeVar("StepType", bound="BaseStep")
 
@@ -29,6 +32,21 @@ class BaseStep(metaclass=abc.ABCMeta):
         if uri is not None:
             mlflow.set_tracking_uri(uri)
 
+    def _initialize_databricks_pyspark_connection_if_applicable(self) -> None:
+        """
+        Initializes a connection to the Databricks PySpark Gateway if MLflow Pipelines is running
+        in the Databricks Runtime.
+        """
+        if is_in_databricks_runtime():
+            try:
+                from dbruntime.spark_connection import initialize_spark_connection, is_pinn_mode_enabled
+                initialize_spark_connection(is_pinn_mode_enabled())
+            except Exception as e:
+                _logger.warning(
+                    "Encountered unexpected failure while initializing Spark connection. Spark"
+                    " operations may not succeed. Exception: %s", e
+                )
+                
     def run(self, output_directory: str):
         """
         Executes the step by running common setup operations and invoking
@@ -39,7 +57,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         :return: Results from executing the corresponding step.
         """
         self._set_tracking_uri()
-        # other common setup stuff for steps goes here
+        self._initialize_databricks_pyspark_connection_if_applicable()
         return self._run(output_directory)
 
     @abc.abstractmethod

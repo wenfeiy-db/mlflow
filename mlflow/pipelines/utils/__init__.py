@@ -1,5 +1,6 @@
 import os
 import pathlib
+from collections import NamedTuple
 from typing import Dict, Any
 
 from mlflow.exceptions import MlflowException
@@ -119,6 +120,28 @@ def get_pipeline_root_path() -> str:
     #     )
     #
     # os.chdir(repo_root)
+
+
+class TrackingConfig(NamedTuple):
+    tracking_uri: str
+    experiment_name: str
+
+
+def get_pipeline_tracking_config(pipeline_root_path: str = None) -> TrackingConfig:
+    pipeline_config = get_pipeline_config(pipeline_root_path=pipeline_root_path)
+    tracking_config = pipeline_config.get("experiment", {})
+    tracking_uri = tracking_config.get(
+        "tracking_uri",
+        os.path.join(pipeline_root_path, "metadata", "runs"),
+    )
+    experiment_name = tracking_config.get(
+        "name",
+        get_pipeline_name(pipeline_root_path=pipeline_root_path),
+    )
+    return TrackingConfig(
+        tracking_uri=tracking_uri,
+        experiment_name=experiment_name,
+    )
 
 
 def _verify_is_pipeline_root_directory(pipeline_root_path: str) -> str:
