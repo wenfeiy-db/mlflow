@@ -379,9 +379,11 @@ jobs:
           git clone https://github.com/cdarlint/winutils
       - name: Run tests
         run: |
-          export MLFLOW_HOME=$(pwd)
+          # Set Hadoop environment variables required for testing Spark integrations on Windows
           export HADOOP_HOME=`realpath winutils/hadoop-3.2.2`
           export PATH=$PATH:$HADOOP_HOME/bin
+          # Run pipelines tests
+          export MLFLOW_HOME=$(pwd)
           pytest tests/pipelines
 
   sagemaker:

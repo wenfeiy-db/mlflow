@@ -1,8 +1,6 @@
 from __future__ import annotations
-import pprint
 import os
 from io import StringIO
-from typing import Any
 
 
 class BaseCard:
@@ -57,21 +55,19 @@ class BaseCard:
         self._pandas_profiles.append((name, profile))
         return self
 
-    def add_artifact(self, name: str, artifact: Any, artifact_format=None) -> BaseCard:
+    def add_html(self, name: str, html: str) -> BaseCard:
         """
-        Add an artifact to the card.
+        Adds html to the card.
 
         :param name: name of the variable in the Jinja2 template
-        :param artifact: an artifact
+        :param html: the html with which to replace the specified template variable
         :return: the updated card instance
         """
         if name not in self._variables:
             raise ValueError(
                 f"{name} is not a valid artifact variable found in template '{self.template_name}'"
             )
-        if not artifact_format:
-            artifact = pprint.pformat(artifact)
-        self._context[name] = artifact
+        self._context[name] = html
         return self
 
     def add_text(self, text: str) -> BaseCard:

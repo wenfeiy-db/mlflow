@@ -145,18 +145,16 @@ class IngestStep(BaseStep):
         dataset_types_styler = IngestStep._style_dataframe_for_step_card(
             df=dataset_types, column_widths_ch=column_widths_ch
         )
-        card.add_artifact(
+        card.add_html(
             name="DATASET_SCHEMA",
-            artifact=dataset_types_styler.to_html(),
-            artifact_format="html",
+            html=dataset_types_styler.to_html(),
         )
         dataset_sample_styler = IngestStep._style_dataframe_for_step_card(
             df=dataset_sample, column_widths_ch=column_widths_ch
         ).format(precision=2)
-        card.add_artifact(
+        card.add_html(
             name="DATASET_SAMPLE",
-            artifact=dataset_sample_styler.to_html(),
-            artifact_format="html",
+            html=dataset_sample_styler.to_html(),
         )
         return card
 
