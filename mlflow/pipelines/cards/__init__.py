@@ -1,6 +1,11 @@
-from __future__ import annotations
+import html
 import os
 from io import StringIO
+from __future__ import annotations
+
+
+_CARD_PICKLE_NAME = "card.pkl"
+_CARD_HTML_NAME = "card.html"
 
 
 class BaseCard:
@@ -52,7 +57,12 @@ class BaseCard:
         :param profile: the pandas profile object
         :return: the updated card instance
         """
-        self._pandas_profiles.append((name, profile))
+        profile_iframe = (
+            "<iframe srcdoc='"
+            + html.escape(profile.to_html())
+            + "' width='100%' height='500' frameborder='0'></iframe>"
+        )
+        self._pandas_profiles.append((name, profile_iframe))
         return self
 
     def add_html(self, name: str, html: str) -> BaseCard:
@@ -89,7 +99,9 @@ class BaseCard:
         import jinja2
 
         j2_env = jinja2.Environment(loader=jinja2.FileSystemLoader(self.template_root))
-        return j2_env.get_template(self.template_name).render(self._context)
+        return j2_env.get_template(self.template_name).render(
+            {**self._context, "pandas_profiles": self._pandas_profiles}
+        )
 
     def to_text(self) -> str:
         """
@@ -104,17 +116,31 @@ class BaseCard:
         import ipywidgets as widgets
         from IPython.display import display
 
-        if len(self._pandas_profiles) == 0:
-            display(widgets.HTML(self.to_html()))
-        else:
-            tab = widgets.Tab()
-            tab.children = [widgets.HTML(self.to_html())] + [
-                profile.widgets for _, profile in self._pandas_profiles
-            ]
-            titles = ["Summary"] + [name for name, _ in self._pandas_profiles]
-            for i in range(len(tab.children)):
-                tab.set_title(i, titles[i])
-            display(tab)
+        display(HTML(self.to_html()))
+
+    def save_as_html(self, path) -> None:
+        if os.path.isdir(path):
+            path = os.path.join(path, _CARD_HTML_NAME)
+        with open(path, "w") as f:
+            f.write(self.to_html())
+
+    def save(self, path: str) -> None:
+        if os.path.isdir(path):
+            path = os.path.join(path, _CARD_PICKLE_NAME)
+        with open(path, "wb") as out:
+            import pickle
+
+            pickle.dump(self, out)
+
+    @staticmethod
+    def load(path):
+        if os.path.isdir(path):
+            path = os.path.join(path, _CARD_PICKLE_NAME)
+        with open(path, "rb") as f:
+            import pickle
+
+            return pickle.load(f)
+>>>>>>> origin/master
 
 
 class IngestCard(BaseCard):
