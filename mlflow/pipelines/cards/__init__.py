@@ -113,8 +113,7 @@ class BaseCard:
         """
         Display the rendered card as a ipywidget
         """
-        import ipywidgets as widgets
-        from IPython.display import display
+        from IPython.display import display, HTML
 
         display(HTML(self.to_html()))
 
@@ -140,7 +139,6 @@ class BaseCard:
             import pickle
 
             return pickle.load(f)
->>>>>>> origin/master
 
 
 class IngestCard(BaseCard):
