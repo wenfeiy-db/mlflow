@@ -8,3 +8,4 @@ shap==0.40.*
 click==8.0.*
 pandas-profiling==3.1.*
 ipython==7.0.*
+markdown==3.3.*
