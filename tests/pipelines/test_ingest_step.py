@@ -7,7 +7,7 @@ import pytest
 from pyspark.sql import SparkSession
 
 from mlflow.exceptions import MlflowException
-from mlflow.pipelines.cards import IngestCard
+from mlflow.pipelines.regression.v1.cards.ingest import IngestCard
 from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 from mlflow.store.artifact.s3_artifact_repo import S3ArtifactRepository
 from mlflow.utils.file_utils import TempDir

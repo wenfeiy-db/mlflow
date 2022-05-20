@@ -3,9 +3,9 @@ import os
 
 from mlflow.exceptions import MlflowException
 from mlflow.pipelines.step import BaseStep
-from mlflow.pipelines.cards import IngestCard
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 from mlflow.utils.file_utils import read_parquet_as_pandas_df
+from mlflow.pipelines.regression.v1.cards.ingest import IngestCard
 from mlflow.pipelines.regression.v1.steps.ingest.datasets import (
     ParquetDataset,
     DeltaTableDataset,
