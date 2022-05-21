@@ -26,7 +26,9 @@ def ingest():
     """
     Ingest data
     """
-    _run_pipeline_step("ingest")
+    ingest_outputs_path = _run_pipeline_step("ingest")
+    _logger.info("== Showing summary of ingested data ==\n")
+    _maybe_open(os.path.join(ingest_outputs_path, "card.html"))
 
 
 def split():

@@ -374,8 +374,16 @@ jobs:
           pip install -r mlflow/pipelines/requirements.txt
           pip install --no-dependencies tests/resources/mlflow-test-plugin
           pip install -e .[extras]
+          pip install -r mlflow/pipelines/requirements.txt
+      - name: Download Hadoop winutils for Spark
+        run: |
+          git clone https://github.com/cdarlint/winutils
       - name: Run tests
         run: |
+          # Set Hadoop environment variables required for testing Spark integrations on Windows
+          export HADOOP_HOME=`realpath winutils/hadoop-3.2.2`
+          export PATH=$PATH:$HADOOP_HOME/bin
+          # Run pipelines tests
           export MLFLOW_HOME=$(pwd)
           pytest tests/pipelines
 

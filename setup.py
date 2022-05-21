@@ -78,15 +78,17 @@ CORE_REQUIREMENTS = SKINNY_REQUIREMENTS + [
     "pandas",
     "prometheus-flask-exporter",
     "querystring_parser",
-    "jinja2",
     # Pin sqlparse for: https://github.com/mlflow/mlflow/issues/3433
     "sqlparse>=0.3.1",
     # Required to run the MLflow server against SQL-backed storage
     "sqlalchemy",
     "waitress; platform_system == 'Windows'",
     # Required for MLflow Pipelines
+    # TODO: Move these to extras later
     "pandas-profiling",
     "pyarrow",
+    "jinja2",
+    "Markdown",
 ]
 
 _is_mlflow_skinny = bool(os.environ.get(_MLFLOW_SKINNY_ENV_VAR))
