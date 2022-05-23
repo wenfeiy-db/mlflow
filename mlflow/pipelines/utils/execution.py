@@ -290,7 +290,7 @@ train: $(train_objects)
 steps/%/outputs/pipeline.pkl steps/%/outputs/run_id: {path:prp/steps/train.py} {path:prp/steps/train_config.yaml} steps/transform/outputs/train_transformed.parquet steps/transform/outputs/transformer.pkl steps/train/conf.yaml
 	python -c "from mlflow.pipelines.regression.v1.steps.train import TrainStep; TrainStep.from_step_config_path(step_config_path='steps/train/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/train/outputs')"
 
-evaluate_objects = steps/evaluate/outputs/worst_training_examples.parquet steps/evaluate/outputs/metrics.json steps/evaluate/outputs/explanations.html
+evaluate_objects = steps/evaluate/outputs/worst_training_examples.parquet steps/evaluate/outputs/metrics.json steps/evaluate/outputs/explanations.html steps/evaluate/outputs/model_validation_status
 
 evaluate: $(evaluate_objects)
 
@@ -301,7 +301,7 @@ register_objects = steps/register/outputs/register-explanations.html
 
 register: $(register_objects)
 
-steps/register/outputs/register-explanations.html: steps/train/outputs/run_id steps/register/conf.yaml
+steps/register/outputs/register-explanations.html: steps/train/outputs/run_id steps/register/conf.yaml steps/evaluate/outputs/model_validation_status
 	python -c "from mlflow.pipelines.regression.v1.steps.register import RegisterStep; RegisterStep.from_step_config_path(step_config_path='steps/register/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/register/outputs')"
 
 clean:

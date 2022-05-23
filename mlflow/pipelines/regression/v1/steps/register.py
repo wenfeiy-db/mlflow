@@ -44,10 +44,28 @@ class RegisterStep(BaseStep):
             )
             with open(run_id_path, "r") as f:
                 run_id = f.read()
+
+            model_validation_path = get_step_output_path(
+                pipeline_name=self.pipeline_name,
+                step_name="evaluate",
+                relative_path="model_validation_status",
+            )
+            with open(model_validation_path, "r") as f:
+                model_validation = f.read()
+
             artifact_path = "model"
-            self.model_uri = "runs:/{run_id}/{artifact_path}".format(run_id=run_id, artifact_path=artifact_path)
-            self.model_details = mlflow.register_model(model_uri=self.model_uri, name=self.register_model_name)
-            self.final_status = self._wait_until_not_pending(self.model_details.version)
+            if model_validation is "VALIDATED" or (model_validation is "UNKNOWN" and self.allow_non_validated_model):
+                self.model_url = "https://figurethisout.com"
+                self.model_uri = "runs:/{run_id}/{artifact_path}".format(run_id=run_id, artifact_path=artifact_path)
+                self.model_details = mlflow.register_model(model_uri=self.model_uri, name=self.register_model_name)
+                self.final_status = self._wait_until_not_pending(self.model_details.version)
+                self.alerts = ""
+            else:
+                self.model_url = "-"
+                self.model_uri = "-"
+                self.final_status = "-"
+                self.alerts = "Model registration skipped.  Please check the validation result from Evaluate step."
+
             self.status = "Done"
         except Exception:
             self.status = "Failed"
@@ -94,6 +112,8 @@ class RegisterStep(BaseStep):
         card.add_markdown(
             "MODEL_URI", f"**Model URI:** `{self.model_uri}`"
         )
+        card.add_markdown("ALERTS", f"**Alerts:** `{self.alerts}`")
+        card.add_markdown("MODEL_URL", f"**Model URL:** `{self.model_url}`")
         with open(os.path.join(output_directory, _OUTPUT_CARD_FILE_NAME), "w") as f:
             f.write(card.to_html())
 
