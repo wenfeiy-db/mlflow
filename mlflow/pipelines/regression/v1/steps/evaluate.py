@@ -27,7 +27,7 @@ _BUILTIN_METRIC_TO_GREATER_IS_BETTER = {
 
 
 class EvaluateStep(BaseStep):
-    def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
+    def __init__(self, step_config: Dict[str, Any], pipeline_root: str) -> None:
         super().__init__(step_config, pipeline_root)
         self.tracking_config = TrackingConfig.from_dict(step_config)
         self.target_col = self.pipeline_config.get("target_col")
@@ -162,9 +162,13 @@ class EvaluateStep(BaseStep):
             raise MlflowException(
                 "Config for evaluate step is not found.", error_code=INVALID_PARAMETER_VALUE
             )
-        step_config[EvaluateStep._TRACKING_URI_CONFIG_KEY] = "/tmp/mlruns"
         step_config["metrics"] = pipeline_config.get("metrics")
-        step_config.update(get_pipeline_tracking_config(pipeline_root_path=pipeline_root).to_dict())
+        step_config.update(
+            get_pipeline_tracking_config(
+                pipeline_root_path=pipeline_root,
+                pipeline_config=pipeline_config,
+            ).to_dict()
+        )
         return cls(step_config, pipeline_root)
 
     @property

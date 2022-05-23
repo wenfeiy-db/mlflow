@@ -1,4 +1,5 @@
 import pathlib
+import yaml
 
 import pytest
 from click.testing import CliRunner
@@ -6,10 +7,12 @@ from click.testing import CliRunner
 import mlflow
 import mlflow.pipelines
 import mlflow.pipelines.cli as pipelines_cli
+from mlflow.pipelines import Pipeline
 
 # pylint: disable=unused-import
 from tests.pipelines.helper_functions import (
     enter_pipeline_example_directory,
+    enter_test_pipeline_directory,
 )
 
 
@@ -45,6 +48,31 @@ def test_pipelines_cli_flow_completes_successfully():
     CliRunner().invoke(pipelines_cli.transform)
     CliRunner().invoke(pipelines_cli.train)
     CliRunner().invoke(pipelines_cli.evaluate)
+
+
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
+def test_pipelines_log_to_expected_mlflow_backend_and_experiment(tmp_path):
+    experiment_name = "my_test_exp"
+    tracking_uri = "sqlite:///" + str((tmp_path / "tracking_dst.db").resolve())
+
+    profile_path = pathlib.Path.cwd() / "profiles" / "local.yaml"
+    with open(profile_path, "r") as f:
+        profile_contents = yaml.safe_load(f)
+
+    profile_contents["experiment"]["name"] = experiment_name
+    profile_contents["experiment"]["tracking_uri"] = tracking_uri
+
+    with open(profile_path, "w") as f:
+        yaml.safe_dump(profile_contents, f)
+
+    mlflow.pipelines.clean()
+    pipeline = Pipeline(profile="local")
+    pipeline.evaluate()
+
+    mlflow.set_tracking_uri(tracking_uri)
+    logged_runs = mlflow.search_runs(experiment_names=[experiment_name], output_format="list")
+    assert len(logged_runs) == 1
+    logged_run = logged_runs[0]
 
 
 @pytest.mark.usefixtures("enter_pipeline_example_directory", "clean_up_pipeline")

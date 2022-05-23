@@ -166,14 +166,13 @@ class TrackingConfig:
         )
 
 
-def get_pipeline_tracking_config(pipeline_root_path: str = None) -> TrackingConfig:
+def get_pipeline_tracking_config(pipeline_root_path: str, pipeline_config: Dict[str, Any]) -> TrackingConfig:
     default_tracking_uri = (
         "databricks"
         if is_in_databricks_runtime()
         else os.path.join(pipeline_root_path, "metadata", "runs")
     )
 
-    pipeline_config = get_pipeline_config(pipeline_root_path=pipeline_root_path)
     tracking_config = pipeline_config.get("experiment", {})
     tracking_uri = tracking_config.get("tracking_uri", default_tracking_uri)
 

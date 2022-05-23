@@ -10,6 +10,7 @@ import shutil
 import subprocess
 from typing import Dict, List, Any
 
+from mlflow.pipelines.pipeline import Pipeline
 from mlflow.pipelines.utils import get_pipeline_root_path, get_pipeline_name, get_pipeline_config
 from mlflow.pipelines.utils.execution import run_pipeline_step, clean_execution_state
 from mlflow.pipelines.regression.v1.steps.ingest import IngestStep

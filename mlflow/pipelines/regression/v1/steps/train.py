@@ -91,7 +91,12 @@ class TrainStep(BaseStep):
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
         step_config = read_yaml(os.path.join(pipeline_root, "steps"), "train_config.yaml")
-        step_config.update(get_pipeline_tracking_config(pipeline_root_path=pipeline_root).to_dict())
+        step_config.update(
+            get_pipeline_tracking_config(
+                pipeline_root_path=pipeline_root,
+                pipeline_config=pipeline_config,
+            ).to_dict()
+        )
         return cls(step_config, pipeline_root)
 
     @property

@@ -3,7 +3,6 @@ import logging
 import yaml
 from typing import TypeVar, Dict, Any
 
-import mlflow
 from mlflow.pipelines.utils import get_pipeline_name, get_pipeline_config
 from mlflow.utils.databricks_utils import is_in_databricks_runtime
 
