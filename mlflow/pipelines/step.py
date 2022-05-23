@@ -40,7 +40,8 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         self._set_tracking_uri()
         # other common setup stuff for steps goes here
-        return self._run(output_directory)
+        self._run(output_directory)
+        return self.inspect(output_directory)
 
     @abc.abstractmethod
     def _run(self, output_directory: str):

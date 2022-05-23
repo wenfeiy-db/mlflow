@@ -110,15 +110,11 @@ class SplitStep(BaseStep):
 
         self.split_ratios = split_ratios
 
-    def _build_profiles_and_card(
-        self, input_df, train_df, validation_df, test_df, output_directory
-    ):
+    def _build_profiles_and_card(self, train_df, validation_df, test_df, output_directory):
         from pandas_profiling import ProfileReport
-        from mlflow.pipelines.cards import SplitCard
+        from mlflow.pipelines.regression.v1.cards.split import SplitCard
 
         # Build profiles for input dataset, and train / validation / test splits
-        input_df_profile = ProfileReport(input_df, title="Profile of Input Dataset", minimal=True)
-        input_df_profile.to_file(output_file=os.path.join(output_directory, "summary.html"))
         train_profile = ProfileReport(train_df, title="Profile of Train Dataset", minimal=True)
         validation_profile = ProfileReport(
             validation_df, title="Profile of Validation Dataset", minimal=True
@@ -195,9 +191,7 @@ class SplitStep(BaseStep):
             self.run_end_time = time.time()
             self.execution_duration = self.run_end_time - run_start_time
             try:
-                self._build_profiles_and_card(
-                    input_df, train_df, validation_df, test_df, output_directory
-                )
+                self._build_profiles_and_card(train_df, validation_df, test_df, output_directory)
             except Exception as e:
                 # swallow exception raised during building profiles and card.
                 _logger.warning(f"Build profiles and card failed: {repr(e)}")
