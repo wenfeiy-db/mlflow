@@ -77,7 +77,7 @@ class RegisterStep(BaseStep):
         return ModelVersionStatus.PENDING_REGISTRATION
 
     def _build_card(self, output_directory: str) -> None:
-        from mlflow.pipelines.cards import RegisterCard
+        from mlflow.pipelines.regression.v1.cards.register import RegisterCard
 
         # Build card
         card = RegisterCard()
