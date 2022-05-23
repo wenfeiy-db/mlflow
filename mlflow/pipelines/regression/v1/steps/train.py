@@ -83,7 +83,7 @@ class TrainStep(BaseStep):
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
         step_config = read_yaml(os.path.join(pipeline_root, "steps"), "train_config.yaml")
-        step_config[TrainStep._TRACKING_URI_CONFIG_KEY] = "/tmp/mlruns"
+        step_config[TrainStep._TRACKING_URI_CONFIG_KEY] = "sqlite:///metadata/mlflow/mlruns.db"
         return cls(step_config, pipeline_root)
 
     @property

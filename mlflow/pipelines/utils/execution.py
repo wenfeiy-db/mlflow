@@ -297,6 +297,13 @@ evaluate: $(evaluate_objects)
 steps/%/outputs/worst_training_examples.parquet steps/%/outputs/metrics.json steps/%/outputs/explanations.html: steps/train/outputs/pipeline.pkl steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/train/outputs/run_id steps/evaluate/conf.yaml
 	python -c "from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep; EvaluateStep.from_step_config_path(step_config_path='steps/evaluate/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/evaluate/outputs')"
 
+register_objects = steps/register/outputs/register-explanations.html
+
+register: $(register_objects)
+
+steps/register/outputs/register-explanations.html: steps/train/outputs/run_id steps/register/conf.yaml
+	python -c "from mlflow.pipelines.regression.v1.steps.register import RegisterStep; RegisterStep.from_step_config_path(step_config_path='steps/register/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/register/outputs')"
+
 clean:
 	rm -rf $(split_objects) $(transform_objects) $(train_objects) $(evaluate_objects)
 """

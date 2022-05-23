@@ -4,8 +4,6 @@ import os
 import time
 from typing import Dict, Any
 
-import cloudpickle
-
 import mlflow
 from mlflow.entities.model_registry.model_version_status import ModelVersionStatus
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
@@ -16,14 +14,13 @@ from mlflow.utils.file_utils import read_yaml
 
 _logger = logging.getLogger(__name__)
 
-_OUTPUT_CARD_FILE_NAME = "explanations.html"
+_OUTPUT_CARD_FILE_NAME = "register-explanations.html"
 _MODEL_REGISTRY_STATUS_RETRIES = 10
 
 
 class RegisterStep(BaseStep):
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         super(RegisterStep, self).__init__(step_config, pipeline_root)
-
         self.status = "Unknown"
         self.run_end_time = None
         self.execution_duration = None
@@ -35,7 +32,7 @@ class RegisterStep(BaseStep):
                 error_code=INVALID_PARAMETER_VALUE,
             )
         self.register_model_name = self.step_config.get("name")
-        self.allow_non_validated_model = self.step.config.get("allow_non_validated_model", False)
+        self.allow_non_validated_model = self.step_config.get("allow_non_validated_model", False)
 
     def _run(self, output_directory):
         try:
@@ -47,11 +44,11 @@ class RegisterStep(BaseStep):
             )
             with open(run_id_path, "r") as f:
                 run_id = f.read()
-
             artifact_path = "model"
             self.model_uri = "runs:/{run_id}/{artifact_path}".format(run_id=run_id, artifact_path=artifact_path)
             self.model_details = mlflow.register_model(model_uri=self.model_uri, name=self.register_model_name)
             self.final_status = self._wait_until_not_pending(self.model_details.version)
+            self.status = "Done"
         except Exception:
             self.status = "Failed"
             raise
@@ -80,10 +77,10 @@ class RegisterStep(BaseStep):
         return ModelVersionStatus.PENDING_REGISTRATION
 
     def _build_card(self, output_directory: str) -> None:
-        from mlflow.pipelines.cards import SplitCard
+        from mlflow.pipelines.cards import RegisterCard
 
         # Build card
-        card = SplitCard()
+        card = RegisterCard()
 
         run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
         card.add_markdown(
@@ -97,7 +94,6 @@ class RegisterStep(BaseStep):
         card.add_markdown(
             "MODEL_URI", f"**Model URI:** `{self.model_uri}`"
         )
-
         with open(os.path.join(output_directory, _OUTPUT_CARD_FILE_NAME), "w") as f:
             f.write(card.to_html())
 
@@ -110,6 +106,7 @@ class RegisterStep(BaseStep):
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
         try:
             step_config = pipeline_config["steps"]["register"]
+            step_config[RegisterStep._TRACKING_URI_CONFIG_KEY] = "sqlite:///metadata/mlflow/mlruns.db"
         except KeyError:
             raise MlflowException(
                 "Config for register step is not found.", error_code=INVALID_PARAMETER_VALUE

@@ -127,7 +127,7 @@ class EvaluateStep(BaseStep):
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
-        step_config = {EvaluateStep._TRACKING_URI_CONFIG_KEY: "/tmp/mlruns"}
+        step_config = {EvaluateStep._TRACKING_URI_CONFIG_KEY: "sqlite:///metadata/mlflow/mlruns.db"}
         return cls(step_config, pipeline_root)
 
     @property

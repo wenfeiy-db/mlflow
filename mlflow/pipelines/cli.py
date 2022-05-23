@@ -51,6 +51,11 @@ def evaluate():
     mlflow.pipelines.evaluate()
 
 
+@commands.command(help="Register a model")
+def register():
+    mlflow.pipelines.register()
+
+
 @commands.command(help="Clean")
 def clean():
     mlflow.pipelines.clean()

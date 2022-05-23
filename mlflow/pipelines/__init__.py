@@ -17,6 +17,7 @@ from mlflow.pipelines.regression.v1.steps.split import SplitStep
 from mlflow.pipelines.regression.v1.steps.transform import TransformStep
 from mlflow.pipelines.regression.v1.steps.train import TrainStep
 from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep
+from mlflow.pipelines.regression.v1.steps.register import RegisterStep
 from mlflow.pipelines.step import BaseStep
 
 _logger = logging.getLogger(__name__)
@@ -95,7 +96,7 @@ def register():
     register_outputs_path = _run_pipeline_step("register")
 
     _logger.info("== Created the model register card ==\n")
-    _maybe_open(os.path.join(register_outputs_path, "explanations.html"))
+    _maybe_open(os.path.join(register_outputs_path, "register-explanations.html"))
 
 
 def clean():
@@ -155,7 +156,7 @@ def _get_pipeline_steps(pipeline_root_path: str, pipeline_config: Dict[str, Any]
             pipeline_config=pipeline_config,
             pipeline_root=pipeline_root_path,
         )
-        for pipeline_class in (IngestStep, SplitStep, TransformStep, TrainStep, EvaluateStep)
+        for pipeline_class in (IngestStep, SplitStep, TransformStep, TrainStep, EvaluateStep, RegisterStep)
     ]
 
 
