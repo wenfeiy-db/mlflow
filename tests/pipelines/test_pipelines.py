@@ -67,10 +67,10 @@ def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_d
 
     # Run the full pipeline and verify that outputs for each step were written to the expected
     # execution directory locations
-    CliRunner().invoke(cli=pipelines_cli.register, env=cli_env)
+    CliRunner().invoke(cli=pipelines_cli.evaluate, env=cli_env)
     assert (expected_execution_directory_location / "Makefile").exists()
     assert (expected_execution_directory_location / "steps").exists()
-    for step_name in ["ingest", "split", "train", "transform", "evaluate", "register"]:
+    for step_name in ["ingest", "split", "train", "transform", "evaluate"]:
         step_outputs_path = expected_execution_directory_location / "steps" / step_name / "outputs"
         assert step_outputs_path.exists()
         first_output = next(step_outputs_path.iterdir(), None)
@@ -79,6 +79,6 @@ def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_d
 
     # Clean the pipeline and verify that all step outputs have been removed
     CliRunner().invoke(cli=pipelines_cli.clean, env=cli_env)
-    for step_name in ["ingest", "split", "train", "transform", "evaluate", "register"]:
+    for step_name in ["ingest", "split", "train", "transform", "evaluate"]:
         step_outputs_path = expected_execution_directory_location / "steps" / step_name / "outputs"
         assert not step_outputs_path.exists()
