@@ -26,21 +26,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
         self.pipeline_config = get_pipeline_config(pipeline_root_path=pipeline_root)
 
-    def _initialize_databricks_pyspark_connection_if_applicable(self) -> None:
-        """
-        Initializes a connection to the Databricks PySpark Gateway if MLflow Pipelines is running
-        in the Databricks Runtime.
-        """
-        if is_in_databricks_runtime():
-            try:
-                from dbruntime.spark_connection import initialize_spark_connection, is_pinn_mode_enabled
-                initialize_spark_connection(is_pinn_mode_enabled())
-            except Exception as e:
-                _logger.warning(
-                    "Encountered unexpected failure while initializing Spark connection. Spark"
-                    " operations may not succeed. Exception: %s", e
-                )
-
     def run(self, output_directory: str):
         """
         Executes the step by running common setup operations and invoking
@@ -51,7 +36,8 @@ class BaseStep(metaclass=abc.ABCMeta):
         :return: Results from executing the corresponding step.
         """
         self._initialize_databricks_pyspark_connection_if_applicable()
-        return self._run(output_directory)
+        self._run(output_directory)
+        return self.inspect(output_directory)
 
     @abc.abstractmethod
     def _run(self, output_directory: str):
@@ -118,3 +104,23 @@ class BaseStep(metaclass=abc.ABCMeta):
         downstream by the execution engine to create step-specific directory structures.
         """
         pass
+
+    @property
+    def environment(self):
+        return {}
+
+    def _initialize_databricks_pyspark_connection_if_applicable(self) -> None:
+        """
+        Initializes a connection to the Databricks PySpark Gateway if MLflow Pipelines is running
+        in the Databricks Runtime.
+        """
+        if is_in_databricks_runtime():
+            try:
+                from dbruntime.spark_connection import initialize_spark_connection, is_pinn_mode_enabled
+                initialize_spark_connection(is_pinn_mode_enabled())
+            except Exception as e:
+                _logger.warning(
+                    "Encountered unexpected failure while initializing Spark connection. Spark"
+                    " operations may not succeed. Exception: %s", e
+                )
+

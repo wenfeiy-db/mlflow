@@ -4,9 +4,6 @@ import shutil
 from typing import List, Dict
 
 from mlflow.pipelines.step import BaseStep
-from mlflow.pipelines.utils import get_pipeline_tracking_config
-from mlflow.projects.utils import get_databricks_env_vars
-from mlflow.tracking.fluent import _EXPERIMENT_NAME_ENV_VAR, _EXPERIMENT_ID_ENV_VAR
 from mlflow.utils.file_utils import read_yaml, write_yaml
 from mlflow.utils.process import _exec_cmd
 
@@ -43,15 +40,16 @@ def run_pipeline_step(
     step_output_directory_path = _get_step_output_directory_path(
         execution_directory_path=execution_dir_path, step_name=target_step.name
     )
+    # Aggregate step-specific environment variables into a single environment dictionary
+    # that is passed to the Make subprocess. In the future, steps with different environments
+    # should be isolated in different subprocesses
+    make_env = {}
+    for step in pipeline_steps:
+        make_env.update(step.environment)
     _run_make(
         execution_directory_path=execution_dir_path,
         rule_name=target_step.name,
-        # Pass MLflow Tracking information to the Make child process as environment variables
-        # to ensure that Tracking configurations made in the parent process are properly applied.
-        # Note that a subset of this information is also stored within generated step configuration
-        # files, but we opt to pass potentially-sensitive information (e.g. auth credentials) as
-        # environment variables to avoid persisting them to disk
-        extra_env=_get_tracking_env_vars(pipeline_root_path=pipeline_root_path),
+        extra_env=make_env,
     )
     return step_output_directory_path
 
@@ -189,16 +187,6 @@ def _get_step_output_directory_path(execution_directory_path: str, step_name: st
             _STEP_OUTPUTS_SUBDIRECTORY_NAME,
         )
     )
-
-
-def _get_tracking_env_vars(pipeline_root_path: str) -> Dict[str, str]:
-    pipeline_tracking_config = get_pipeline_tracking_config(pipeline_root_path=pipeline_root_path)
-    tracking_env_vars = get_databricks_env_vars(tracking_uri=pipeline_tracking_config.tracking_uri)
-    if pipeline_tracking_config.experiment_name is not None:
-        tracking_env_vars[_EXPERIMENT_NAME_ENV_VAR] = pipeline_tracking_config.experiment_name
-    if pipeline_tracking_config.experiment_id is not None:
-        tracking_env_vars[_EXPERIMENT_ID_ENV_VAR] = pipeline_tracking_config.experiment_id
-    return tracking_env_vars
 
 
 def _run_make(execution_directory_path, rule_name: str, extra_env: Dict[str, str]) -> None:

@@ -9,6 +9,7 @@ import mlflow
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils import get_pipeline_tracking_config, TrackingConfig
 from mlflow.pipelines.utils.execution import get_step_output_path
+from mlflow.projects.utils import get_databricks_env_vars
 from mlflow.utils.file_utils import read_yaml
 
 _logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ _logger = logging.getLogger(__name__)
 class TrainStep(BaseStep):
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
-        self.tracking_config = TrackingConfig.from_dict(step_config) 
+        self.tracking_config = TrackingConfig.from_dict(step_config)
         self.train_module_name, self.train_method_name = self.step_config["train_method"].rsplit(
             ".", 1
         )
@@ -96,3 +97,7 @@ class TrainStep(BaseStep):
     @property
     def name(self):
         return "train"
+
+    @property
+    def environment(self):
+        return get_databricks_env_vars(tracking_uri=self.tracking_config.tracking_uri)

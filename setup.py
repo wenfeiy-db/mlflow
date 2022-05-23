@@ -34,7 +34,7 @@ extra_files = [
     "pypi_package_index.json",
     "pyspark/ml/log_model_allowlist.txt",
 ]
-pipelines_dag_files = package_files("mlflow/pipelines/regression/v1/resources")
+pipelines_regression_v1_files = package_files("mlflow/pipelines/regression/v1/resources")
 pipelines_files = package_files("mlflow/pipelines/cards/templates")
 
 """
@@ -78,15 +78,17 @@ CORE_REQUIREMENTS = SKINNY_REQUIREMENTS + [
     "pandas",
     "prometheus-flask-exporter",
     "querystring_parser",
-    "jinja2",
     # Pin sqlparse for: https://github.com/mlflow/mlflow/issues/3433
     "sqlparse>=0.3.1",
     # Required to run the MLflow server against SQL-backed storage
     "sqlalchemy",
     "waitress; platform_system == 'Windows'",
     # Required for MLflow Pipelines
+    # TODO: Move these to extras later
     "pandas-profiling",
     "pyarrow",
+    "jinja2",
+    "Markdown",
 ]
 
 _is_mlflow_skinny = bool(os.environ.get(_MLFLOW_SKINNY_ENV_VAR))
@@ -123,7 +125,7 @@ setup(
             + models_container_server_files
             + alembic_files
             + extra_files
-            + pipelines_dag_files
+            + pipelines_regression_v1_files
             + pipelines_files
         ),
     }
