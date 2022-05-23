@@ -13,7 +13,6 @@ StepType = TypeVar("StepType", bound="BaseStep")
 
 
 class BaseStep(metaclass=abc.ABCMeta):
-
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         """
         :param step_config: dictionary of the config needed to
@@ -116,11 +115,15 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         if is_in_databricks_runtime():
             try:
-                from dbruntime.spark_connection import initialize_spark_connection, is_pinn_mode_enabled
+                from dbruntime.spark_connection import (
+                    initialize_spark_connection,
+                    is_pinn_mode_enabled,
+                )
+
                 initialize_spark_connection(is_pinn_mode_enabled())
             except Exception as e:
                 _logger.warning(
                     "Encountered unexpected failure while initializing Spark connection. Spark"
-                    " operations may not succeed. Exception: %s", e
+                    " operations may not succeed. Exception: %s",
+                    e,
                 )
-
