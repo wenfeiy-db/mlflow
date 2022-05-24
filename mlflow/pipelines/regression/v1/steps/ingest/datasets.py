@@ -456,6 +456,7 @@ class SparkSqlDataset(_SparkDatasetMixin, _Dataset):
     def resolve_to_parquet(self, dst_path: str):
         spark_session = self._get_spark_session()
         spark_df = spark_session.sql(self.sql)
+        print("DST PATH", dst_path)
         spark_df.write.parquet(dst_path)
 
     @classmethod
