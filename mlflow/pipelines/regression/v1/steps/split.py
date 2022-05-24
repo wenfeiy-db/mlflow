@@ -187,11 +187,15 @@ class SplitStep(BaseStep):
             split_fn = getattr(
                 importlib.import_module(self.split_module_name), self.split_method_name
             )
-            (train_processed, validation_processed, test_processed) = split_fn(train_df, validation_df, test_df)
+            (train_processed, validation_processed, test_processed) = split_fn(
+                train_df, validation_df, test_df
+            )
 
             # Output train / validation / test splits
             train_processed.to_parquet(os.path.join(output_directory, _OUTPUT_TRAIN_FILE_NAME))
-            validation_processed.to_parquet(os.path.join(output_directory, _OUTPUT_VALIDATION_FILE_NAME))
+            validation_processed.to_parquet(
+                os.path.join(output_directory, _OUTPUT_VALIDATION_FILE_NAME)
+            )
             test_processed.to_parquet(os.path.join(output_directory, _OUTPUT_TEST_FILE_NAME))
 
             self.status = "Done"
