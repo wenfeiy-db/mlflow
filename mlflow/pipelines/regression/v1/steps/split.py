@@ -182,7 +182,7 @@ class SplitStep(BaseStep):
             train_df, validation_df, test_df = _get_split_df(
                 input_df, hash_buckets, self.split_ratios
             )
-            # Import from user function module to process train dataframe.
+            # Import from user function module to process dataframes
             sys.path.append(self.pipeline_root)
             split_fn = getattr(
                 importlib.import_module(self.split_module_name), self.split_method_name
