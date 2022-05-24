@@ -161,7 +161,12 @@ def _get_pipeline_steps(pipeline_root_path: str, pipeline_config: Dict[str, Any]
             pipeline_root=pipeline_root_path,
         )
         for pipeline_class in (
-            IngestStep, SplitStep, TransformStep, TrainStep, EvaluateStep, RegisterStep
+            IngestStep,
+            SplitStep,
+            TransformStep,
+            TrainStep,
+            EvaluateStep,
+            RegisterStep,
         )
     ]
 

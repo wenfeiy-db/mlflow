@@ -121,7 +121,6 @@ class BaseCard:
 
         display(HTML(self.to_html()))
 
-
     def save_as_html(self, path) -> None:
         if os.path.isdir(path):
             path = os.path.join(path, _CARD_HTML_NAME)
