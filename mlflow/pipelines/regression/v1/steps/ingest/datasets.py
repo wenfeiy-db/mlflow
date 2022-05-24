@@ -431,7 +431,7 @@ class DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
     def resolve_to_parquet(self, dst_path: str):
         spark_session = self._get_spark_session()
         spark_df = spark_session.read.format("delta").load(self.location)
-        spark_df.write.parquet(dst_path)
+        spark_df.write.mode("overwrite").parquet(f"file:{dst_path}")
 
     @staticmethod
     def handles_format(dataset_format: str) -> bool:
@@ -456,8 +456,7 @@ class SparkSqlDataset(_SparkDatasetMixin, _Dataset):
     def resolve_to_parquet(self, dst_path: str):
         spark_session = self._get_spark_session()
         spark_df = spark_session.sql(self.sql)
-        print("DST PATH", dst_path)
-        spark_df.write.parquet(dst_path)
+        spark_df.write.mode("overwrite").parquet(f"file:{dst_path}")
 
     @classmethod
     def _from_config(cls, dataset_config: Dict[str, Any], pipeline_root: str) -> _DatasetType:
