@@ -2,6 +2,8 @@ import datetime
 import logging
 import os
 import time
+import importlib
+import sys
 from typing import Dict, Any
 
 from mlflow.pipelines.step import BaseStep
@@ -109,6 +111,9 @@ class SplitStep(BaseStep):
             )
 
         self.split_ratios = split_ratios
+        (self.split_module_name, self.split_method_name,) = self.step_config[
+            "split_method"
+        ].rsplit(".", 1)
 
     def _build_profiles_and_card(self, train_df, validation_df, test_df, output_directory):
         from pandas_profiling import ProfileReport
@@ -177,11 +182,17 @@ class SplitStep(BaseStep):
             train_df, validation_df, test_df = _get_split_df(
                 input_df, hash_buckets, self.split_ratios
             )
+            # Import from user function module to process train dataframe.
+            sys.path.append(self.pipeline_root)
+            split_fn = getattr(
+                importlib.import_module(self.split_module_name), self.split_method_name
+            )
+            (train_processed, validation_processed, test_processed) = split_fn(train_df, validation_df, test_df)
 
             # Output train / validation / test splits
-            train_df.to_parquet(os.path.join(output_directory, _OUTPUT_TRAIN_FILE_NAME))
-            validation_df.to_parquet(os.path.join(output_directory, _OUTPUT_VALIDATION_FILE_NAME))
-            test_df.to_parquet(os.path.join(output_directory, _OUTPUT_TEST_FILE_NAME))
+            train_processed.to_parquet(os.path.join(output_directory, _OUTPUT_TRAIN_FILE_NAME))
+            validation_processed.to_parquet(os.path.join(output_directory, _OUTPUT_VALIDATION_FILE_NAME))
+            test_processed.to_parquet(os.path.join(output_directory, _OUTPUT_TEST_FILE_NAME))
 
             self.status = "Done"
         except Exception:

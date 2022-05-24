@@ -49,6 +49,9 @@ def split():
     _logger.info("== Summary of train data ==\n")
     _logger.info(pd.read_parquet(os.path.join(split_outputs_path, "train.parquet")).describe())
 
+    _logger.info("== Summary of validation data ==\n")
+    _logger.info(pd.read_parquet(os.path.join(split_outputs_path, "validation.parquet")).describe())
+
     _logger.info("== Summary of test data ==\n")
     _logger.info(pd.read_parquet(os.path.join(split_outputs_path, "test.parquet")).describe())
 
