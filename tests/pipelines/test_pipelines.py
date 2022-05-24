@@ -8,6 +8,7 @@ import mlflow
 import mlflow.pipelines
 import mlflow.pipelines.cli as pipelines_cli
 from mlflow.pipelines import Pipeline
+from mlflow.tracking.client import MlflowClient
 
 # pylint: disable=unused-import
 from tests.pipelines.helper_functions import (
@@ -54,6 +55,7 @@ def test_pipelines_cli_flow_completes_successfully():
 def test_pipelines_log_to_expected_mlflow_backend_and_experiment(tmp_path):
     experiment_name = "my_test_exp"
     tracking_uri = "sqlite:///" + str((tmp_path / "tracking_dst.db").resolve())
+    artifact_location = str(tmp_path / "mlartifacts")
 
     profile_path = pathlib.Path.cwd() / "profiles" / "local.yaml"
     with open(profile_path, "r") as f:
@@ -61,6 +63,7 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment(tmp_path):
 
     profile_contents["experiment"]["name"] = experiment_name
     profile_contents["experiment"]["tracking_uri"] = tracking_uri
+    profile_contents["experiment"]["artifact_location"] = artifact_location
 
     with open(profile_path, "w") as f:
         yaml.safe_dump(profile_contents, f)
@@ -73,6 +76,12 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment(tmp_path):
     logged_runs = mlflow.search_runs(experiment_names=[experiment_name], output_format="list")
     assert len(logged_runs) == 1
     logged_run = logged_runs[0]
+    assert logged_run.info.artifact_uri == str(
+        pathlib.Path(artifact_location) / logged_run.info.run_id / "artifacts"
+    )
+    assert "r2_score_on_data_test" in logged_run.data.metrics
+    artifacts = MlflowClient(tracking_uri).list_artifacts(run_id=logged_run.info.run_id)
+    assert "model" in [artifact.path for artifact in artifacts]
 
 
 @pytest.mark.usefixtures("enter_pipeline_example_directory", "clean_up_pipeline")

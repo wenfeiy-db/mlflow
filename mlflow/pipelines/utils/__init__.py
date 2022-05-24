@@ -127,11 +127,18 @@ def get_pipeline_root_path() -> str:
 
 class TrackingConfig:
 
+    _KEY_TRACKING_URI = "mlflow_tracking_uri"
     _KEY_EXPERIMENT_NAME = "mlflow_experiment_name"
     _KEY_EXPERIMENT_ID = "mlflow_experiment_id"
-    _KEY_TRACKING_URI = "mlflow_tracking_uri"
+    _KEY_ARTIFACT_LOCATION = "mlflow_experiment_artifact_location"
 
-    def __init__(self, tracking_uri: str, experiment_name: str = None, experiment_id: str = None):
+    def __init__(
+        self,
+        tracking_uri: str,
+        experiment_name: str = None,
+        experiment_id: str = None,
+        artifact_location: str = None,
+    ):
         if tracking_uri is None:
             raise MlflowException(
                 message="`tracking_uri` must not be None",
@@ -146,15 +153,22 @@ class TrackingConfig:
         self.tracking_uri = tracking_uri
         self.experiment_name = experiment_name
         self.experiment_id = experiment_id
+        self.artifact_location = artifact_location
 
     def to_dict(self):
         config_dict = {
             TrackingConfig._KEY_TRACKING_URI: self.tracking_uri,
         }
+
         if self.experiment_name:
             config_dict[TrackingConfig._KEY_EXPERIMENT_NAME] = self.experiment_name
+
         elif self.experiment_id:
             config_dict[TrackingConfig._KEY_EXPERIMENT_ID] = self.experiment_id
+
+        if self.artifact_location:
+            config_dict[TrackingConfig._KEY_ARTIFACT_LOCATION] = self.artifact_location
+
         return config_dict
 
     @classmethod
@@ -163,43 +177,55 @@ class TrackingConfig:
             tracking_uri=config_dict.get(TrackingConfig._KEY_TRACKING_URI),
             experiment_name=config_dict.get(TrackingConfig._KEY_EXPERIMENT_NAME),
             experiment_id=config_dict.get(TrackingConfig._KEY_EXPERIMENT_ID),
+            artifact_location=config_dict.get(TrackingConfig._KEY_ARTIFACT_LOCATION),
         )
 
 
-def get_pipeline_tracking_config(pipeline_root_path: str, pipeline_config: Dict[str, Any]) -> TrackingConfig:
-    default_tracking_uri = (
-        "databricks"
-        if is_in_databricks_runtime()
-        else os.path.join(pipeline_root_path, "metadata", "runs")
-    )
+def get_pipeline_tracking_config(
+    pipeline_root_path: str, pipeline_config: Dict[str, Any]
+) -> TrackingConfig:
+    if is_in_databricks_runtime():
+        default_tracking_uri = "databricks"
+        default_artifact_location = None
+    else:
+        mlflow_metadata_base_path = pathlib.Path(pipeline_root_path) / "metadata" / "mlflow"
+        default_tracking_sqlite_db_posixpath = (
+            (mlflow_metadata_base_path / "mlruns.db").resolve().as_posix()
+        )
+        default_tracking_uri = f"sqlite:///{default_tracking_sqlite_db_posixpath}"
+        default_artifact_location = str((mlflow_metadata_base_path / "mlartifacts").resolve())
 
     tracking_config = pipeline_config.get("experiment", {})
-    tracking_uri = tracking_config.get("tracking_uri", default_tracking_uri)
+
+    config_obj_kwargs = {
+        "tracking_uri": tracking_config.get("tracking_uri", default_tracking_uri),
+        "artifact_location": tracking_config.get("artifact_location", default_artifact_location),
+    }
 
     experiment_name = tracking_config.get("name")
     if experiment_name is not None:
         return TrackingConfig(
-            tracking_uri=tracking_uri,
             experiment_name=experiment_name,
+            **config_obj_kwargs,
         )
 
     experiment_id = tracking_config.get("id")
     if experiment_id is not None:
         return TrackingConfig(
-            tracking_uri=tracking_uri,
             experiment_id=experiment_id,
+            **config_obj_kwargs,
         )
 
     experiment_id = _get_experiment_id()
     if experiment_id != DEFAULT_EXPERIMENT_ID:
         return TrackingConfig(
-            tracking_uri=tracking_uri,
             experiment_id=experiment_id,
+            **config_obj_kwargs,
         )
 
     return TrackingConfig(
-        tracking_uri=tracking_uri,
         experiment_name=get_pipeline_name(pipeline_root_path=pipeline_root_path),
+        **config_obj_kwargs,
     )
 
 
