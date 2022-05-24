@@ -10,7 +10,6 @@ from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.tracking.client import MlflowClient
-from mlflow.utils.file_utils import read_yaml
 
 _logger = logging.getLogger(__name__)
 
@@ -25,6 +24,11 @@ class RegisterStep(BaseStep):
         self.run_end_time = None
         self.execution_duration = None
         self.num_dropped_rows = None
+        self.final_status = None
+        self.model_url = None
+        self.model_uri = None
+        self.model_details = None
+        self.alerts = None
 
         if "name" not in self.step_config:
             raise MlflowException(

@@ -37,7 +37,9 @@ class Pipeline:
 
         pipeline_steps = [
             pipeline_class.from_pipeline_config(pipeline_config, self.pipeline_root)
-            for pipeline_class in (IngestStep, SplitStep, TransformStep, TrainStep, EvaluateStep, RegisterStep)
+            for pipeline_class in (
+                IngestStep, SplitStep, TransformStep, TrainStep, EvaluateStep, RegisterStep
+            )
         ]
         return pipeline_name, pipeline_steps
 
