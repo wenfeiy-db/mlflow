@@ -74,7 +74,10 @@ class RegisterStep(BaseStep):
                 self.model_url = "-"
                 self.model_uri = "-"
                 self.final_status = "-"
-                self.alerts = "Model registration skipped.  Please check the validation result from Evaluate step."
+                self.alerts = (
+                    "Model registration skipped.  Please check the validation "
+                    "result from Evaluate step."
+                )
 
             self.status = "Done"
         except Exception:
