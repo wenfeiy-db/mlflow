@@ -36,8 +36,8 @@ class TransformStep(BaseStep):
         transformer = transformer_fn()
 
         # TODO: load from conf
-        X = df.drop(columns=["price"])
-        y = df["price"]
+        X = df.drop(columns=["fare_amount"])
+        y = df["fare_amount"]
 
         features = transformer.fit_transform(X)
 
