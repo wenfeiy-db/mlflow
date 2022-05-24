@@ -108,3 +108,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         downstream by the execution engine to create step-specific directory structures.
         """
         pass
+
+    def clean(self) -> None:
+        pass
