@@ -58,10 +58,16 @@ class RegisterStep(BaseStep):
                 model_validation = f.read()
 
             artifact_path = "model"
-            if model_validation is "VALIDATED" or (model_validation is "UNKNOWN" and self.allow_non_validated_model):
+            if model_validation is "VALIDATED" or (
+                model_validation is "UNKNOWN" and self.allow_non_validated_model
+            ):
                 self.model_url = "https://figurethisout.com"
-                self.model_uri = "runs:/{run_id}/{artifact_path}".format(run_id=run_id, artifact_path=artifact_path)
-                self.model_details = mlflow.register_model(model_uri=self.model_uri, name=self.register_model_name)
+                self.model_uri = "runs:/{run_id}/{artifact_path}".format(
+                    run_id=run_id, artifact_path=artifact_path
+                )
+                self.model_details = mlflow.register_model(
+                    model_uri=self.model_uri, name=self.register_model_name
+                )
                 self.final_status = self._wait_until_not_pending(self.model_details.version)
                 self.alerts = ""
             else:
@@ -113,9 +119,7 @@ class RegisterStep(BaseStep):
             "EXECUTION_DURATION", f"**Execution duration (s):** `{self.execution_duration:.2f}`"
         )
         card.add_markdown("RUN_STATUS", f"**Run status:** `{self.status}`")
-        card.add_markdown(
-            "MODEL_URI", f"**Model URI:** `{self.model_uri}`"
-        )
+        card.add_markdown("MODEL_URI", f"**Model URI:** `{self.model_uri}`")
         card.add_markdown("ALERTS", f"**Alerts:** `{self.alerts}`")
         card.add_markdown("MODEL_URL", f"**Model URL:** `{self.model_url}`")
         with open(os.path.join(output_directory, _OUTPUT_CARD_FILE_NAME), "w") as f:
@@ -130,7 +134,9 @@ class RegisterStep(BaseStep):
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
         try:
             step_config = pipeline_config["steps"]["register"]
-            step_config[RegisterStep._TRACKING_URI_CONFIG_KEY] = "sqlite:///metadata/mlflow/mlruns.db"
+            step_config[
+                RegisterStep._TRACKING_URI_CONFIG_KEY
+            ] = "sqlite:///metadata/mlflow/mlruns.db"
         except KeyError:
             raise MlflowException(
                 "Config for register step is not found.", error_code=INVALID_PARAMETER_VALUE
