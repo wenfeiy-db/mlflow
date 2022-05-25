@@ -17,7 +17,7 @@ from mlflow.utils.file_utils import write_yaml
 from tests.pipelines.helper_functions import (
     enter_pipeline_example_directory,
     enter_test_pipeline_directory,
-) # pylint: enable=unused-import
+)  # pylint: enable=unused-import
 from tests.pipelines.helper_functions import chdir
 from unittest import mock
 
