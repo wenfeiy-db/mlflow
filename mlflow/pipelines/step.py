@@ -63,6 +63,9 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         pass
 
+    def clean(self) -> None:
+        pass
+
     @classmethod
     @abc.abstractmethod
     def from_pipeline_config(cls, pipeline_config: Dict[str, Any], pipeline_root: str) -> StepType:

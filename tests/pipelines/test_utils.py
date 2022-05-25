@@ -5,7 +5,12 @@ import shutil
 import pytest
 
 from mlflow.exceptions import MlflowException
-from mlflow.pipelines.utils import get_pipeline_root_path, get_pipeline_name, get_pipeline_config
+from mlflow.pipelines.utils import (
+    get_pipeline_root_path,
+    get_pipeline_name,
+    get_pipeline_config,
+    get_default_profile,
+)
 from mlflow.utils.file_utils import write_yaml
 
 # pylint: disable=unused-import
@@ -13,6 +18,7 @@ from tests.pipelines.helper_functions import (
     enter_pipeline_example_directory,
 )
 from tests.pipelines.helper_functions import chdir
+from unittest import mock
 
 
 def test_get_pipeline_root_path_returns_correctly_when_inside_pipeline_directory(
@@ -80,3 +86,12 @@ def test_get_pipeline_config_throws_for_invalid_pipeline_directory(tmp_path):
 
     with pytest.raises(MlflowException, match="Failed to find pipeline.yaml"):
         get_pipeline_config(pipeline_root_path=tmp_path)
+
+
+def test_get_default_profile_works():
+    assert get_default_profile() == "local"
+    with mock.patch(
+        "mlflow.pipelines.utils.is_in_databricks_runtime", return_value=True
+    ) as patched_is_in_databricks_runtime:
+        assert get_default_profile() == "databricks"
+        patched_is_in_databricks_runtime.assert_called_once()

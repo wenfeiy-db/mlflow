@@ -1,8 +1,7 @@
 import click
-import mlflow.pipelines
 
-from mlflow.pipelines.pipeline import Pipeline
-from mlflow.exceptions import MlflowException
+from mlflow.pipelines.utils import get_default_profile, _PIPELINE_PROFILE_ENV_VAR
+from mlflow.pipelines import Pipeline
 
 
 @click.group("pipelines")
@@ -10,52 +9,69 @@ def commands():
     pass
 
 
-@commands.command(help="Pipeline initialization")
+@commands.command(
+    help="Run an individual step in the pipeline. If no step is specified, run all"
+    "steps sequentially."
+)
 @click.option(
     "--step",
     type=click.STRING,
-    help="Specify the step that needs to run",
-    required=True,
+    default=None,
+    required=False,
+    help="The name of the pipeline step to run.",
 )
-def run(step):
-    # TODO: replace to use env instead of hard coding the profile
-    pipeline_module = Pipeline("local")
-    try:
-        getattr(pipeline_module, step)()
-    except AttributeError:
-        raise MlflowException("Not a valid step input")
+@click.option(
+    "--profile",
+    envvar=_PIPELINE_PROFILE_ENV_VAR,
+    type=click.STRING,
+    default=get_default_profile(),
+    required=False,
+    help="The profile under which the MLflow pipeline and steps will run.",
+)
+def run(step, profile):
+    Pipeline(profile=profile).run(step)
 
 
-@commands.command(help="Ingest data")
-def ingest():
-    mlflow.pipelines.ingest()
+@commands.command(
+    help="Clean the cache associated with an individual step run. If the step is not"
+    "specified, clean the entire pipeline cache."
+)
+@click.option(
+    "--step",
+    type=click.STRING,
+    default=None,
+    required=False,
+    help="The pipeline step whose execution cached output to be cleaned.",
+)
+@click.option(
+    "--profile",
+    envvar=_PIPELINE_PROFILE_ENV_VAR,
+    type=click.STRING,
+    default=get_default_profile(),
+    required=False,
+    help="The profile under which the MLflow pipeline and steps will run.",
+)
+def clean(step, profile):
+    Pipeline(profile=profile).clean(step)
 
 
-@commands.command(help="Split data")
-def split():
-    mlflow.pipelines.split()
-
-
-@commands.command(help="Transform features")
-def transform():
-    mlflow.pipelines.transform()
-
-
-@commands.command(help="Train a model")
-def train():
-    mlflow.pipelines.train()
-
-
-@commands.command(help="Evaluate a model (explanations included)")
-def evaluate():
-    mlflow.pipelines.evaluate()
-
-
-@commands.command(help="Clean")
-def clean():
-    mlflow.pipelines.clean()
-
-
-@commands.command(help="Inspect specific steps or full pipeline DAG")
-def inspect():
-    mlflow.pipelines.inspect()
+@commands.command(
+    help="Inspect a step output. If no step is provided, visualize the full pipeline graph."
+)
+@click.option(
+    "--step",
+    type=click.STRING,
+    default=None,
+    required=False,
+    help="The pipeline step to be inspected.",
+)
+@click.option(
+    "--profile",
+    envvar=_PIPELINE_PROFILE_ENV_VAR,
+    type=click.STRING,
+    default=get_default_profile(),
+    required=False,
+    help="The profile under which the MLflow pipeline and steps will run.",
+)
+def inspect(step, profile):
+    Pipeline(profile=profile).inspect(step)
