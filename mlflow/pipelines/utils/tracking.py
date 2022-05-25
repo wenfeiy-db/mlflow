@@ -3,7 +3,6 @@ import pathlib
 from typing import Dict, Any, TypeVar
 
 import mlflow
-from mlflow.entities import Experiment
 from mlflow.exceptions import MlflowException
 from mlflow.pipelines.utils import get_pipeline_name
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
