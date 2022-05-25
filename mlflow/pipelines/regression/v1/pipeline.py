@@ -15,9 +15,7 @@ _logger = logging.getLogger(__name__)
 
 
 class RegressionPipeline(_BasePipeline):
-    _PIPELINE_STEPS = (
-        IngestStep, SplitStep, TransformStep, TrainStep, EvaluateStep, RegisterStep
-    )
+    _PIPELINE_STEPS = (IngestStep, SplitStep, TransformStep, TrainStep, EvaluateStep, RegisterStep)
 
     def _get_step_classes(self) -> List[BaseStep]:
         return self._PIPELINE_STEPS
