@@ -2,6 +2,7 @@ import logging
 import pathlib
 from typing import Dict, Any, TypeVar
 
+import mlflow
 from mlflow.entities import Experiment
 from mlflow.exceptions import MlflowException
 from mlflow.pipelines.utils import get_pipeline_name
@@ -12,38 +13,6 @@ from mlflow.tracking.fluent import set_experiment as fluent_set_experiment, _get
 from mlflow.utils.databricks_utils import is_in_databricks_runtime
 
 _logger = logging.getLogger(__name__)
-
-
-def set_experiment(
-    experiment_id: str = None, experiment_name: str = None, artifact_location: str = None
-) -> Experiment:
-    """
-    Set the given experiment as the active experiment. The experiment must either be specified by
-    name via ``experiment_name`` or by ID via ``experiment_id``. The experiment name and ID cannot
-    both be specified.
-
-    :param experiment_name: Case sensitive name of the experiment to be activated. If an experiment
-                            with this name does not exist, a new experiment wth this name is
-                            created.
-    :param experiment_id: ID of the experiment to be activated. If an experiment with this ID
-                          does not exist, an exception is thrown.
-    :param artifact_location: The optional artifact location to set when creating the experiment,
-                              if the experiment does not already exist. If the experiment already
-                              exists, ``artifact_location`` is ignored.
-    :return: An instance of :py:class:``mlflow.entities.Experiment`` representing the new active
-             experiment.
-    """
-    client = MlflowClient()
-    if experiment_name is not None:
-        experiment = client.get_experiment_by_name(name=experiment_name)
-        if not experiment:
-            _logger.info(
-                "Experiment with name '%s' does not exist. Creating a new experiment.",
-                experiment_name,
-            )
-            client.create_experiment(name=experiment_name, artifact_location=artifact_location)
-
-    return fluent_set_experiment(experiment_id=experiment_id, experiment_name=experiment_name)
 
 
 TrackingConfigType = TypeVar("TrackingConfig")
@@ -188,4 +157,32 @@ def get_pipeline_tracking_config(
     return TrackingConfig(
         experiment_name=get_pipeline_name(pipeline_root_path=pipeline_root_path),
         **config_obj_kwargs,
+    )
+
+
+def apply_pipeline_tracking_config(tracking_config: TrackingConfig):
+    """
+    Applies the specified ``TrackingConfig`` in the current context by setting the associated
+    MLflow Tracking URI (via ``mlflow.set_tracking_uri()``) and setting the associated MLflow
+    Experiment (via ``mlflow.set_experiment()``), creating it if necessary.
+
+    :param tracking_config: The MLflow Pipeline ``TrackingConfig`` to apply.
+    """
+    mlflow.set_tracking_uri(uri=tracking_config.tracking_uri)
+
+    client = MlflowClient()
+    if tracking_config.experiment_name is not None:
+        experiment = client.get_experiment_by_name(name=tracking_config.experiment_name)
+        if not experiment:
+            _logger.info(
+                "Experiment with name '%s' does not exist. Creating a new experiment.",
+                tracking_config.experiment_name,
+            )
+            client.create_experiment(
+                name=tracking_config.experiment_name,
+                artifact_location=tracking_config.artifact_location,
+            )
+
+    fluent_set_experiment(
+        experiment_id=tracking_config.experiment_id, experiment_name=tracking_config.experiment_name
     )

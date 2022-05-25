@@ -9,8 +9,8 @@ import mlflow
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.pipelines.utils.tracking import (
-    set_experiment,
     get_pipeline_tracking_config,
+    apply_pipeline_tracking_config,
     TrackingConfig,
 )
 from mlflow.projects.utils import get_databricks_env_vars
@@ -32,12 +32,7 @@ class TrainStep(BaseStep):
         import numpy as np
         from sklearn.pipeline import make_pipeline
 
-        mlflow.set_tracking_uri(self.tracking_config.tracking_uri)
-        set_experiment(
-            experiment_name=self.tracking_config.experiment_name,
-            experiment_id=self.tracking_config.experiment_id,
-            artifact_location=self.tracking_config.artifact_location,
-        )
+        apply_pipeline_tracking_config(self.tracking_config)
 
         transformed_train_data_path = get_step_output_path(
             pipeline_name=self.pipeline_name,

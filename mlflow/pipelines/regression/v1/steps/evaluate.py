@@ -10,8 +10,8 @@ from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, BAD_REQUEST
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.pipelines.utils.tracking import (
-    set_experiment,
     get_pipeline_tracking_config,
+    apply_pipeline_tracking_config,
     TrackingConfig,
 )
 from mlflow.projects.utils import get_databricks_env_vars
@@ -122,12 +122,7 @@ class EvaluateStep(BaseStep):
         with open(run_id_path, "r") as f:
             run_id = f.read()
 
-        mlflow.set_tracking_uri(self.tracking_config.tracking_uri)
-        set_experiment(
-            experiment_name=self.tracking_config.experiment_name,
-            experiment_id=self.tracking_config.experiment_id,
-            artifact_location=self.tracking_config.artifact_location,
-        )
+        apply_pipeline_tracking_config(self.tracking_config)
 
         with mlflow.start_run(run_id=run_id):
             model_uri = mlflow.get_artifact_uri("model")
