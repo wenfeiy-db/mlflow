@@ -104,7 +104,11 @@ class BaseStep(metaclass=abc.ABCMeta):
         pass
 
     @property
-    def environment(self):
+    def environment(self) -> Dict[str, str]:
+        """
+        Returns environment variables associated with step that should be set when the
+        step is executed.
+        """
         return {}
 
     def _initialize_databricks_pyspark_connection_if_applicable(self) -> None:

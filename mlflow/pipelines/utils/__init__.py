@@ -126,6 +126,10 @@ def get_pipeline_root_path() -> str:
 
 
 class TrackingConfig:
+    """
+    The MLflow Tracking configuration associated with an MLflow Pipeline, including the
+    Tracking URI and information about the destination Experiment for writing results.
+    """
 
     _KEY_TRACKING_URI = "mlflow_tracking_uri"
     _KEY_EXPERIMENT_NAME = "mlflow_experiment_name"
@@ -139,9 +143,23 @@ class TrackingConfig:
         experiment_id: str = None,
         artifact_location: str = None,
     ):
+        """
+        :param tracking_uri: The MLflow Tracking URI.
+        :param experiment_name: The MLflow Experiment name. At least one of ``experiment_name`` or
+                                ``experiment_id`` must be specified. If both are specified, they
+                                must be consistent with Tracking server state. Note that this
+                                Experiment may not exist prior to pipeline execution.
+        :param experiment_id: The MLflow Experiment ID. At least one of ``experiment_name`` or
+                              ``experiment_id`` must be specified. If both are specified, they
+                              must be consistent with Tracking server state. Note that this
+                              Experiment may not exist prior to pipeline execution.
+        :param artifact_location: The artifact location to use for the Experiment, if the Experiment
+                                  does not already exist. If the Experiment already exists, this
+                                  location is ignored.
+        """
         if tracking_uri is None:
             raise MlflowException(
-                message="`tracking_uri` must not be None",
+                message="`tracking_uri` must be specified",
                 error_code=INVALID_PARAMETER_VALUE,
             )
 
@@ -155,7 +173,12 @@ class TrackingConfig:
         self.experiment_id = experiment_id
         self.artifact_location = artifact_location
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, str]:
+        """
+        Obtains a dictionary representation of the MLflow Tracking configuration.
+
+        :return: A dictionary representation of the MLflow Tracking configuration.
+        """
         config_dict = {
             TrackingConfig._KEY_TRACKING_URI: self.tracking_uri,
         }
@@ -172,7 +195,13 @@ class TrackingConfig:
         return config_dict
 
     @classmethod
-    def from_dict(cls, config_dict):
+    def from_dict(cls, config_dict: Dict[str, str]) -> TrackingConfig:
+        """
+        Creates a ``TrackingConfig`` instance from a dictionary representation.
+
+        :param config_dict: A dictionary representation of the MLflow Tracking configuration.
+        :return: A ``TrackingConfig`` instance.
+        """
         return TrackingConfig(
             tracking_uri=config_dict.get(TrackingConfig._KEY_TRACKING_URI),
             experiment_name=config_dict.get(TrackingConfig._KEY_EXPERIMENT_NAME),
@@ -184,6 +213,15 @@ class TrackingConfig:
 def get_pipeline_tracking_config(
     pipeline_root_path: str, pipeline_config: Dict[str, Any]
 ) -> TrackingConfig:
+    """
+    Obtains the MLflow Tracking configuration for the specified pipeline.
+
+    :param pipeline_root_path: The absolute path of the pipeline root directory on the local
+                               filesystem.
+    :param pipeline_config: The configuration of the specified pipeline.
+    :return: A ``TrackingConfig`` instance containing MLflow Tracking information for the
+             specified pipeline, including Tracking URI, Experiment name, and more.
+    """
     if is_in_databricks_runtime():
         default_tracking_uri = "databricks"
         default_artifact_location = None
