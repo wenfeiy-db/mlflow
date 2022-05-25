@@ -29,7 +29,6 @@ def test_create_pipeline_and_clean_works():
     p.clean()
 
 
-@pytest.mark.large
 @pytest.mark.usefixtures("enter_pipeline_example_directory")
 @pytest.mark.parametrize("custom_execution_directory", [None, "custom"])
 def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_directory, tmp_path):
@@ -82,9 +81,9 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment(tmp_path):
     with open(profile_path, "w") as f:
         yaml.safe_dump(profile_contents, f)
 
-    mlflow.pipelines.clean()
     pipeline = Pipeline(profile="local")
-    pipeline.evaluate()
+    pipeline.clean()
+    pipeline.run()
 
     mlflow.set_tracking_uri(tracking_uri)
     logged_runs = mlflow.search_runs(experiment_names=[experiment_name], output_format="list")
