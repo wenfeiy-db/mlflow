@@ -29,12 +29,12 @@ class RegisterStep(BaseStep):
         self.version = None
         self.OUTPUT_CARD_FILE_NAME = "register_card.html"
 
-        if "name" not in self.step_config:
+        if "model_name" not in self.step_config:
             raise MlflowException(
-                "Missing 'name' config in register step config.",
+                "Missing 'model_name' config in register step config.",
                 error_code=INVALID_PARAMETER_VALUE,
             )
-        self.register_model_name = self.step_config.get("name")
+        self.register_model_name = self.step_config.get("model_name")
         self.allow_non_validated_model = self.step_config.get("allow_non_validated_model", False)
 
     def _run(self, output_directory):
