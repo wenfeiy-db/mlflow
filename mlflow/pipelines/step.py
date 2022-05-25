@@ -66,6 +66,7 @@ class BaseStep(metaclass=abc.ABCMeta):
                 display(HTML(filename=output_filename))
             else:
                 import webbrowser
+
                 file_uri = output_filename
                 webbrowser.open_new(file_uri)
         self._inspect(output_directory)

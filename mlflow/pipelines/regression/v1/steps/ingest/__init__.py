@@ -87,9 +87,7 @@ class IngestStep(BaseStep):
             dataset_src_location=getattr(self.dataset, "location", None),
             dataset_sql=getattr(self.dataset, "sql", None),
         )
-        step_card.save_as_html(
-            path=os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME)
-        )
+        step_card.save_as_html(path=os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME))
         step_card.save(path=os.path.join(output_directory, IngestStep._STEP_CARD_OUTPUT_NAME))
 
     @staticmethod

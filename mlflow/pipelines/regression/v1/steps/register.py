@@ -57,7 +57,9 @@ class RegisterStep(BaseStep):
             )
             with open(model_validation_path, "r") as f:
                 model_validation = f.read()
-            _logger.info(f"model validation path =|{model_validation_path} and model_validation=|{model_validation}|")
+            _logger.info(
+                f"model validation path =|{model_validation_path} and model_validation=|{model_validation}|"
+            )
             artifact_path = "model"
             if model_validation == "VALIDATED" or (
                 model_validation == "UNKNOWN" and self.allow_non_validated_model
@@ -70,7 +72,7 @@ class RegisterStep(BaseStep):
                 self.model_details = mlflow.register_model(
                     model_uri=self.model_uri,
                     name=self.register_model_name,
-                    await_registration_for=DEFAULT_AWAIT_MAX_SLEEP_SECONDS
+                    await_registration_for=DEFAULT_AWAIT_MAX_SLEEP_SECONDS,
                 )
                 final_status = self._get_model_version_status(self.model_details.version)
                 self.version = self.model_details.version
@@ -124,7 +126,9 @@ class RegisterStep(BaseStep):
             final_markdown.append(f"**Model Version:** `{self.version}`")
         if self.alerts is not None:
             final_markdown.append(f"**Alerts:** `{self.alerts}`")
-        final_markdown.append(f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`")
+        final_markdown.append(
+            f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`"
+        )
         final_markdown.append(f"**Execution duration (s):** `{self.execution_duration:.2f}`")
         final_markdown.append(f"**Run status:** `{self.status}`")
         card.add_markdown("REGISTER_SUMMARY", "<br>\n".join(final_markdown))
