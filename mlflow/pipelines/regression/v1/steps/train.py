@@ -75,7 +75,7 @@ class TrainStep(BaseStep):
             # Do step-specific code to execute the train step
             _logger.info("train run code %s", output_directory)
 
-    def inspect(self, output_directory):
+    def _inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
         _logger.info("train inspect code %s", output_directory)
         pass

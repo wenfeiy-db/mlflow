@@ -17,7 +17,6 @@ _INPUT_FILE_NAME = "dataset.parquet"
 _OUTPUT_TRAIN_FILE_NAME = "train.parquet"
 _OUTPUT_VALIDATION_FILE_NAME = "validation.parquet"
 _OUTPUT_TEST_FILE_NAME = "test.parquet"
-_OUTPUT_CARD_FILE_NAME = "card.html"
 
 
 def _make_elem_hashable(elem):
@@ -90,6 +89,7 @@ class SplitStep(BaseStep):
         self.run_end_time = None
         self.execution_duration = None
         self.num_dropped_rows = None
+        self.OUTPUT_CARD_FILE_NAME = "card.html"
 
         if "target_col" not in self.pipeline_config:
             raise MlflowException(
@@ -150,7 +150,7 @@ class SplitStep(BaseStep):
         card.add_pandas_profile("Profile of Validation Dataset", validation_profile)
         card.add_pandas_profile("Profile of Test Dataset", test_profile)
 
-        with open(os.path.join(output_directory, _OUTPUT_CARD_FILE_NAME), "w") as f:
+        with open(os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME), "w") as f:
             f.write(card.to_html())
 
     def _run(self, output_directory):
@@ -198,7 +198,7 @@ class SplitStep(BaseStep):
                 # When log level is DEBUG, also log the error stack trace.
                 _logger.debug("", exc_info=True)
 
-    def inspect(self, output_directory):
+    def _inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
         _logger.info("split inspect code %s", output_directory)
         pass

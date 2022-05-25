@@ -1,9 +1,12 @@
 import abc
+import os
 import yaml
 from typing import TypeVar, Dict, Any
 
 import mlflow
 from mlflow.pipelines.utils import get_pipeline_name, get_pipeline_config
+from mlflow.utils.file_utils import path_to_local_file_uri
+from mlflow.utils.databricks_utils import is_running_in_ipython_environment
 
 
 StepType = TypeVar("StepType", bound="BaseStep")
@@ -23,6 +26,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         self.pipeline_root = pipeline_root
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
         self.pipeline_config = get_pipeline_config(pipeline_root_path=pipeline_root)
+        self.OUTPUT_CARD_FILE_NAME = None
 
     def _set_tracking_uri(self) -> None:
         uri = self.step_config.get(self._TRACKING_URI_CONFIG_KEY)
@@ -43,6 +47,29 @@ class BaseStep(metaclass=abc.ABCMeta):
         self._run(output_directory)
         return self.inspect(output_directory)
 
+    def inspect(self, output_directory: str):
+        """
+        Inspect the step output state by running the generic inspect information here and
+        running the step specific inspection code in the step's _inspect() method.
+
+        :param output_directory: String file path where to the directory where step
+                                 outputs are located.
+        :return: Results from the last execution of the corresponding step.
+        """
+        # Open the step card here
+        from IPython.display import display, HTML
+
+        if self.OUTPUT_CARD_FILE_NAME is not None:
+            relative_path = os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME)
+            output_filename = path_to_local_file_uri(os.path.abspath(relative_path))
+            if is_running_in_ipython_environment():
+                display(HTML(filename=output_filename))
+            else:
+                import webbrowser
+                file_uri = output_filename
+                webbrowser.open_new(file_uri)
+        self._inspect(output_directory)
+
     @abc.abstractmethod
     def _run(self, output_directory: str):
         """
@@ -57,7 +84,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def inspect(self, output_directory: str):
+    def _inspect(self, output_directory: str):
         """
         Inspect the step output state that was stored as part of the last execution.
         Each individual step needs to implement this function to return a materialized

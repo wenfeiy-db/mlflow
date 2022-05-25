@@ -10,10 +10,10 @@ from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.tracking.client import MlflowClient
+from mlflow.tracking._model_registry import DEFAULT_AWAIT_MAX_SLEEP_SECONDS
 
 _logger = logging.getLogger(__name__)
 
-_OUTPUT_CARD_FILE_NAME = "register-explanations.html"
 _MODEL_REGISTRY_STATUS_RETRIES = 10
 
 
@@ -24,11 +24,12 @@ class RegisterStep(BaseStep):
         self.run_end_time = None
         self.execution_duration = None
         self.num_dropped_rows = None
-        self.final_status = None
         self.model_url = None
         self.model_uri = None
         self.model_details = None
         self.alerts = None
+        self.version = None
+        self.OUTPUT_CARD_FILE_NAME = "register_card.html"
 
         if "name" not in self.step_config:
             raise MlflowException(
@@ -56,30 +57,35 @@ class RegisterStep(BaseStep):
             )
             with open(model_validation_path, "r") as f:
                 model_validation = f.read()
-
+            _logger.info(f"model validation path =|{model_validation_path} and model_validation=|{model_validation}|")
             artifact_path = "model"
-            if model_validation is "VALIDATED" or (
-                model_validation is "UNKNOWN" and self.allow_non_validated_model
+            if model_validation == "VALIDATED" or (
+                model_validation == "UNKNOWN" and self.allow_non_validated_model
             ):
+                # TODO: Figure out how to turn this into an actual URL
                 self.model_url = "https://figurethisout.com"
                 self.model_uri = "runs:/{run_id}/{artifact_path}".format(
                     run_id=run_id, artifact_path=artifact_path
                 )
                 self.model_details = mlflow.register_model(
-                    model_uri=self.model_uri, name=self.register_model_name
+                    model_uri=self.model_uri,
+                    name=self.register_model_name,
+                    await_registration_for=DEFAULT_AWAIT_MAX_SLEEP_SECONDS
                 )
-                self.final_status = self._wait_until_not_pending(self.model_details.version)
-                self.alerts = ""
+                final_status = self._get_model_version_status(self.model_details.version)
+                self.version = self.model_details.version
+                if final_status == ModelVersionStatus.READY:
+                    self.status = "Done"
+                else:
+                    self.alerts = f"Model failed to register.  Status: {final_status}"
+                    self.status = "Failed"
             else:
-                self.model_url = "-"
-                self.model_uri = "-"
-                self.final_status = "-"
                 self.alerts = (
                     "Model registration skipped.  Please check the validation "
                     "result from Evaluate step."
                 )
+                self.status = "Done"
 
-            self.status = "Done"
         except Exception:
             self.status = "Failed"
             raise
@@ -94,18 +100,13 @@ class RegisterStep(BaseStep):
                 # When log level is DEBUG, also log the error stack trace.
                 _logger.debug("", exc_info=True)
 
-    def _wait_until_not_pending(self, model_version: str) -> ModelVersionStatus:
+    def _get_model_version_status(self, model_version: str) -> ModelVersionStatus:
         client = MlflowClient()
-        for _ in range(_MODEL_REGISTRY_STATUS_RETRIES):
-            model_version_details = client.get_model_version(
-                name=self.register_model_name,
-                version=model_version,
-            )
-            status = ModelVersionStatus.from_string(model_version_details.status)
-            if status != ModelVersionStatus.PENDING_REGISTRATION:
-                return status
-            time.sleep(1)
-        return ModelVersionStatus.PENDING_REGISTRATION
+        model_version_details = client.get_model_version(
+            name=self.register_model_name,
+            version=model_version,
+        )
+        return ModelVersionStatus.from_string(model_version_details.status)
 
     def _build_card(self, output_directory: str) -> None:
         from mlflow.pipelines.regression.v1.cards.register import RegisterCard
@@ -114,21 +115,23 @@ class RegisterStep(BaseStep):
         card = RegisterCard()
 
         run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
-        card.add_markdown(
-            "RUN_END_TIMESTAMP",
-            f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`",
-        )
-        card.add_markdown(
-            "EXECUTION_DURATION", f"**Execution duration (s):** `{self.execution_duration:.2f}`"
-        )
-        card.add_markdown("RUN_STATUS", f"**Run status:** `{self.status}`")
-        card.add_markdown("MODEL_URI", f"**Model URI:** `{self.model_uri}`")
-        card.add_markdown("ALERTS", f"**Alerts:** `{self.alerts}`")
-        card.add_markdown("MODEL_URL", f"**Model URL:** `{self.model_url}`")
-        with open(os.path.join(output_directory, _OUTPUT_CARD_FILE_NAME), "w") as f:
+        final_markdown = []
+        if self.model_url is not None:
+            final_markdown.append(f"**Model URL:** `{self.model_url}`")
+        if self.model_uri is not None:
+            final_markdown.append(f"**Model URI:** `{self.model_uri}`")
+        if self.version is not None:
+            final_markdown.append(f"**Model Version:** `{self.version}`")
+        if self.alerts is not None:
+            final_markdown.append(f"**Alerts:** `{self.alerts}`")
+        final_markdown.append(f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`")
+        final_markdown.append(f"**Execution duration (s):** `{self.execution_duration:.2f}`")
+        final_markdown.append(f"**Run status:** `{self.status}`")
+        card.add_markdown("REGISTER_SUMMARY", "<br>\n".join(final_markdown))
+        with open(os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME), "w") as f:
             f.write(card.to_html())
 
-    def inspect(self, output_directory):
+    def _inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
         _logger.info("register inspect code %s", output_directory)
         pass
