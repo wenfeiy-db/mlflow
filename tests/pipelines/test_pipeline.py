@@ -1,51 +1,61 @@
+import os
+import pathlib
 import pytest
 
-from unittest.mock import patch
 from mlflow.pipelines.pipeline import Pipeline
-from mlflow.pipelines.regression.v1.pipeline import Pipeline as PipelineV1
 from mlflow.exceptions import MlflowException
 
+# pylint: disable=unused-import
+from tests.pipelines.helper_functions import (
+    enter_pipeline_example_directory,
+)  # pylint: enable=unused-import
 
-def test_setup_pipeline_initialization():
-    pipeline_root = "pipeline-root"
-    profile = "production"
-    pipeline_config = {"template": "regression/v1"}
-
-    with patch(
-        "mlflow.utils.file_utils.render_and_merge_yaml", return_value=pipeline_config
-    ) as patch_render_and_merge_yaml, patch(
-        "os.path.join", return_value="profiles/production.yaml"
-    ) as patch_os_path_join, patch(
-        "mlflow.pipelines.pipeline.get_pipeline_root_path", return_value=pipeline_root
-    ) as patch_get_pipeline_root_path:
-        pipeline = Pipeline(profile)
-        patch_os_path_join.assert_called_once_with("profiles", profile + ".yaml")
-        patch_render_and_merge_yaml.assert_called_once_with(
-            pipeline_root, "pipeline.yaml", "profiles/production.yaml"
-        )
-        patch_get_pipeline_root_path.assert_called_once()
-        assert type(pipeline) is PipelineV1
+_STEP_NAMES = ["ingest", "split", "train", "transform", "evaluate"]
 
 
-def test_error_pipeline_initialization():
-    pipeline_root = "pipeline-root"
-    profile = "production"
-    error_pipeline_template = {"template": "regression/v4"}
-    empty_pipeline_template = {}
-    patch_get_pipeline_root_path = patch(
-        "mlflow.pipelines.pipeline.get_pipeline_root_path", return_value=pipeline_root
+@pytest.mark.usefixtures("enter_pipeline_example_directory")
+def test_create_pipeline_fails_with_invalid_profile():
+    with pytest.raises(MlflowException, match=r".*(Failed to find|does not exist).*"):
+        Pipeline(profile="local123")
+
+
+@pytest.mark.usefixtures("enter_pipeline_example_directory")
+def test_create_pipeline_and_clean_works():
+    p = Pipeline()
+    p.clean()
+
+
+@pytest.mark.large
+@pytest.mark.usefixtures("enter_pipeline_example_directory")
+@pytest.mark.parametrize("custom_execution_directory", [None, "custom"])
+def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_directory, tmp_path):
+    if custom_execution_directory is not None:
+        custom_execution_directory = tmp_path / custom_execution_directory
+
+    if custom_execution_directory is not None:
+        os.environ["MLFLOW_PIPELINES_EXECUTION_DIRECTORY"] = str(custom_execution_directory)
+
+    expected_execution_directory_location = (
+        pathlib.Path(custom_execution_directory)
+        if custom_execution_directory
+        else pathlib.Path.home() / ".mlflow" / "pipelines" / "sklearn_regression"
     )
 
-    with patch_get_pipeline_root_path, patch(
-        "mlflow.utils.file_utils.render_and_merge_yaml", return_value=error_pipeline_template
-    ), pytest.raises(MlflowException, match="The template defined in pipeline.yaml is not valid"):
-        Pipeline(profile)
-        patch_get_pipeline_root_path.assert_called_once()
+    # Run the full pipeline and verify that outputs for each step were written to the expected
+    # execution directory locations
+    p = Pipeline()
+    p.run()
+    assert (expected_execution_directory_location / "Makefile").exists()
+    assert (expected_execution_directory_location / "steps").exists()
+    for step_name in _STEP_NAMES:
+        step_outputs_path = expected_execution_directory_location / "steps" / step_name / "outputs"
+        assert step_outputs_path.exists()
+        first_output = next(step_outputs_path.iterdir(), None)
+        # TODO: Assert that the ingest step has outputs once ingest execution has been implemented
+        assert first_output is not None or step_name == "ingest"
 
-    with patch_get_pipeline_root_path, patch(
-        "mlflow.utils.file_utils.render_and_merge_yaml", return_value=empty_pipeline_template
-    ), pytest.raises(
-        MlflowException, match="Template property needs to be defined in the pipeline.yaml file"
-    ):
-        Pipeline(profile)
-        patch_get_pipeline_root_path.assert_called_once()
+    # Clean the pipeline and verify that all step outputs have been removed
+    p.clean()
+    for step_name in _STEP_NAMES:
+        step_outputs_path = expected_execution_directory_location / "steps" / step_name / "outputs"
+        assert not step_outputs_path.exists()
