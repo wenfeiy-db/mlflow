@@ -69,7 +69,7 @@ class BaseStep(metaclass=abc.ABCMeta):
 
                 file_uri = output_filename
                 webbrowser.open_new(file_uri)
-        self._inspect(output_directory)
+        return self._inspect(output_directory)
 
     @abc.abstractmethod
     def _run(self, output_directory: str):

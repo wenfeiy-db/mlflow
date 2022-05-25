@@ -55,9 +55,6 @@ class RegisterStep(BaseStep):
             )
             with open(model_validation_path, "r") as f:
                 model_validation = f.read()
-            _logger.info(
-                f"model validation path =|{model_validation_path} and model_validation=|{model_validation}|"
-            )
             artifact_path = "model"
             if model_validation == "VALIDATED" or (
                 model_validation == "UNKNOWN" and self.allow_non_validated_model
