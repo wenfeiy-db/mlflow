@@ -1,5 +1,7 @@
 import abc
 import os
+import shutil
+import subprocess
 import yaml
 from typing import TypeVar, Dict, Any
 
@@ -65,10 +67,8 @@ class BaseStep(metaclass=abc.ABCMeta):
             if is_running_in_ipython_environment():
                 display(HTML(filename=output_filename))
             else:
-                import webbrowser
-
-                file_uri = output_filename
-                webbrowser.open_new(file_uri)
+                if shutil.which("open") is not None:
+                    subprocess.run(["open", output_filename], check=True)
         return self._inspect(output_directory)
 
     @abc.abstractmethod
