@@ -1,5 +1,7 @@
 import abc
 import logging
+import shutil
+import subprocess
 
 from mlflow.exceptions import MlflowException
 from mlflow.pipelines.step import BaseStep
@@ -130,11 +132,9 @@ class _BasePipeline:
             if is_running_in_ipython_environment():
                 display(HTML(filename=pipeline_dag_file))
             else:
-                import webbrowser
-
-                file_uri = f"file://{pipeline_dag_file}"
-                webbrowser.open_new(file_uri)
-                _logger.info(f"MLflow regression v1 pipeline snapshot DAG: '{file_uri}'")
+                if shutil.which("open") is not None:
+                    subprocess.run(["open", pipeline_dag_file], check=True)
+                _logger.info(f"MLflow regression v1 pipeline snapshot DAG: '{pipeline_dag_file}'")
         else:
             output_directory = get_step_output_path(self.name, step, "")
             self._get_step(step).inspect(output_directory)
