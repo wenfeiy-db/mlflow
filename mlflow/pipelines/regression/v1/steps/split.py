@@ -111,9 +111,6 @@ class SplitStep(BaseStep):
             )
 
         self.split_ratios = split_ratios
-        (self.split_module_name, self.split_method_name,) = self.step_config[
-            "split_method"
-        ].rsplit(".", 1)
 
     def _build_profiles_and_card(self, train_df, validation_df, test_df, output_directory):
         from pandas_profiling import ProfileReport
@@ -183,20 +180,21 @@ class SplitStep(BaseStep):
                 input_df, hash_buckets, self.split_ratios
             )
             # Import from user function module to process dataframes
-            sys.path.append(self.pipeline_root)
-            split_fn = getattr(
-                importlib.import_module(self.split_module_name), self.split_method_name
-            )
-            (train_processed, validation_processed, test_processed) = split_fn(
-                train_df, validation_df, test_df
-            )
+            split_method_config = self.step_config.get("split_method", None)
+            if split_method_config is not None:
+                (self.split_module_name, self.split_method_name) = split_method_config.rsplit(".", 1)
+                sys.path.append(self.pipeline_root)
+                split_fn = getattr(
+                    importlib.import_module(self.split_module_name), self.split_method_name
+                )
+                (train_df, validation_df, test_df) = split_fn(train_df, validation_df, test_df)
 
             # Output train / validation / test splits
-            train_processed.to_parquet(os.path.join(output_directory, _OUTPUT_TRAIN_FILE_NAME))
-            validation_processed.to_parquet(
+            train_df.to_parquet(os.path.join(output_directory, _OUTPUT_TRAIN_FILE_NAME))
+            validation_df.to_parquet(
                 os.path.join(output_directory, _OUTPUT_VALIDATION_FILE_NAME)
             )
-            test_processed.to_parquet(os.path.join(output_directory, _OUTPUT_TEST_FILE_NAME))
+            test_df.to_parquet(os.path.join(output_directory, _OUTPUT_TEST_FILE_NAME))
 
             self.status = "Done"
         except Exception:
