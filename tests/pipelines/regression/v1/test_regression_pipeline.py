@@ -61,5 +61,5 @@ def test_pipeline_inspect_pipeline_dag_works(create_pipeline):
         p = create_pipeline
         p.inspect()
         patched_run.assert_called_once()
-        dag_file = patched_run.call_args[0][0]
+        dag_file = patched_run.call_args[0][0][1]
         assert os.path.exists(dag_file)
