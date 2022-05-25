@@ -36,7 +36,7 @@ class BaseStepImplemented(BaseStep):
     def _run(self, output_directory):
         pass
 
-    def inspect(self, output_directory):
+    def _inspect(self, output_directory):
         pass
 
     def clean(self):
