@@ -194,6 +194,13 @@ def apply_pipeline_tracking_config(tracking_config: TrackingConfig):
 
 
 def get_run_tags_env_vars() -> Dict[str, str]:
+    """
+    Returns environment variables that should be set during step execution to ensure that MLflow
+    Run Tags from the current context are applied to any MLflow Runs that are created during
+    pipeline execution.
+
+    :return: A dictionary of environment variable names and values.
+    """
     return {
         MLFLOW_RUN_CONTEXT_ENV_VAR: json.dumps(resolve_tags())
     }
