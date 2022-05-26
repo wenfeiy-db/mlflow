@@ -57,9 +57,11 @@ def test_pipeline_run_and_clean_individual_step_works(step, create_pipeline):
 
 
 def test_pipeline_inspect_pipeline_dag_works(create_pipeline):
-    with mock.patch("subprocess.run") as patched_run:
+    with mock.patch("subprocess.run") as patched_run, mock.patch("shutil.which") as patched_which:
+        patched_which.return_value("/bin/which")
         p = create_pipeline
         p.inspect()
+        patched_which.assert_called_once()
         patched_run.assert_called_once()
         dag_file = patched_run.call_args[0][0][1]
         assert os.path.exists(dag_file)
