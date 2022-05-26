@@ -8,6 +8,12 @@ import cloudpickle
 import mlflow
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
+from mlflow.pipelines.utils.tracking import (
+    get_pipeline_tracking_config,
+    apply_pipeline_tracking_config,
+    TrackingConfig,
+)
+from mlflow.projects.utils import get_databricks_env_vars
 from mlflow.utils.file_utils import read_yaml
 
 _logger = logging.getLogger(__name__)
@@ -16,6 +22,7 @@ _logger = logging.getLogger(__name__)
 class TrainStep(BaseStep):
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
+        self.tracking_config = TrackingConfig.from_dict(step_config)
         self.train_module_name, self.train_method_name = self.step_config["train_method"].rsplit(
             ".", 1
         )
@@ -24,6 +31,8 @@ class TrainStep(BaseStep):
         import pandas as pd
         import numpy as np
         from sklearn.pipeline import make_pipeline
+
+        apply_pipeline_tracking_config(self.tracking_config)
 
         transformed_train_data_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
@@ -48,7 +57,6 @@ class TrainStep(BaseStep):
         X = np.vstack(X)
         y = np.array(y)
 
-        mlflow.set_experiment("demo")  # hardcoded
         mlflow.autolog(log_models=False)
 
         with mlflow.start_run() as run:
@@ -83,9 +91,18 @@ class TrainStep(BaseStep):
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
         step_config = read_yaml(os.path.join(pipeline_root, "steps"), "train_config.yaml")
-        step_config[TrainStep._TRACKING_URI_CONFIG_KEY] = "sqlite:///metadata/mlflow/mlruns.db"
+        step_config.update(
+            get_pipeline_tracking_config(
+                pipeline_root_path=pipeline_root,
+                pipeline_config=pipeline_config,
+            ).to_dict()
+        )
         return cls(step_config, pipeline_root)
 
     @property
     def name(self):
         return "train"
+
+    @property
+    def environment(self):
+        return get_databricks_env_vars(tracking_uri=self.tracking_config.tracking_uri)

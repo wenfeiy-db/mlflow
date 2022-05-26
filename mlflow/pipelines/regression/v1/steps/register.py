@@ -9,6 +9,12 @@ from mlflow.entities.model_registry.model_version_status import ModelVersionStat
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
+from mlflow.pipelines.utils.tracking import (
+    get_pipeline_tracking_config,
+    apply_pipeline_tracking_config,
+    TrackingConfig,
+)
+from mlflow.projects.utils import get_databricks_env_vars
 from mlflow.tracking.client import MlflowClient
 from mlflow.tracking._model_registry import DEFAULT_AWAIT_MAX_SLEEP_SECONDS
 
@@ -18,7 +24,8 @@ _logger = logging.getLogger(__name__)
 class RegisterStep(BaseStep):
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         super(RegisterStep, self).__init__(step_config, pipeline_root)
-        self.status = "Unknown"
+        self.status = "UNKNOWN"
+        self.tracking_config = TrackingConfig.from_dict(step_config)
         self.run_end_time = None
         self.execution_duration = None
         self.num_dropped_rows = None
@@ -59,6 +66,7 @@ class RegisterStep(BaseStep):
             if model_validation == "VALIDATED" or (
                 model_validation == "UNKNOWN" and self.allow_non_validated_model
             ):
+                apply_pipeline_tracking_config(self.tracking_config)
                 # TODO: Figure out how to turn this into an actual URL
                 self.model_url = "https://figurethisout.com"
                 self.model_uri = "runs:/{run_id}/{artifact_path}".format(
@@ -139,9 +147,12 @@ class RegisterStep(BaseStep):
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
         try:
             step_config = pipeline_config["steps"]["register"]
-            step_config[
-                RegisterStep._TRACKING_URI_CONFIG_KEY
-            ] = "sqlite:///metadata/mlflow/mlruns.db"
+            step_config.update(
+                get_pipeline_tracking_config(
+                    pipeline_root_path=pipeline_root,
+                    pipeline_config=pipeline_config,
+                ).to_dict()
+            )
         except KeyError:
             raise MlflowException(
                 "Config for register step is not found.", error_code=INVALID_PARAMETER_VALUE
@@ -151,3 +162,7 @@ class RegisterStep(BaseStep):
     @property
     def name(self):
         return "register"
+
+    @property
+    def environment(self):
+        return get_databricks_env_vars(tracking_uri=self.tracking_config.tracking_uri)
