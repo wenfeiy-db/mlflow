@@ -31,9 +31,12 @@ def test_get_pipeline_tracking_config_returns_expected_config(
     tracking_uri, artifact_location, experiment_name, experiment_id
 ):
     default_tracking_uri = (
-        "sqlite:///" + (pathlib.Path.cwd() / "metadata" / "mlflow" / "mlruns.db").as_posix()
+        "sqlite:///"
+        + (pathlib.Path.cwd() / "metadata" / "mlflow" / "mlruns.db").resolve().as_posix()
     )
-    default_artifact_location = str(pathlib.Path.cwd() / "metadata" / "mlflow" / "mlartifacts")
+    default_artifact_location = str(
+        (pathlib.Path.cwd() / "metadata" / "mlflow" / "mlartifacts").resolve()
+    )
     default_experiment_name = "sklearn_regression"  # equivalent to pipeline name
 
     profile_contents = {"experiment": {}}
