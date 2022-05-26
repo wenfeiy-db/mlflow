@@ -62,7 +62,7 @@ def clean_execution_state(pipeline_name: str, pipeline_steps: List[BaseStep]) ->
 
     :param pipeline_name: The name of the pipeline.
     """
-    execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
+    execution_dir_path = get_execution_directory_path(pipeline_name=pipeline_name)
     for step in pipeline_steps:
         step_outputs_path = _get_step_output_directory_path(
             execution_directory_path=execution_dir_path,
@@ -84,7 +84,7 @@ def get_step_output_path(pipeline_name: str, step_name: str, relative_path: str)
     :return The absolute path of the step output on the local filesystem, which may or may
             not exist.
     """
-    execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
+    execution_dir_path = get_execution_directory_path(pipeline_name=pipeline_name)
     step_outputs_path = _get_step_output_directory_path(
         execution_directory_path=execution_dir_path,
         step_name=step_name,
@@ -107,7 +107,7 @@ def _get_or_create_execution_directory(
     :return: The absolute path of the execution directory on the local filesystem for the specified
              pipeline.
     """
-    execution_dir_path = _get_execution_directory_path(pipeline_name)
+    execution_dir_path = get_execution_directory_path(pipeline_name)
 
     os.makedirs(execution_dir_path, exist_ok=True)
     _create_makefile(pipeline_root_path, execution_dir_path)
@@ -153,7 +153,7 @@ def _write_updated_step_confs(
             )
 
 
-def _get_execution_directory_path(pipeline_name: str) -> str:
+def get_execution_directory_path(pipeline_name: str) -> str:
     """
     Obtains the path of the execution directory on the local filesystem corresponding to the
     specified pipeline, which may or may not exist.
