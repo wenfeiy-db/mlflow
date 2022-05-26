@@ -5,7 +5,7 @@ from typing import List
 
 from mlflow.utils.file_utils import read_yaml, write_yaml
 from mlflow.utils.process import _exec_cmd
-from mlflow.pipelines.step import BaseStep
+from mlflow.pipelines.step import BaseStep, StepStatus
 
 
 _MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR = "MLFLOW_PIPELINES_EXECUTION_DIRECTORY"
@@ -33,6 +33,18 @@ def run_pipeline_step(
     execution_dir_path = _get_or_create_execution_directory(
         pipeline_root_path, pipeline_name, pipeline_steps
     )
+    clean_execution_state(
+        pipeline_name=pipeline_name,
+        pipeline_steps=[
+            step for step in pipeline_steps
+            if step.get_status(
+                output_directory=_get_step_output_directory_path(
+                    execution_directory_path=execution_dir_path,
+                    step_name=step.name,
+                )
+            ) != StepStatus.SUCCEEDED
+        ]
+    )
     _write_updated_step_confs(
         pipeline_steps=pipeline_steps,
         execution_directory_path=execution_dir_path,
@@ -46,11 +58,12 @@ def run_pipeline_step(
 
 def clean_execution_state(pipeline_name: str, pipeline_steps: List[BaseStep]) -> None:
     """
-    Removes all execution state for the specified pipeline from the associated execution directory
-    on the local filesystem. This method does *not* remove other execution results, such as content
-    logged to MLflow Tracking.
+    Removes all execution state for the specified pipeline steps from the associated execution
+    directory on the local filesystem. This method does *not* remove other execution results, such
+    as content logged to MLflow Tracking.
 
     :param pipeline_name: The name of the pipeline.
+    :param pipeline_steps: The pipeline steps for which to remove execution state.
     """
     execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
     for step in pipeline_steps:
@@ -60,6 +73,7 @@ def clean_execution_state(pipeline_name: str, pipeline_steps: List[BaseStep]) ->
         )
         if os.path.exists(step_outputs_path):
             shutil.rmtree(step_outputs_path)
+        os.makedirs(step_outputs_path)
 
 
 def get_step_output_path(pipeline_name: str, step_name: str, relative_path: str) -> str:

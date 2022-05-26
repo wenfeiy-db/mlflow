@@ -55,7 +55,7 @@ class BaseStep(metaclass=abc.ABCMeta):
             self._update_status(status=StepStatus.SUCCEEDED, output_directory=output_directory)
         except Exception:
             self._update_status(status=StepStatus.FAILED, output_directory=output_directory)
-        
+
         return self.inspect(output_directory)
 
     @abc.abstractmethod
@@ -84,7 +84,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         pass
 
-    @property
     def get_status(self, output_directory: str) -> StepStatus:
         status_file_path = os.path.join(output_directory, BaseStep._STATUS_FILE_NAME)
         if os.path.exists(status_file_path):
