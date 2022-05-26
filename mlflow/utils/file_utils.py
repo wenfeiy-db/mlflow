@@ -217,7 +217,7 @@ def render_and_merge_yaml(root, template_name, context_name):
             raise MissingConfigException("Yaml file '%s' does not exist." % path)
 
     with codecs.open(context_path, mode="r", encoding=ENCODING) as context_file:
-        context_dict = yaml.load(context_file, Loader=UniqueKeyLoader)
+        context_dict = yaml.load(context_file, Loader=UniqueKeyLoader) or {}
 
     j2_env = jinja2.Environment(loader=jinja2.FileSystemLoader(root, encoding=ENCODING))
     source = j2_env.get_template(template_name).render(context_dict)

@@ -41,14 +41,12 @@ def test_create_pipeline_fails_with_invalid_input(
         RegressionPipeline(pipeline_root_path=pipeline_root_path, profile=profile)
 
 
-@pytest.mark.large
 def test_pipeline_run_and_clean_the_whole_pipeline_works(create_pipeline):
     p = create_pipeline
     p.run()
     p.clean()
 
 
-@pytest.mark.large
 @pytest.mark.parametrize("step", ["ingest", "split", "transform", "train", "evaluate"])
 def test_pipeline_run_and_clean_individual_step_works(step, create_pipeline):
     p = create_pipeline

@@ -16,7 +16,8 @@ from mlflow.utils.file_utils import write_yaml
 # pylint: disable=unused-import
 from tests.pipelines.helper_functions import (
     enter_pipeline_example_directory,
-)
+    enter_test_pipeline_directory,
+)  # pylint: enable=unused-import
 from tests.pipelines.helper_functions import chdir
 from unittest import mock
 
@@ -86,6 +87,20 @@ def test_get_pipeline_config_throws_for_invalid_pipeline_directory(tmp_path):
 
     with pytest.raises(MlflowException, match="Failed to find pipeline.yaml"):
         get_pipeline_config(pipeline_root_path=tmp_path)
+
+
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
+def test_get_pipeline_config_supports_empty_profile():
+    with open("profiles/empty.yaml", "w"):
+        pass
+
+    get_pipeline_config(profile="empty")
+
+
+@pytest.mark.usefixtures("enter_pipeline_example_directory")
+def test_get_pipeline_config_throws_for_nonexistent_profile():
+    with pytest.raises(MlflowException, match="Yaml file.*badprofile.*does not exist"):
+        get_pipeline_config(profile="badprofile")
 
 
 def test_get_default_profile_works():
