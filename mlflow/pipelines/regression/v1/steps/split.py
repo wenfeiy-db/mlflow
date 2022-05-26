@@ -182,7 +182,9 @@ class SplitStep(BaseStep):
             # Import from user function module to process dataframes
             post_split_config = self.step_config.get("post_split_method", None)
             if post_split_config is not None:
-                (self.post_split_module_name, self.post_split_fn_name) = post_split_config.rsplit(".", 1)
+                (self.post_split_module_name, self.post_split_fn_name) = post_split_config.rsplit(
+                    ".", 1
+                )
                 sys.path.append(self.pipeline_root)
                 post_split = getattr(
                     importlib.import_module(self.post_split_module_name), self.post_split_fn_name
@@ -191,9 +193,7 @@ class SplitStep(BaseStep):
 
             # Output train / validation / test splits
             train_df.to_parquet(os.path.join(output_directory, _OUTPUT_TRAIN_FILE_NAME))
-            validation_df.to_parquet(
-                os.path.join(output_directory, _OUTPUT_VALIDATION_FILE_NAME)
-            )
+            validation_df.to_parquet(os.path.join(output_directory, _OUTPUT_VALIDATION_FILE_NAME))
             test_df.to_parquet(os.path.join(output_directory, _OUTPUT_TEST_FILE_NAME))
 
             self.status = "Done"
