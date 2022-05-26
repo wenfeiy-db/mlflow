@@ -182,12 +182,10 @@ class SplitStep(BaseStep):
             # Import from user function module to process dataframes
             post_split_config = self.step_config.get("post_split_method", None)
             if post_split_config is not None:
-                (self.post_split_module_name, self.post_split_fn_name) = post_split_config.rsplit(
-                    ".", 1
-                )
+                (post_split_module_name, post_split_fn_name) = post_split_config.rsplit(".", 1)
                 sys.path.append(self.pipeline_root)
                 post_split = getattr(
-                    importlib.import_module(self.post_split_module_name), self.post_split_fn_name
+                    importlib.import_module(post_split_module_name), post_split_fn_name
                 )
                 (train_df, validation_df, test_df) = post_split(train_df, validation_df, test_df)
 
