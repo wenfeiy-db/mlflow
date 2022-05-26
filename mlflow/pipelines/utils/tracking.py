@@ -10,6 +10,7 @@ from mlflow.tracking.client import MlflowClient
 from mlflow.tracking.default_experiment import DEFAULT_EXPERIMENT_ID
 from mlflow.tracking.fluent import set_experiment as fluent_set_experiment, _get_experiment_id
 from mlflow.utils.databricks_utils import is_in_databricks_runtime
+from mlflow.utils.file_utils import path_to_local_sqlite_uri, path_to_local_file_uri
 
 _logger = logging.getLogger(__name__)
 
@@ -120,11 +121,12 @@ def get_pipeline_tracking_config(
     else:
         mlflow_metadata_base_path = pathlib.Path(pipeline_root_path) / "metadata" / "mlflow"
         mlflow_metadata_base_path.mkdir(exist_ok=True, parents=True)
-        default_tracking_sqlite_db_posixpath = (
-            (mlflow_metadata_base_path / "mlruns.db").resolve().as_posix()
+        default_tracking_uri = path_to_local_sqlite_uri(
+            path=str((mlflow_metadata_base_path / "mlruns.db").resolve())
         )
-        default_tracking_uri = f"sqlite:///{default_tracking_sqlite_db_posixpath}"
-        default_artifact_location = str((mlflow_metadata_base_path / "mlartifacts").resolve())
+        default_artifact_location = path_to_local_file_uri(
+            path=str((mlflow_metadata_base_path / "mlartifacts").resolve())
+        )
 
     tracking_config = pipeline_config.get("experiment", {})
 

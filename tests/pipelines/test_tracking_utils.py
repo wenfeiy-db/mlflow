@@ -7,6 +7,7 @@ import pytest
 
 from mlflow.pipelines.utils import get_pipeline_config
 from mlflow.pipelines.utils.tracking import get_pipeline_tracking_config
+from mlflow.utils.file_utils import path_to_local_file_uri, path_to_local_sqlite_uri
 
 # pylint: disable=unused-import
 from tests.pipelines.helper_functions import (
@@ -30,12 +31,11 @@ from tests.pipelines.helper_functions import (
 def test_get_pipeline_tracking_config_returns_expected_config(
     tracking_uri, artifact_location, experiment_name, experiment_id
 ):
-    default_tracking_uri = (
-        "sqlite:///"
-        + (pathlib.Path.cwd() / "metadata" / "mlflow" / "mlruns.db").resolve().as_posix()
+    default_tracking_uri = path_to_local_sqlite_uri(
+        path=str((pathlib.Path.cwd() / "metadata" / "mlflow" / "mlruns.db").resolve())
     )
-    default_artifact_location = str(
-        (pathlib.Path.cwd() / "metadata" / "mlflow" / "mlartifacts").resolve()
+    default_artifact_location = path_to_local_file_uri(
+        path=str((pathlib.Path.cwd() / "metadata" / "mlflow" / "mlartifacts").resolve())
     )
     default_experiment_name = "sklearn_regression"  # equivalent to pipeline name
 
