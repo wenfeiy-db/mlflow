@@ -254,7 +254,7 @@ def test_ingests_remote_s3_datasets_successfully(mock_s3_bucket, pandas_df, tmp_
         pandas_df.to_parquet(dataset_path)
         S3ArtifactRepository(f"s3://{mock_s3_bucket}").log_artifact(str(dataset_path))
 
-       IngestStep.from_pipeline_config(
+        IngestStep.from_pipeline_config(
             pipeline_config={
                 "data": {
                     "format": "parquet",
