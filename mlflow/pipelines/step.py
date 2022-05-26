@@ -69,6 +69,7 @@ class BaseStep(metaclass=abc.ABCMeta):
             else:
                 if shutil.which("open") is not None:
                     subprocess.run(["open", output_filename], check=True)
+                    
         return self._inspect(output_directory)
 
     @abc.abstractmethod
