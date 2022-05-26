@@ -67,8 +67,7 @@ class RegisterStep(BaseStep):
                 model_validation == "UNKNOWN" and self.allow_non_validated_model
             ):
                 apply_pipeline_tracking_config(self.tracking_config)
-                # TODO: Figure out how to turn this into an actual URL
-                self.model_url = "https://figurethisout.com"
+                # TODO: Figure out how populate self.model_url
                 self.model_uri = "runs:/{run_id}/{artifact_path}".format(
                     run_id=run_id, artifact_path=artifact_path
                 )
