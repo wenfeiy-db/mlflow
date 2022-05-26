@@ -180,14 +180,14 @@ class SplitStep(BaseStep):
                 input_df, hash_buckets, self.split_ratios
             )
             # Import from user function module to process dataframes
-            split_fn_config = self.step_config.get("process_splits", None)
-            if split_fn_config is not None:
-                (self.split_module_name, self.split_fn_name) = split_fn_config.rsplit(".", 1)
+            post_split_config = self.step_config.get("post_split_method", None)
+            if post_split_config is not None:
+                (self.post_split_module_name, self.post_split_fn_name) = post_split_config.rsplit(".", 1)
                 sys.path.append(self.pipeline_root)
-                split_fn = getattr(
-                    importlib.import_module(self.split_module_name), self.split_fn_name
+                post_split = getattr(
+                    importlib.import_module(self.post_split_module_name), self.post_split_fn_name
                 )
-                (train_df, validation_df, test_df) = split_fn(train_df, validation_df, test_df)
+                (train_df, validation_df, test_df) = post_split(train_df, validation_df, test_df)
 
             # Output train / validation / test splits
             train_df.to_parquet(os.path.join(output_directory, _OUTPUT_TRAIN_FILE_NAME))
