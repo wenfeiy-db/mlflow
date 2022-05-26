@@ -36,14 +36,16 @@ def run_pipeline_step(
     clean_execution_state(
         pipeline_name=pipeline_name,
         pipeline_steps=[
-            step for step in pipeline_steps
+            step
+            for step in pipeline_steps
             if step.get_status(
                 output_directory=_get_step_output_directory_path(
                     execution_directory_path=execution_dir_path,
                     step_name=step.name,
                 )
-            ) != StepStatus.SUCCEEDED
-        ]
+            )
+            != StepStatus.SUCCEEDED
+        ],
     )
     _write_updated_step_confs(
         pipeline_steps=pipeline_steps,

@@ -10,6 +10,7 @@ from mlflow.utils.databricks_utils import is_in_databricks_runtime
 
 _logger = logging.getLogger(__name__)
 
+
 class StepStatus(Enum):
     UNKNOWN = "UNKNOWN"
     RUNNING = "RUNNING"
