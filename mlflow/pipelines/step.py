@@ -1,10 +1,18 @@
 import abc
 import os
 import yaml
+from enum import Enum
 from typing import TypeVar, Dict, Any
 
 import mlflow
 from mlflow.pipelines.utils import get_pipeline_name, get_pipeline_config
+
+
+class StepStatus(Enum):
+    UNKNOWN = "UNKNOWN"
+    RUNNING = "RUNNING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
 
 
 StepType = TypeVar("StepType", bound="BaseStep")
@@ -13,10 +21,6 @@ StepType = TypeVar("StepType", bound="BaseStep")
 class BaseStep(metaclass=abc.ABCMeta):
     _TRACKING_URI_CONFIG_KEY = "tracking_uri"
     _STATUS_FILE_NAME = "status.txt"
-    _STATUS_UNKNOWN = "Unknown"
-    _STATUS_RUNNING = "Running"
-    _STATUS_SUCCEEDED = "Succeeded"
-    _STATUS_FAILED = "Failed"
 
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         """
@@ -45,8 +49,13 @@ class BaseStep(metaclass=abc.ABCMeta):
         :return: Results from executing the corresponding step.
         """
         self._set_tracking_uri()
-        # other common setup stuff for steps goes here
-        self._run(output_directory)
+        try:
+            self._update_status(status=StepStatus.RUNNING, output_directory=output_directory)
+            self._run(output_directory)
+            self._update_status(status=StepStatus.SUCCEEDED, output_directory=output_directory)
+        except Exception:
+            self._update_status(status=StepStatus.FAILED, output_directory=output_directory)
+        
         return self.inspect(output_directory)
 
     @abc.abstractmethod
@@ -76,13 +85,13 @@ class BaseStep(metaclass=abc.ABCMeta):
         pass
 
     @property
-    def get_status(self, output_directory: str) -> str:
+    def get_status(self, output_directory: str) -> StepStatus:
         status_file_path = os.path.join(output_directory, BaseStep._STATUS_FILE_NAME)
         if os.path.exists(status_file_path):
             with open(status_file_path, "r") as f:
-                return f.read()
+                return StepStatus[f.read()]
         else:
-            return BaseStep._STATUS_UNKNOWN
+            return StepStatus.UNKNOWN
 
     @classmethod
     @abc.abstractmethod
@@ -127,6 +136,6 @@ class BaseStep(metaclass=abc.ABCMeta):
     def clean(self) -> None:
         pass
 
-    def _update_status(self, status: str, output_directory: str) -> None:
+    def _update_status(self, status: StepStatus, output_directory: str) -> None:
         with open(os.path.join(output_directory, BaseStep._STATUS_FILE_NAME), "w") as f:
-            f.write(status)
+            f.write(status.value)
