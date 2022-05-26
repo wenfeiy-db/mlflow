@@ -189,7 +189,7 @@ class _DownloadThenConvertDataset(_LocationBasedDataset):
     for phase (2).
     """
 
-    _FILE_DOWNLOAD_CHUNK_SIZE_BYTES = 10**7  # 10MB
+    _FILE_DOWNLOAD_CHUNK_SIZE_BYTES = 10 ** 7  # 10MB
 
     def resolve_to_parquet(self, dst_path: str):
         with TempDir(chdr=True) as tmpdir:

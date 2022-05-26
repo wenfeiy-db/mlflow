@@ -7,6 +7,7 @@ import mlflow
 from mlflow.pipelines.pipeline import Pipeline
 from mlflow.exceptions import MlflowException
 from mlflow.tracking.client import MlflowClient
+from mlflow.utils.file_utils import path_to_local_file_uri
 
 # pylint: disable=unused-import
 from tests.pipelines.helper_functions import (
@@ -68,7 +69,7 @@ def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_d
 def test_pipelines_log_to_expected_mlflow_backend_and_experiment(tmp_path):
     experiment_name = "my_test_exp"
     tracking_uri = "sqlite:///" + str((tmp_path / "tracking_dst.db").resolve())
-    artifact_location = str(tmp_path / "mlartifacts")
+    artifact_location = str((tmp_path / "mlartifacts").resolve())
 
     profile_path = pathlib.Path.cwd() / "profiles" / "local.yaml"
     with open(profile_path, "r") as f:
@@ -76,7 +77,7 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment(tmp_path):
 
     profile_contents["experiment"]["name"] = experiment_name
     profile_contents["experiment"]["tracking_uri"] = tracking_uri
-    profile_contents["experiment"]["artifact_location"] = artifact_location
+    profile_contents["experiment"]["artifact_location"] = path_to_local_file_uri(artifact_location)
 
     with open(profile_path, "w") as f:
         yaml.safe_dump(profile_contents, f)
@@ -89,8 +90,10 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment(tmp_path):
     logged_runs = mlflow.search_runs(experiment_names=[experiment_name], output_format="list")
     assert len(logged_runs) == 1
     logged_run = logged_runs[0]
-    assert logged_run.info.artifact_uri == str(
-        pathlib.Path(artifact_location) / logged_run.info.run_id / "artifacts"
+    assert logged_run.info.artifact_uri == path_to_local_file_uri(
+        str(
+            (pathlib.Path(artifact_location) / logged_run.info.run_id / "artifacts").resolve()
+        )
     )
     assert "r2_score_on_data_test" in logged_run.data.metrics
     artifacts = MlflowClient(tracking_uri).list_artifacts(run_id=logged_run.info.run_id)
