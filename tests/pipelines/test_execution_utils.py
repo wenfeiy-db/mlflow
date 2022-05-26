@@ -122,5 +122,6 @@ def test_run_pipeline_step_sets_environment_as_expected(tmp_path):
             target_step=TestStep1(),
         )
 
-    extra_env = dict(mock_run_in_subprocess.call_args.kwargs.get("extra_env"))
+    extra_env = mock_run_in_subprocess.call_args.kwargs.get("extra_env")
+    print("EXTRA ENV", extra_env)
     assert extra_env == {"A": "B", "C": "D"}, extra_env
