@@ -201,6 +201,4 @@ def get_run_tags_env_vars() -> Dict[str, str]:
 
     :return: A dictionary of environment variable names and values.
     """
-    return {
-        MLFLOW_RUN_CONTEXT_ENV_VAR: json.dumps(resolve_tags())
-    }
+    return {MLFLOW_RUN_CONTEXT_ENV_VAR: json.dumps(resolve_tags())}
