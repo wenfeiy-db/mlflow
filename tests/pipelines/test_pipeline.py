@@ -91,9 +91,7 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment(tmp_path):
     assert len(logged_runs) == 1
     logged_run = logged_runs[0]
     assert logged_run.info.artifact_uri == path_to_local_file_uri(
-        str(
-            (pathlib.Path(artifact_location) / logged_run.info.run_id / "artifacts").resolve()
-        )
+        str((pathlib.Path(artifact_location) / logged_run.info.run_id / "artifacts").resolve())
     )
     assert "r2_score_on_data_test" in logged_run.data.metrics
     artifacts = MlflowClient(tracking_uri).list_artifacts(run_id=logged_run.info.run_id)
