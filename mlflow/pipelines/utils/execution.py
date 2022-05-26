@@ -283,11 +283,11 @@ ingest:
 steps/ingest/outputs/dataset.parquet: steps/ingest/conf.yaml
 	$(MAKE) ingest
 
-split_objects = steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/split/outputs/summary.html
+split_objects = steps/split/outputs/train.parquet steps/split/outputs/validation.parquet steps/split/outputs/test.parquet steps/split/outputs/card.html
 
 split: $(split_objects)
 
-steps/%/outputs/train.parquet steps/%/outputs/test.parquet steps/%/outputs/summary.html: steps/ingest/outputs/dataset.parquet steps/split/conf.yaml
+steps/%/outputs/train.parquet steps/%/outputs/validation.parquet steps/%/outputs/test.parquet steps/%/outputs/card.html: steps/ingest/outputs/dataset.parquet steps/split/conf.yaml
 	python -c "from mlflow.pipelines.regression.v1.steps.split import SplitStep; SplitStep.from_step_config_path(step_config_path='steps/split/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/split/outputs')"
 
 transform_objects = steps/transform/outputs/transformer.pkl steps/transform/outputs/train_transformed.parquet
@@ -304,11 +304,11 @@ train: $(train_objects)
 steps/%/outputs/pipeline.pkl steps/%/outputs/run_id: {path:prp/steps/train.py} {path:prp/steps/train_config.yaml} steps/transform/outputs/train_transformed.parquet steps/transform/outputs/transformer.pkl steps/train/conf.yaml
 	python -c "from mlflow.pipelines.regression.v1.steps.train import TrainStep; TrainStep.from_step_config_path(step_config_path='steps/train/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/train/outputs')"
 
-evaluate_objects = steps/evaluate/outputs/worst_training_examples.parquet steps/evaluate/outputs/metrics.json steps/evaluate/outputs/explanations.html
+evaluate_objects = steps/evaluate/outputs/metrics.json steps/evaluate/outputs/artifacts steps/evaluate/outputs/artifacts_metadata.json steps/evaluate/outputs/model_validation_status
 
 evaluate: $(evaluate_objects)
 
-steps/%/outputs/worst_training_examples.parquet steps/%/outputs/metrics.json steps/%/outputs/explanations.html: steps/train/outputs/pipeline.pkl steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/train/outputs/run_id steps/evaluate/conf.yaml
+steps/%/outputs/metrics.json steps/%/outputs/artifacts steps/%/outputs/artifacts_metadata.json steps/%/outputs/model_validation_status: steps/train/outputs/pipeline.pkl steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/train/outputs/run_id steps/evaluate/conf.yaml
 	python -c "from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep; EvaluateStep.from_step_config_path(step_config_path='steps/evaluate/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/evaluate/outputs')"
 
 clean:
