@@ -6,13 +6,14 @@ from mlflow.pipelines.regression.v1.steps.split import SplitStep
 from mlflow.pipelines.regression.v1.steps.transform import TransformStep
 from mlflow.pipelines.regression.v1.steps.train import TrainStep
 from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep
+from mlflow.pipelines.regression.v1.steps.register import RegisterStep
 from mlflow.pipelines.step import BaseStep
 from typing import List
 from mlflow.pipelines.utils.execution import get_execution_directory_path
 
 
 class RegressionPipeline(_BasePipeline):
-    _PIPELINE_STEPS = (IngestStep, SplitStep, TransformStep, TrainStep, EvaluateStep)
+    _PIPELINE_STEPS = (IngestStep, SplitStep, TransformStep, TrainStep, EvaluateStep, RegisterStep)
 
     def _get_step_classes(self) -> List[BaseStep]:
         return self._PIPELINE_STEPS
