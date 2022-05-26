@@ -2,6 +2,8 @@ import datetime
 import logging
 import os
 import time
+import importlib
+import sys
 from typing import Dict, Any
 
 from mlflow.pipelines.step import BaseStep
@@ -177,6 +179,15 @@ class SplitStep(BaseStep):
             train_df, validation_df, test_df = _get_split_df(
                 input_df, hash_buckets, self.split_ratios
             )
+            # Import from user function module to process dataframes
+            post_split_config = self.step_config.get("post_split_method", None)
+            if post_split_config is not None:
+                (post_split_module_name, post_split_fn_name) = post_split_config.rsplit(".", 1)
+                sys.path.append(self.pipeline_root)
+                post_split = getattr(
+                    importlib.import_module(post_split_module_name), post_split_fn_name
+                )
+                (train_df, validation_df, test_df) = post_split(train_df, validation_df, test_df)
 
             # Output train / validation / test splits
             train_df.to_parquet(os.path.join(output_directory, _OUTPUT_TRAIN_FILE_NAME))
