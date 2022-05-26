@@ -7,6 +7,7 @@ import mlflow
 from mlflow.pipelines.pipeline import Pipeline
 from mlflow.exceptions import MlflowException
 from mlflow.tracking.client import MlflowClient
+from mlflow.tracking.context.registry import resolve_tags
 from mlflow.utils.file_utils import path_to_local_file_uri
 
 # pylint: disable=unused-import
@@ -66,7 +67,7 @@ def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_d
 
 
 @pytest.mark.usefixtures("enter_test_pipeline_directory")
-def test_pipelines_log_to_expected_mlflow_backend_and_experiment(tmp_path):
+def test_pipelines_log_to_expected_mlflow_backend_and_experiment_with_expected_run_tags(tmp_path):
     experiment_name = "my_test_exp"
     tracking_uri = "sqlite:///" + str((tmp_path / "tracking_dst.db").resolve())
     artifact_location = str((tmp_path / "mlartifacts").resolve())
@@ -96,3 +97,5 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment(tmp_path):
     assert "r2_score_on_data_test" in logged_run.data.metrics
     artifacts = MlflowClient(tracking_uri).list_artifacts(run_id=logged_run.info.run_id)
     assert "model" in [artifact.path for artifact in artifacts]
+    run_tags = MlflowClient(tracking_uri).get_run(run_id=logged_run.info.run_id).data.tags
+    assert resolve_tags().items() <= run_tags.items()
