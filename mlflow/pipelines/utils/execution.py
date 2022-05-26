@@ -266,7 +266,9 @@ class _MakefilePathFormat:
         self.pipeline_root_path = pipeline_root_path
         self.execution_directory_path = execution_directory_path
 
-    def _get_formatted_path(self, path_spec: str, prefix_placeholder: str, replacement_path: str) -> str:
+    def _get_formatted_path(
+        self, path_spec: str, prefix_placeholder: str, replacement_path: str
+    ) -> str:
         """
         :param path_spec: A substitution path spec of the form `<placeholder>/<subpath>`. This
                           method substitutes `<placeholder>` with `<pipeline_root_path>`, if
