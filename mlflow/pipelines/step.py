@@ -1,4 +1,5 @@
 import abc
+import os
 import yaml
 from typing import TypeVar, Dict, Any
 
@@ -11,6 +12,7 @@ StepType = TypeVar("StepType", bound="BaseStep")
 
 class BaseStep(metaclass=abc.ABCMeta):
     _TRACKING_URI_CONFIG_KEY = "tracking_uri"
+    _STATUS_FILE_NAME = "status.txt"
     _STATUS_UNKNOWN = "Unknown"
     _STATUS_RUNNING = "Running"
     _STATUS_SUCCEEDED = "Succeeded"
@@ -75,7 +77,12 @@ class BaseStep(metaclass=abc.ABCMeta):
 
     @property
     def get_status(self, output_directory: str) -> str:
-        pass
+        status_file_path = os.path.join(output_directory, BaseStep._STATUS_FILE_NAME)
+        if os.path.exists(status_file_path):
+            with open(status_file_path, "r") as f:
+                return f.read()
+        else:
+            return BaseStep._STATUS_UNKNOWN
 
     @classmethod
     @abc.abstractmethod
@@ -119,3 +126,7 @@ class BaseStep(metaclass=abc.ABCMeta):
 
     def clean(self) -> None:
         pass
+
+    def _update_status(self, status: str, output_directory: str) -> None:
+        with open(os.path.join(output_directory, BaseStep._STATUS_FILE_NAME), "w") as f:
+            f.write(status)
