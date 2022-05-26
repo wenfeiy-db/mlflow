@@ -119,6 +119,7 @@ def get_pipeline_tracking_config(
         default_artifact_location = None
     else:
         mlflow_metadata_base_path = pathlib.Path(pipeline_root_path) / "metadata" / "mlflow"
+        mlflow_metadata_base_path.mkdir(exist_ok=True, parents=True)
         default_tracking_sqlite_db_posixpath = (
             (mlflow_metadata_base_path / "mlruns.db").resolve().as_posix()
         )
