@@ -47,7 +47,7 @@ class TransformStep(BaseStep):
         transformed = pd.DataFrame(data={"features": list(features), "target": y})
         transformed.to_parquet(os.path.join(output_directory, "train_transformed.parquet"))
 
-    def inspect(self, output_directory):
+    def _inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
         _logger.info("transform inspect code %s", output_directory)
         pass

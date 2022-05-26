@@ -23,7 +23,6 @@ class IngestStep(BaseStep):
     _DATASET_FORMAT_PARQUET = "parquet"
     _DATASET_OUTPUT_NAME = "dataset.parquet"
     _DATASET_PROFILE_OUTPUT_NAME = "dataset_profile.html"
-    _STEP_CARD_HTML_OUTPUT_NAME = "card.html"
     _STEP_CARD_OUTPUT_NAME = "card.pkl"
     _SUPPORTED_DATASETS = [
         ParquetDataset,
@@ -38,6 +37,7 @@ class IngestStep(BaseStep):
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         super().__init__(step_config, pipeline_root)
 
+        self.OUTPUT_CARD_FILE_NAME = "card.html"
         dataset_format = step_config.get("format")
         if not dataset_format:
             raise MlflowException(
@@ -87,9 +87,7 @@ class IngestStep(BaseStep):
             dataset_src_location=getattr(self.dataset, "location", None),
             dataset_sql=getattr(self.dataset, "sql", None),
         )
-        step_card.save_as_html(
-            path=os.path.join(output_directory, IngestStep._STEP_CARD_HTML_OUTPUT_NAME)
-        )
+        step_card.save_as_html(path=os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME))
         step_card.save(path=os.path.join(output_directory, IngestStep._STEP_CARD_OUTPUT_NAME))
 
     @staticmethod
@@ -139,7 +137,7 @@ class IngestStep(BaseStep):
         card.add_pandas_profile("Profile of Ingested Dataset", ingested_dataset_profile)
         return card
 
-    def inspect(self, output_directory: str):
+    def _inspect(self, output_directory: str):
         return IngestCard.load(
             path=os.path.join(output_directory, IngestStep._STEP_CARD_OUTPUT_NAME)
         )
