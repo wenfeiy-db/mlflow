@@ -10,7 +10,7 @@ from mlflow.pipelines.utils import get_pipeline_name, get_pipeline_config
 from mlflow.utils.file_utils import path_to_local_file_uri
 from mlflow.utils.databricks_utils import (
     is_in_databricks_runtime,
-    is_running_in_ipython_environment
+    is_running_in_ipython_environment,
 )
 
 
@@ -66,7 +66,7 @@ class BaseStep(metaclass=abc.ABCMeta):
             else:
                 if shutil.which("open") is not None:
                     subprocess.run(["open", output_filename], check=True)
-                    
+
         return self._inspect(output_directory)
 
     @abc.abstractmethod
