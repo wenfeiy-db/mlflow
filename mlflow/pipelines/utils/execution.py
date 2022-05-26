@@ -332,7 +332,7 @@ split: $(split_objects)
 
 steps/%/outputs/train.parquet steps/%/outputs/test.parquet steps/%/outputs/summary.html: steps/ingest/outputs/dataset.parquet steps/split/conf.yaml
 	cd {path:prp/} && \
-         python -c "from mlflow.pipelines.regression.v1.steps.split import SplitStep; SplitStep.from_step_config_path(step_config_path='{path:exe/steps/split/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/split/outputs}')"
+        python -c "from mlflow.pipelines.regression.v1.steps.split import SplitStep; SplitStep.from_step_config_path(step_config_path='{path:exe/steps/split/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/split/outputs}')"
 
 transform_objects = steps/transform/outputs/transformer.pkl steps/transform/outputs/train_transformed.parquet
 

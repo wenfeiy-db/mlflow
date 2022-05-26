@@ -14,6 +14,7 @@ from tests.helper_functions import mock_s3_bucket  # pylint: disable=unused-impo
 
 # pylint: disable=unused-import
 from tests.pipelines.helper_functions import (
+    enter_pipeline_example_directory,
     enter_test_pipeline_directory,
 )
 
