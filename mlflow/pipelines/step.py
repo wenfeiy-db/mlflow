@@ -11,6 +11,10 @@ StepType = TypeVar("StepType", bound="BaseStep")
 
 class BaseStep(metaclass=abc.ABCMeta):
     _TRACKING_URI_CONFIG_KEY = "tracking_uri"
+    _STATUS_UNKNOWN = "Unknown"
+    _STATUS_RUNNING = "Running"
+    _STATUS_SUCCEEDED = "Succeeded"
+    _STATUS_FAILED = "Failed"
 
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         """
@@ -67,6 +71,10 @@ class BaseStep(metaclass=abc.ABCMeta):
                                  outputs are located.
         :return: Results from the last execution of the corresponding step.
         """
+        pass
+
+    @property
+    def get_status(self, output_directory: str) -> str:
         pass
 
     @classmethod
