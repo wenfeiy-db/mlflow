@@ -1,10 +1,10 @@
-import shutil
 import pathlib
+import shutil
 from unittest import mock
 
 import pytest
 
-from mlflow.pipelines.utils.execution import _get_or_create_execution_directory
+from mlflow.pipelines.utils.execution import _get_or_create_execution_directory, run_pipeline_step
 
 from tests.pipelines.helper_functions import BaseStepImplemented
 
@@ -87,3 +87,40 @@ def test_get_or_create_execution_directory_is_idempotent(tmp_path):
     )
     assert execution_dir_path_4 == execution_dir_path_1
     assert_expected_execution_directory_contents_exist(execution_dir_path_4)
+
+
+def test_run_pipeline_step_sets_environment_as_expected(tmp_path):
+    class TestStep1(BaseStepImplemented):
+        def __init__(self):  # pylint: disable=super-init-not-called
+            self.step_config = {}
+
+        @property
+        def name(self):
+            return "test_step_1"
+
+        @property
+        def environment(self):
+            return {"A": "B"}
+
+    class TestStep2(BaseStepImplemented):
+        def __init__(self):  # pylint: disable=super-init-not-called
+            self.step_config = {}
+
+        @property
+        def name(self):
+            return "test_step_2"
+
+        @property
+        def environment(self):
+            return {"C": "D"}
+
+    with mock.patch("mlflow.pipelines.utils.execution._exec_cmd") as mock_run_in_subprocess:
+        run_pipeline_step(
+            pipeline_root_path=tmp_path,
+            pipeline_name="test_pipeline",
+            pipeline_steps=[TestStep1(), TestStep2()],
+            target_step=TestStep1(),
+        )
+
+    _, subprocess_call_kwargs = mock_run_in_subprocess.call_args
+    assert subprocess_call_kwargs.get("extra_env") == {"A": "B", "C": "D"}

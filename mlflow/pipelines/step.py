@@ -1,17 +1,17 @@
 import abc
+import logging
 import yaml
 from typing import TypeVar, Dict, Any
 
-import mlflow
 from mlflow.pipelines.utils import get_pipeline_name, get_pipeline_config
+from mlflow.utils.databricks_utils import is_in_databricks_runtime
 
+_logger = logging.getLogger(__name__)
 
 StepType = TypeVar("StepType", bound="BaseStep")
 
 
 class BaseStep(metaclass=abc.ABCMeta):
-    _TRACKING_URI_CONFIG_KEY = "tracking_uri"
-
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         """
         :param step_config: dictionary of the config needed to
@@ -24,11 +24,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
         self.pipeline_config = get_pipeline_config(pipeline_root_path=pipeline_root)
 
-    def _set_tracking_uri(self) -> None:
-        uri = self.step_config.get(self._TRACKING_URI_CONFIG_KEY)
-        if uri is not None:
-            mlflow.set_tracking_uri(uri)
-
     def run(self, output_directory: str):
         """
         Executes the step by running common setup operations and invoking
@@ -38,8 +33,7 @@ class BaseStep(metaclass=abc.ABCMeta):
                                  outputs should be stored.
         :return: Results from executing the corresponding step.
         """
-        self._set_tracking_uri()
-        # other common setup stuff for steps goes here
+        self._initialize_databricks_pyspark_connection_if_applicable()
         self._run(output_directory)
         return self.inspect(output_directory)
 
@@ -67,6 +61,9 @@ class BaseStep(metaclass=abc.ABCMeta):
                                  outputs are located.
         :return: Results from the last execution of the corresponding step.
         """
+        pass
+
+    def clean(self) -> None:
         pass
 
     @classmethod
@@ -109,5 +106,30 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         pass
 
-    def clean(self) -> None:
-        pass
+    @property
+    def environment(self) -> Dict[str, str]:
+        """
+        Returns environment variables associated with step that should be set when the
+        step is executed.
+        """
+        return {}
+
+    def _initialize_databricks_pyspark_connection_if_applicable(self) -> None:
+        """
+        Initializes a connection to the Databricks PySpark Gateway if MLflow Pipelines is running
+        in the Databricks Runtime.
+        """
+        if is_in_databricks_runtime():
+            try:
+                from dbruntime.spark_connection import (
+                    initialize_spark_connection,
+                    is_pinn_mode_enabled,
+                )
+
+                initialize_spark_connection(is_pinn_mode_enabled())
+            except Exception as e:
+                _logger.warning(
+                    "Encountered unexpected failure while initializing Spark connection. Spark"
+                    " operations may not succeed. Exception: %s",
+                    e,
+                )

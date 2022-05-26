@@ -50,6 +50,7 @@ SKINNY_REQUIREMENTS = [
     "entrypoints",
     "gitpython>=2.1.0",
     "pyyaml>=5.1",
+    # Temporarily restrict protobuf to <4.0.0 until protos are regenerated with a new version of protoc
     "protobuf>=3.7.0,<4.0.0",
     "pytz",
     "requests>=2.17.3",

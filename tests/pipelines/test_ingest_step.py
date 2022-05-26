@@ -1,5 +1,4 @@
 import os
-import shutil
 from unittest import mock
 
 import pandas as pd
@@ -10,25 +9,14 @@ from mlflow.exceptions import MlflowException
 from mlflow.pipelines.regression.v1.cards.ingest import IngestCard
 from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 from mlflow.store.artifact.s3_artifact_repo import S3ArtifactRepository
-from mlflow.utils.file_utils import TempDir
 
 from tests.helper_functions import mock_s3_bucket  # pylint: disable=unused-import
 
 # pylint: disable=unused-import
 from tests.pipelines.helper_functions import (
     enter_pipeline_example_directory,
+    enter_test_pipeline_directory,
 )
-
-
-@pytest.fixture
-def enter_ingest_test_pipeline_directory(enter_pipeline_example_directory):
-    pipeline_example_root_path = enter_pipeline_example_directory
-
-    with TempDir(chdr=True) as tmp:
-        ingest_test_pipeline_path = tmp.path("test_ingest_pipeline")
-        shutil.copytree(pipeline_example_root_path, ingest_test_pipeline_path)
-        os.chdir(ingest_test_pipeline_path)
-        yield os.getcwd()
 
 
 @pytest.fixture
@@ -74,7 +62,7 @@ def spark_df(spark_session):
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
 @pytest.mark.parametrize("multiple_files", [False, True])
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingests_parquet_successfully(use_relative_path, multiple_files, pandas_df, tmp_path):
     if multiple_files:
         dataset_path = tmp_path / "dataset"
@@ -106,7 +94,7 @@ def test_ingests_parquet_successfully(use_relative_path, multiple_files, pandas_
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
 @pytest.mark.parametrize("multiple_files", [False, True])
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingests_csv_successfully(use_relative_path, multiple_files, pandas_df, tmp_path):
     if multiple_files:
         dataset_path = tmp_path / "dataset"
@@ -143,7 +131,7 @@ def custom_load_file_as_dataframe(file_path, file_format):  # pylint: disable=un
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
 @pytest.mark.parametrize("multiple_files", [False, True])
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingests_custom_format_successfully(use_relative_path, multiple_files, pandas_df, tmp_path):
     if multiple_files:
         dataset_path = tmp_path / "dataset"
@@ -176,7 +164,7 @@ def test_ingests_custom_format_successfully(use_relative_path, multiple_files, p
     pd.testing.assert_frame_equal(reloaded_df, pandas_df)
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingest_throws_for_custom_dataset_when_custom_loader_function_cannot_be_imported(
     pandas_df, tmp_path
 ):
@@ -196,7 +184,7 @@ def test_ingest_throws_for_custom_dataset_when_custom_loader_function_cannot_be_
         ).run(output_directory=tmp_path)
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingest_throws_for_custom_dataset_when_custom_loader_function_not_implemented_for_format(
     pandas_df, tmp_path
 ):
@@ -218,7 +206,7 @@ def test_ingest_throws_for_custom_dataset_when_custom_loader_function_not_implem
         ).run(output_directory=tmp_path)
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingest_throws_for_custom_dataset_when_custom_loader_function_throws_unexpectedly(
     pandas_df, tmp_path
 ):
@@ -246,7 +234,7 @@ def test_ingest_throws_for_custom_dataset_when_custom_loader_function_throws_une
         ).run(output_directory=tmp_path)
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingests_remote_s3_datasets_successfully(mock_s3_bucket, pandas_df, tmp_path):
     dataset_path = tmp_path / "df.parquet"
     pandas_df.to_parquet(dataset_path)
@@ -266,7 +254,7 @@ def test_ingests_remote_s3_datasets_successfully(mock_s3_bucket, pandas_df, tmp_
     pd.testing.assert_frame_equal(reloaded_df, pandas_df)
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingests_remote_http_datasets_successfully(tmp_path):
     dataset_url = "https://raw.githubusercontent.com/mlflow/mlflow/594a08f2a49c5754bb65d76cd719c15c5b8266e9/examples/sklearn_elasticnet_wine/wine-quality.csv"
     IngestStep.from_pipeline_config(
@@ -284,7 +272,7 @@ def test_ingests_remote_http_datasets_successfully(tmp_path):
     pd.testing.assert_frame_equal(reloaded_df, pd.read_csv(dataset_url, index_col=0))
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingests_spark_sql_successfully(spark_df, tmp_path):
     spark_df.write.saveAsTable("test_table")
 
@@ -312,7 +300,7 @@ def test_ingests_spark_sql_successfully(spark_df, tmp_path):
 
 
 @pytest.mark.parametrize("use_relative_path", [False, True])
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingests_delta_successfully(use_relative_path, spark_df, tmp_path):
     dataset_path = tmp_path / "test.delta"
     spark_df.write.format("delta").save(str(dataset_path))
@@ -342,7 +330,7 @@ def test_ingests_delta_successfully(use_relative_path, spark_df, tmp_path):
     pd.testing.assert_frame_equal(reloaded_df, spark_to_pandas_df)
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingest_directory_ignores_files_that_do_not_match_dataset_format(pandas_df, tmp_path):
     dataset_path = tmp_path / "dataset"
     dataset_path.mkdir()
@@ -369,7 +357,7 @@ def test_ingest_directory_ignores_files_that_do_not_match_dataset_format(pandas_
     pd.testing.assert_frame_equal(reloaded_df, pandas_df)
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingest_produces_expected_step_card(pandas_df, tmp_path):
     dataset_path = tmp_path / "df.parquet"
     pandas_df.to_parquet(dataset_path)
@@ -394,7 +382,7 @@ def test_ingest_produces_expected_step_card(pandas_df, tmp_path):
     assert "Profile of Ingested Dataset" in step_card_html_content
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingest_run_and_inspect_return_expected_step_card(pandas_df, tmp_path):
     dataset_path = tmp_path / "df.parquet"
     pandas_df.to_parquet(dataset_path)
@@ -422,7 +410,7 @@ def test_ingest_run_and_inspect_return_expected_step_card(pandas_df, tmp_path):
     assert run_output.to_html() == step_card_html_content
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingest_throws_when_spark_unavailable_for_spark_based_dataset(spark_df, tmp_path):
     dataset_path = tmp_path / "test.delta"
     spark_df.write.format("delta").save(str(dataset_path))
@@ -444,7 +432,7 @@ def test_ingest_throws_when_spark_unavailable_for_spark_based_dataset(spark_df, 
         ).run(output_directory=tmp_path)
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingest_throws_when_dataset_format_unspecified():
     with pytest.raises(MlflowException, match="Dataset format must be specified"):
         IngestStep.from_pipeline_config(
@@ -457,7 +445,7 @@ def test_ingest_throws_when_dataset_format_unspecified():
         )
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingest_throws_when_data_section_unspecified():
     with pytest.raises(MlflowException, match="The `data` section.*must be specified"):
         IngestStep.from_pipeline_config(
@@ -466,7 +454,7 @@ def test_ingest_throws_when_data_section_unspecified():
         )
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingest_throws_when_required_dataset_config_keys_are_missing():
     with pytest.raises(MlflowException, match="The `location` configuration key must be specified"):
         IngestStep.from_pipeline_config(
@@ -505,7 +493,7 @@ def test_ingest_throws_when_required_dataset_config_keys_are_missing():
         )
 
 
-@pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingest_throws_when_dataset_files_have_wrong_format(pandas_df, tmp_path):
     dataset_path = tmp_path / "df.csv"
     pandas_df.to_csv(dataset_path)
