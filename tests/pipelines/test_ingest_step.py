@@ -248,22 +248,24 @@ def test_ingest_throws_for_custom_dataset_when_custom_loader_function_throws_une
 
 @pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
 def test_ingests_remote_s3_datasets_successfully(mock_s3_bucket, pandas_df, tmp_path):
-    dataset_path = tmp_path / "df.parquet"
-    pandas_df.to_parquet(dataset_path)
-    S3ArtifactRepository(f"s3://{mock_s3_bucket}").log_artifact(str(dataset_path))
+    with mock.patch("shutil.which") as patched_which:
+        patched_which.return_value(None)
+        dataset_path = tmp_path / "df.parquet"
+        pandas_df.to_parquet(dataset_path)
+        S3ArtifactRepository(f"s3://{mock_s3_bucket}").log_artifact(str(dataset_path))
 
-    IngestStep.from_pipeline_config(
-        pipeline_config={
-            "data": {
-                "format": "parquet",
-                "location": f"s3://{mock_s3_bucket}/df.parquet",
-            }
-        },
-        pipeline_root=os.getcwd(),
-    ).run(output_directory=tmp_path)
+       IngestStep.from_pipeline_config(
+            pipeline_config={
+                "data": {
+                    "format": "parquet",
+                    "location": f"s3://{mock_s3_bucket}/df.parquet",
+                }
+            },
+            pipeline_root=os.getcwd(),
+        ).run(output_directory=tmp_path)
 
-    reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
-    pd.testing.assert_frame_equal(reloaded_df, pandas_df)
+        reloaded_df = pd.read_parquet(str(tmp_path / "dataset.parquet"))
+        pd.testing.assert_frame_equal(reloaded_df, pandas_df)
 
 
 @pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
@@ -371,27 +373,29 @@ def test_ingest_directory_ignores_files_that_do_not_match_dataset_format(pandas_
 
 @pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
 def test_ingest_produces_expected_step_card(pandas_df, tmp_path):
-    dataset_path = tmp_path / "df.parquet"
-    pandas_df.to_parquet(dataset_path)
+    with mock.patch("shutil.which") as patched_which:
+        patched_which.return_value(None)
+        dataset_path = tmp_path / "df.parquet"
+        pandas_df.to_parquet(dataset_path)
 
-    IngestStep.from_pipeline_config(
-        pipeline_config={
-            "data": {
-                "format": "parquet",
-                "location": str(dataset_path),
-            }
-        },
-        pipeline_root=os.getcwd(),
-    ).run(output_directory=tmp_path)
+        IngestStep.from_pipeline_config(
+            pipeline_config={
+                "data": {
+                    "format": "parquet",
+                    "location": str(dataset_path),
+                }
+            },
+            pipeline_root=os.getcwd(),
+        ).run(output_directory=tmp_path)
 
-    expected_step_card_path = os.path.join(tmp_path, "card.html")
-    assert os.path.exists(expected_step_card_path)
-    with open(expected_step_card_path, "r") as f:
-        step_card_html_content = f.read()
+        expected_step_card_path = os.path.join(tmp_path, "card.html")
+        assert os.path.exists(expected_step_card_path)
+        with open(expected_step_card_path, "r") as f:
+            step_card_html_content = f.read()
 
-    assert "Dataset source location" in step_card_html_content
-    assert "Ingested dataset path" in step_card_html_content
-    assert "Profile of Ingested Dataset" in step_card_html_content
+        assert "Dataset source location" in step_card_html_content
+        assert "Ingested dataset path" in step_card_html_content
+        assert "Profile of Ingested Dataset" in step_card_html_content
 
 
 @pytest.mark.usefixtures("enter_ingest_test_pipeline_directory")
