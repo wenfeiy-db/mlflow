@@ -55,6 +55,7 @@ class BaseStep(metaclass=abc.ABCMeta):
             self._update_status(status=StepStatus.SUCCEEDED, output_directory=output_directory)
         except Exception:
             self._update_status(status=StepStatus.FAILED, output_directory=output_directory)
+            raise
 
         return self.inspect(output_directory)
 

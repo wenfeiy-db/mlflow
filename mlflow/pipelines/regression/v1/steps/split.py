@@ -86,7 +86,6 @@ class SplitStep(BaseStep):
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         super(SplitStep, self).__init__(step_config, pipeline_root)
 
-        self.status = "Unknown"
         self.run_end_time = None
         self.execution_duration = None
         self.num_dropped_rows = None
@@ -132,7 +131,7 @@ class SplitStep(BaseStep):
         card.add_markdown(
             "EXECUTION_DURATION", f"**Execution duration (s):** `{self.execution_duration:.2f}`"
         )
-        card.add_markdown("RUN_STATUS", f"**Run status:** `{self.status}`")
+        card.add_markdown("RUN_STATUS", f"**Run status:** `{self.get_status(output_directory)}`")
         card.add_markdown(
             "NUM_DROPPED_ROWS", f"**Number of dropped rows:** `{self.num_dropped_rows}`"
         )
@@ -183,9 +182,7 @@ class SplitStep(BaseStep):
             validation_df.to_parquet(os.path.join(output_directory, _OUTPUT_VALIDATION_FILE_NAME))
             test_df.to_parquet(os.path.join(output_directory, _OUTPUT_TEST_FILE_NAME))
 
-            self.status = "Done"
         except Exception:
-            self.status = "Failed"
             raise
         finally:
             self.run_end_time = time.time()
