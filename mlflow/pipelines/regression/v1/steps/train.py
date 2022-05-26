@@ -105,4 +105,6 @@ class TrainStep(BaseStep):
 
     @property
     def environment(self):
-        return get_databricks_env_vars(tracking_uri=self.tracking_config.tracking_uri)
+        environ = get_databricks_env_vars(tracking_uri=self.tracking_config.tracking_uri)
+        environ.update(get_run_tags_env_vars())
+        return environ
