@@ -1,9 +1,11 @@
 import os
 import pathlib
+import shutil
 from contextlib import contextmanager
 
 import mlflow
 from mlflow.pipelines.step import BaseStep
+from mlflow.utils.file_utils import TempDir
 
 import pytest
 
@@ -22,6 +24,17 @@ def enter_pipeline_example_directory():
         yield pipeline_example_path
 
 
+@pytest.fixture
+def enter_test_pipeline_directory(enter_pipeline_example_directory):
+    pipeline_example_root_path = enter_pipeline_example_directory
+
+    with TempDir(chdr=True) as tmp:
+        test_pipeline_path = tmp.path("test_pipeline")
+        shutil.copytree(pipeline_example_root_path, test_pipeline_path)
+        os.chdir(test_pipeline_path)
+        yield os.getcwd()
+
+
 @contextmanager
 def chdir(directory_path):
     og_dir = os.getcwd()
@@ -36,7 +49,7 @@ class BaseStepImplemented(BaseStep):
     def _run(self, output_directory):
         pass
 
-    def inspect(self, output_directory):
+    def _inspect(self, output_directory):
         pass
 
     def clean(self):

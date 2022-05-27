@@ -9,6 +9,13 @@ import mlflow
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, BAD_REQUEST
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
+from mlflow.pipelines.utils.tracking import (
+    get_pipeline_tracking_config,
+    apply_pipeline_tracking_config,
+    TrackingConfig,
+    get_run_tags_env_vars,
+)
+from mlflow.projects.utils import get_databricks_env_vars
 from mlflow.exceptions import MlflowException
 
 _logger = logging.getLogger(__name__)
@@ -27,6 +34,7 @@ _BUILTIN_METRIC_TO_GREATER_IS_BETTER = {
 class EvaluateStep(BaseStep):
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str) -> None:
         super().__init__(step_config, pipeline_root)
+        self.tracking_config = TrackingConfig.from_dict(step_config)
         self.target_col = self.pipeline_config.get("target_col")
         self.status = "UNKNOWN"
 
@@ -115,7 +123,7 @@ class EvaluateStep(BaseStep):
         with open(run_id_path, "r") as f:
             run_id = f.read()
 
-        mlflow.set_experiment("demo")  # hardcoded
+        apply_pipeline_tracking_config(self.tracking_config)
 
         with mlflow.start_run(run_id=run_id):
             model_uri = mlflow.get_artifact_uri("model")
@@ -142,7 +150,7 @@ class EvaluateStep(BaseStep):
         Path(output_directory, "model_validation_status").write_text(model_validation_status)
         self.status = "DONE"
 
-    def inspect(self, output_directory):
+    def _inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
         _logger.info("evaluate inspect code %s", output_directory)
         pass
@@ -155,10 +163,21 @@ class EvaluateStep(BaseStep):
             raise MlflowException(
                 "Config for evaluate step is not found.", error_code=INVALID_PARAMETER_VALUE
             )
-        step_config[EvaluateStep._TRACKING_URI_CONFIG_KEY] = "/tmp/mlruns"
         step_config["metrics"] = pipeline_config.get("metrics")
+        step_config.update(
+            get_pipeline_tracking_config(
+                pipeline_root_path=pipeline_root,
+                pipeline_config=pipeline_config,
+            ).to_dict()
+        )
         return cls(step_config, pipeline_root)
 
     @property
     def name(self):
         return "evaluate"
+
+    @property
+    def environment(self):
+        environ = get_databricks_env_vars(tracking_uri=self.tracking_config.tracking_uri)
+        environ.update(get_run_tags_env_vars())
+        return environ

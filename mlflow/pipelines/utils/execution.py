@@ -1,11 +1,11 @@
 import os
 import pathlib
 import shutil
-from typing import List
+from typing import List, Dict
 
+from mlflow.pipelines.step import BaseStep
 from mlflow.utils.file_utils import read_yaml, write_yaml
 from mlflow.utils.process import _exec_cmd
-from mlflow.pipelines.step import BaseStep
 
 
 _MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR = "MLFLOW_PIPELINES_EXECUTION_DIRECTORY"
@@ -40,7 +40,17 @@ def run_pipeline_step(
     step_output_directory_path = _get_step_output_directory_path(
         execution_directory_path=execution_dir_path, step_name=target_step.name
     )
-    _run_make(execution_directory_path=execution_dir_path, rule_name=target_step.name)
+    # Aggregate step-specific environment variables into a single environment dictionary
+    # that is passed to the Make subprocess. In the future, steps with different environments
+    # should be isolated in different subprocesses
+    make_env = {}
+    for step in pipeline_steps:
+        make_env.update(step.environment)
+    _run_make(
+        execution_directory_path=execution_dir_path,
+        rule_name=target_step.name,
+        extra_env=make_env,
+    )
     return step_output_directory_path
 
 
@@ -52,7 +62,7 @@ def clean_execution_state(pipeline_name: str, pipeline_steps: List[BaseStep]) ->
 
     :param pipeline_name: The name of the pipeline.
     """
-    execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
+    execution_dir_path = get_execution_directory_path(pipeline_name=pipeline_name)
     for step in pipeline_steps:
         step_outputs_path = _get_step_output_directory_path(
             execution_directory_path=execution_dir_path,
@@ -74,7 +84,7 @@ def get_step_output_path(pipeline_name: str, step_name: str, relative_path: str)
     :return The absolute path of the step output on the local filesystem, which may or may
             not exist.
     """
-    execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
+    execution_dir_path = get_execution_directory_path(pipeline_name=pipeline_name)
     step_outputs_path = _get_step_output_directory_path(
         execution_directory_path=execution_dir_path,
         step_name=step_name,
@@ -97,7 +107,7 @@ def _get_or_create_execution_directory(
     :return: The absolute path of the execution directory on the local filesystem for the specified
              pipeline.
     """
-    execution_dir_path = _get_execution_directory_path(pipeline_name)
+    execution_dir_path = get_execution_directory_path(pipeline_name)
 
     os.makedirs(execution_dir_path, exist_ok=True)
     _create_makefile(pipeline_root_path, execution_dir_path)
@@ -143,7 +153,7 @@ def _write_updated_step_confs(
             )
 
 
-def _get_execution_directory_path(pipeline_name: str) -> str:
+def get_execution_directory_path(pipeline_name: str) -> str:
     """
     Obtains the path of the execution directory on the local filesystem corresponding to the
     specified pipeline, which may or may not exist.
@@ -179,7 +189,7 @@ def _get_step_output_directory_path(execution_directory_path: str, step_name: st
     )
 
 
-def _run_make(execution_directory_path, rule_name: str) -> None:
+def _run_make(execution_directory_path, rule_name: str, extra_env: Dict[str, str]) -> None:
     """
     Runs the specified pipeline rule with Make. This method assumes that a Makefile named `Makefile`
     exists in the specified execution directory.
@@ -187,6 +197,7 @@ def _run_make(execution_directory_path, rule_name: str) -> None:
     :param execution_directory_path: The absolute path of the execution directory on the local
                                      filesystem for the relevant pipeline. The Makefile is created
                                      in this directory.
+    :param extra_env: Extra environment variables to be defined when running the Make child process.
     :param rule_name: The name of the Make rule to run.
     """
     _exec_cmd(
@@ -195,6 +206,7 @@ def _run_make(execution_directory_path, rule_name: str) -> None:
         stream_output=True,
         synchronous=True,
         cwd=execution_directory_path,
+        extra_env=extra_env,
     )
 
 
@@ -212,7 +224,10 @@ def _create_makefile(pipeline_root_path, execution_directory_path) -> None:
     """
     makefile_path = os.path.join(execution_directory_path, "Makefile")
     makefile_contents = _MAKEFILE_FORMAT_STRING.format(
-        path=_MakefilePathFormat(os.path.abspath(pipeline_root_path)),
+        path=_MakefilePathFormat(
+            os.path.abspath(pipeline_root_path),
+            execution_directory_path=os.path.abspath(execution_directory_path),
+        ),
     )
     with open(makefile_path, "w") as f:
         f.write(makefile_contents)
@@ -222,33 +237,74 @@ class _MakefilePathFormat:
     r"""
     Provides platform-agnostic path substitution for execution Makefiles, ensuring that POSIX-style
     relative paths are joined correctly with POSIX-style or Windows-style pipeline root paths.
+
     For example, given a format string `s = "{path:prp/my/subpath.txt}"`, invoking
-    `s.format(path=_MakefilePathFormat("/my/pipeline/root/path"))` on Unix systems or
-    `s.format(path=_MakefilePathFormat("C:\my\pipeline\root\path"))`` on Windows systems will
-    yield "/my/pipeline/root/path/my/subpath.txt" or "C:/my/pipeline/root/path/my/subpath.txt",
-    respectively.
+    `s.format(path=_MakefilePathFormat(pipeline_root_path="/my/pipeline/root/path", ...))` on
+    Unix systems or
+    `s.format(path=_MakefilePathFormat(pipeline_root_path="C:\my\pipeline\root\path", ...))`` on
+    Windows systems will yield "/my/pipeline/root/path/my/subpath.txt" or
+    "C:/my/pipeline/root/path/my/subpath.txt", respectively.
+
+    Additionally, given a format string `s = "{path:exe/my/subpath.txt}"`, invoking
+    `s.format(path=_MakefilePathFormat(execution_directory_path="/my/exe/dir/path", ...))` on
+    Unix systems or
+    `s.format(path=_MakefilePathFormat(execution_directory_path="/my/exe/dir/path", ...))`` on
+    Windows systems will yield "/my/exe/dir/path/my/subpath.txt" or
+    "C:/my/exe/dir/path/my/subpath.txt", respectively.
     """
 
-    def __init__(self, pipeline_root_path):
+    _PIPELINE_ROOT_PATH_PREFIX_PLACEHOLDER = "prp/"
+    _EXECUTION_DIRECTORY_PATH_PREFIX_PLACEHOLDER = "exe/"
+
+    def __init__(self, pipeline_root_path: str, execution_directory_path: str):
         """
         :param pipeline_root_path: The absolute path of the pipeline root directory on the local
                                    filesystem.
+        :param execution_directory_path: The absolute path of the execution directory on the local
+                                         filesystem for the pipeline.
         """
         self.pipeline_root_path = pipeline_root_path
+        self.execution_directory_path = execution_directory_path
 
-    def __format__(self, path_spec):
+    def _get_formatted_path(
+        self, path_spec: str, prefix_placeholder: str, replacement_path: str
+    ) -> str:
         """
-        :param path_spec: A substitution path spec of the form `prp/<subpath>`. This method
-                          substitutes `prp/` with `<pipeline_root_path>/`.
+        :param path_spec: A substitution path spec of the form `<placeholder>/<subpath>`. This
+                          method substitutes `<placeholder>` with `<pipeline_root_path>`, if
+                          `<placeholder>` is `prp`, or `<execution_directory_path>`, if
+                          `<placeholder>` is `exe`.
+        :param prefix_placeholder: The prefix placeholder, which is present at the beginning of
+                                   `path_spec`. Either `prp` or `exe`.
+        :param replacement_path: The path to use to replace the specified `prefix_placeholder`
+                                 in the specified `path_spec`.
+        :return: The formatted path obtained by replacing the ``prefix placeholder`` in the
+                 specified ``path_spec`` with the specified ``replacement_path``.
         """
-        root_path_prefix_placeholder = "prp/"
-        if path_spec.startswith(root_path_prefix_placeholder):
-            subpath = pathlib.PurePosixPath(path_spec.split(root_path_prefix_placeholder)[1])
-            pipeline_root_posix_path = pathlib.PurePosixPath(
-                pathlib.Path(self.pipeline_root_path).as_posix()
+        subpath = pathlib.PurePosixPath(path_spec.split(prefix_placeholder)[1])
+        pipeline_root_posix_path = pathlib.PurePosixPath(pathlib.Path(replacement_path).as_posix())
+        full_formatted_path = pipeline_root_posix_path / subpath
+        return str(full_formatted_path)
+
+    def __format__(self, path_spec: str) -> str:
+        """
+        :param path_spec: A substitution path spec of the form `<placeholder>/<subpath>`. This
+                          method substitutes `<placeholder>` with `<pipeline_root_path>`, if
+                          `<placeholder>` is `prp`, or `<execution_directory_path>`, if
+                          `<placeholder>` is `exe`.
+        """
+        if path_spec.startswith(_MakefilePathFormat._PIPELINE_ROOT_PATH_PREFIX_PLACEHOLDER):
+            return self._get_formatted_path(
+                path_spec=path_spec,
+                prefix_placeholder=_MakefilePathFormat._PIPELINE_ROOT_PATH_PREFIX_PLACEHOLDER,
+                replacement_path=self.pipeline_root_path,
             )
-            full_formatted_path = pipeline_root_posix_path / subpath
-            return str(full_formatted_path)
+        elif path_spec.startswith(_MakefilePathFormat._EXECUTION_DIRECTORY_PATH_PREFIX_PLACEHOLDER):
+            return self._get_formatted_path(
+                path_spec=path_spec,
+                prefix_placeholder=_MakefilePathFormat._EXECUTION_DIRECTORY_PATH_PREFIX_PLACEHOLDER,
+                replacement_path=self.execution_directory_path,
+            )
         else:
             raise ValueError(f"Invalid Makefile string format path spec: {path_spec}")
 
@@ -260,7 +316,8 @@ _MAKEFILE_FORMAT_STRING = r"""
 # Define `ingest` as a target with no dependencies to ensure that it runs whenever a user explicitly
 # invokes the MLflow Pipelines ingest step, allowing them to reingest data on-demand
 ingest:
-	python -c "from mlflow.pipelines.regression.v1.steps.ingest import IngestStep; IngestStep.from_step_config_path(step_config_path='steps/ingest/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/ingest/outputs')"
+	cd {path:prp/} && \
+        python -c "from mlflow.pipelines.regression.v1.steps.ingest import IngestStep; IngestStep.from_step_config_path(step_config_path='{path:exe/steps/ingest/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/ingest/outputs}')"
 
 # Define a separate target for the ingested dataset that recursively invokes make with the `ingest`
 # target. Downstream steps depend on the ingested dataset target, rather than the `ingest` target,
@@ -274,28 +331,40 @@ split_objects = steps/split/outputs/train.parquet steps/split/outputs/test.parqu
 split: $(split_objects)
 
 steps/%/outputs/train.parquet steps/%/outputs/test.parquet steps/%/outputs/summary.html: steps/ingest/outputs/dataset.parquet steps/split/conf.yaml
-	python -c "from mlflow.pipelines.regression.v1.steps.split import SplitStep; SplitStep.from_step_config_path(step_config_path='steps/split/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/split/outputs')"
+	cd {path:prp/} && \
+        python -c "from mlflow.pipelines.regression.v1.steps.split import SplitStep; SplitStep.from_step_config_path(step_config_path='{path:exe/steps/split/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/split/outputs}')"
 
 transform_objects = steps/transform/outputs/transformer.pkl steps/transform/outputs/train_transformed.parquet
 
 transform: $(transform_objects)
 
 steps/%/outputs/transformer.pkl steps/%/outputs/train_transformed.parquet: {path:prp/steps/transform.py} {path:prp/steps/transformer_config.yaml} steps/split/outputs/train.parquet steps/transform/conf.yaml
-	python -c "from mlflow.pipelines.regression.v1.steps.transform import TransformStep; TransformStep.from_step_config_path(step_config_path='steps/transform/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/transform/outputs')"
+	cd {path:prp/} && \
+        python -c "from mlflow.pipelines.regression.v1.steps.transform import TransformStep; TransformStep.from_step_config_path(step_config_path='{path:exe/steps/transform/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/transform/outputs}')"
 
 train_objects = steps/train/outputs/pipeline.pkl steps/train/outputs/run_id
 
 train: $(train_objects)
 
 steps/%/outputs/pipeline.pkl steps/%/outputs/run_id: {path:prp/steps/train.py} {path:prp/steps/train_config.yaml} steps/transform/outputs/train_transformed.parquet steps/transform/outputs/transformer.pkl steps/train/conf.yaml
-	python -c "from mlflow.pipelines.regression.v1.steps.train import TrainStep; TrainStep.from_step_config_path(step_config_path='steps/train/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/train/outputs')"
+	cd {path:prp/} && \
+        python -c "from mlflow.pipelines.regression.v1.steps.train import TrainStep; TrainStep.from_step_config_path(step_config_path='{path:exe/steps/train/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/train/outputs}')"
 
-evaluate_objects = steps/evaluate/outputs/worst_training_examples.parquet steps/evaluate/outputs/metrics.json steps/evaluate/outputs/explanations.html
+evaluate_objects = steps/evaluate/outputs/worst_training_examples.parquet steps/evaluate/outputs/metrics.json steps/evaluate/outputs/explanations.html steps/evaluate/outputs/model_validation_status
 
 evaluate: $(evaluate_objects)
 
-steps/%/outputs/worst_training_examples.parquet steps/%/outputs/metrics.json steps/%/outputs/explanations.html: steps/train/outputs/pipeline.pkl steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/train/outputs/run_id steps/evaluate/conf.yaml
-	python -c "from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep; EvaluateStep.from_step_config_path(step_config_path='steps/evaluate/conf.yaml', pipeline_root='{path:prp/}').run(output_directory='steps/evaluate/outputs')"
+steps/%/outputs/worst_training_examples.parquet steps/%/outputs/metrics.json steps/%/outputs/explanations.html steps/%/outputs/model_validation_status: steps/train/outputs/pipeline.pkl steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/train/outputs/run_id steps/evaluate/conf.yaml
+	cd {path:prp/} && \
+        python -c "from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep; EvaluateStep.from_step_config_path(step_config_path='{path:exe/steps/evaluate/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/evaluate/outputs}')"
+
+register_objects = steps/register/outputs/register_card.html
+
+register: $(register_objects)
+
+steps/register/outputs/register_card.html: steps/train/outputs/run_id steps/register/conf.yaml steps/evaluate/outputs/model_validation_status
+	cd {path:prp/} && \
+        python -c "from mlflow.pipelines.regression.v1.steps.register import RegisterStep; RegisterStep.from_step_config_path(step_config_path='{path:exe/steps/register/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/register/outputs}')"
 
 clean:
 	rm -rf $(split_objects) $(transform_objects) $(train_objects) $(evaluate_objects)
