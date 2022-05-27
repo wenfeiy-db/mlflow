@@ -33,7 +33,8 @@ class TrainStep(BaseStep):
             step_name=step_name,
             relative_path="card.html",
         )
-        mlflow.log_artifact(local_card_path, artifact_path=step_name)
+        if os.path.exists(local_card_path):
+            mlflow.log_artifact(local_card_path, artifact_path=step_name)
 
     def _run(self, output_directory):
         import pandas as pd
