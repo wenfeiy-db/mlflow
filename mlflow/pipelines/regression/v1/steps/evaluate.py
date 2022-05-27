@@ -13,6 +13,7 @@ from mlflow.pipelines.utils.tracking import (
     get_pipeline_tracking_config,
     apply_pipeline_tracking_config,
     TrackingConfig,
+    get_run_tags_env_vars,
 )
 from mlflow.projects.utils import get_databricks_env_vars
 from mlflow.exceptions import MlflowException
@@ -177,4 +178,6 @@ class EvaluateStep(BaseStep):
 
     @property
     def environment(self):
-        return get_databricks_env_vars(tracking_uri=self.tracking_config.tracking_uri)
+        environ = get_databricks_env_vars(tracking_uri=self.tracking_config.tracking_uri)
+        environ.update(get_run_tags_env_vars())
+        return environ
