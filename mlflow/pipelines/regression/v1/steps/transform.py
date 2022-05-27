@@ -27,7 +27,7 @@ class TransformStep(BaseStep):
             step_name="split",
             relative_path="train.parquet",
         )
-        df = pd.read_parquet(train_data_path)
+        train_df = pd.read_parquet(train_data_path)
 
         sys.path.append(self.pipeline_root)
         transformer_fn = getattr(
@@ -35,11 +35,14 @@ class TransformStep(BaseStep):
         )
         transformer = transformer_fn()
 
+        transformer.fit(train_df)
+
         # TODO: load from conf
-        X = df.drop(columns=["fare_amount"])
+        X = df.drop(columns=["fare_amount"]) # we should index on feature we want
         y = df["fare_amount"]
 
-        features = transformer.fit_transform(X)
+        # features = transformer.fit_transform(X)
+        transformer_
 
         with open(os.path.join(output_directory, "transformer.pkl"), "wb") as f:
             cloudpickle.dump(transformer, f)
