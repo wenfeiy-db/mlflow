@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block STEP_TITLE %}Register{% endblock %}
+
+{% block CSS %}
+h3.section-title {
+    color: #57a8de;
+}
+.dataset-container {
+    width: max;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+{% endblock %}
+{% block BODY %}
+<h3 class="section-title">Register model info</h3>
+{{ REGISTER_SUMMARY }}
+
+{% endblock %}

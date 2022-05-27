@@ -11,7 +11,7 @@ from tests.pipelines.helper_functions import (
     enter_pipeline_example_directory,
 )  # pylint: enable=unused-import
 
-_STEP_NAMES = ["ingest", "split", "train", "transform", "evaluate"]
+_STEP_NAMES = ["ingest", "split", "train", "transform", "evaluate", "register"]
 
 
 @pytest.fixture
@@ -22,7 +22,6 @@ def clean_up_pipeline():
         CliRunner().invoke(pipelines_cli.clean)
 
 
-@pytest.mark.large
 @pytest.mark.usefixtures("enter_pipeline_example_directory", "clean_up_pipeline")
 @pytest.mark.parametrize("step", _STEP_NAMES)
 def test_pipelines_cli_step_works(step):
@@ -31,7 +30,6 @@ def test_pipelines_cli_step_works(step):
     CliRunner().invoke(cli=pipelines_cli.clean, args=f"--step {step}")
 
 
-@pytest.mark.large
 @pytest.mark.usefixtures("enter_pipeline_example_directory", "clean_up_pipeline")
 def test_pipelines_cli_flow_completes_successfully():
     CliRunner().invoke(pipelines_cli.clean)

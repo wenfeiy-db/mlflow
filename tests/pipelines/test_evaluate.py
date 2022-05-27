@@ -72,6 +72,8 @@ def test_evaluate_step_run(
         """
 template: "regression/v1"
 target_col: "y"
+experiment:
+  tracking_uri: {tracking_uri}
 steps:
   evaluate:
     validation_criteria:
@@ -87,7 +89,8 @@ metrics:
       function: weighted_mean_squared_error
       greater_is_better: False
 """.format(
-            mae_threshold=mae_threshold
+            tracking_uri=mlflow.get_tracking_uri(),
+            mae_threshold=mae_threshold,
         )
     )
     pipeline_steps_dir = tmp_pipeline_root_path.joinpath("steps")
@@ -139,9 +142,13 @@ def test_no_validation_criteria(tmp_pipeline_root_path: Path, tmp_pipeline_exec_
         """
 template: "regression/v1"
 target_col: "y"
+experiment:
+  tracking_uri: {tracking_uri}
 steps:
   evaluate:
-"""
+""".format(
+            tracking_uri=mlflow.get_tracking_uri()
+        )
     )
     pipeline_steps_dir = tmp_pipeline_root_path.joinpath("steps")
     pipeline_steps_dir.mkdir(parents=True)
@@ -164,6 +171,8 @@ def test_validation_criteria_contain_undefined_metrics(tmp_pipeline_root_path: P
         """
 template: "regression/v1"
 target_col: "y"
+experiment:
+  tracking_uri: {tracking_uri}
 steps:
   evaluate:
     validation_criteria:
@@ -171,7 +180,9 @@ steps:
         threshold: 100
       - metric: undefined_metric
         threshold: 100
-"""
+""".format(
+            tracking_uri=mlflow.get_tracking_uri()
+        )
     )
     pipeline_steps_dir = tmp_pipeline_root_path.joinpath("steps")
     pipeline_steps_dir.mkdir(parents=True)
@@ -191,6 +202,8 @@ def test_custom_metric_function_does_not_exist(tmp_pipeline_root_path: Path):
         """
 template: "regression/v1"
 target_col: "y"
+experiment:
+  tracking_uri: {tracking_uri}
 steps:
   evaluate:
     validation_criteria:
@@ -201,7 +214,9 @@ metrics:
     - name: weighted_mean_squared_error
       function: weighted_mean_squared_error
       greater_is_better: False
-"""
+""".format(
+            tracking_uri=mlflow.get_tracking_uri()
+        )
     )
     pipeline_steps_dir = tmp_pipeline_root_path.joinpath("steps")
     pipeline_steps_dir.mkdir(parents=True)
@@ -225,6 +240,8 @@ def test_custom_metrics_module_does_not_exist(tmp_pipeline_root_path: Path):
         """
 template: "regression/v1"
 target_col: "y"
+experiment:
+  tracking_uri: {tracking_uri}
 steps:
   evaluate:
     validation_criteria:
@@ -235,7 +252,9 @@ metrics:
     - name: weighted_mean_squared_error
       function: weighted_mean_squared_error
       greater_is_better: False
-"""
+""".format(
+            tracking_uri=mlflow.get_tracking_uri()
+        )
     )
     pipeline_steps_dir = tmp_pipeline_root_path.joinpath("steps")
     pipeline_steps_dir.mkdir(parents=True)
@@ -270,6 +289,8 @@ def test_custom_metrics_override_builtin_metrics(
         """
 template: "regression/v1"
 target_col: "y"
+experiment:
+  tracking_uri: {tracking_uri}
 steps:
   evaluate:
     validation_criteria:
@@ -285,7 +306,9 @@ metrics:
     - name: root_mean_squared_error
       function: root_mean_squared_error
       greater_is_better: False
-"""
+""".format(
+            tracking_uri=mlflow.get_tracking_uri()
+        )
     )
     pipeline_steps_dir = tmp_pipeline_root_path.joinpath("steps")
     pipeline_steps_dir.mkdir(parents=True)

@@ -17,6 +17,7 @@ target_col: "price"
 steps:
   split:
     split_ratios: [0.75, 0.125, 0.125] # Train/validation/test split ratio
+    post_split_method: steps.split.process_splits
   evaluate:
     validation_criteria:
       - metric: root_mean_squared_error
@@ -25,6 +26,9 @@ steps:
         threshold: 50
       - metric: weighted_mean_squared_error
         threshold: 0.5
+  register:
+    model_name: "price_regression"
+    allow_non_validated_model: true
 metrics:
   custom:
     - name: weighted_mean_squared_error

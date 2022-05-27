@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
   <body>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/9.1.1/mermaid.min.js" type="text/javascript" charset="utf-8"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.5.0/ace.js" type="text/javascript" charset="utf-8"></script>
     <style>
       .mermaidTooltip{
         display: none;
@@ -17,6 +15,10 @@
         font-size: 13px;
         width: 40%;
       }
+      font {
+        font-size: 24px;
+        padding: 24px;
+      }
     </style>
 
     <div class="wrapper">
@@ -24,23 +26,23 @@
           flowchart TB
           pipeline(pipeline.yaml)
 
-          ingestUserCode([steps/ingest.py]) --> ingestMLPStep[["ingest"]]
-          ingestMLPStep --> dataParquet[(data.parquet)]
+          ingestUserCode([steps/ingest.py]) --> ingestMLPStep[["<font>ingest</font>"]]
+          ingestMLPStep --> dataParquet[(ingested_data)]
 
-          data[(data.parquet)] --> splitStep[["split"]]
-          splitStep --> splitData1[(train.parquet, <br> validation.parquet)]
-          splitStep --> splitData2[test.parquet]
-          splitData1 --> transformMLPStep[["transform"]]
+          data[(ingested_data)] --> splitStep[["<font>split</font>"]]
+          splitStep --> splitData1[(training_data, <br> validation_data)]
+          splitStep --> splitData2[(test_data)]
+          splitData1 --> transformMLPStep[["<font>transform</font>"]]
 
           transformUserCode([steps/transform.py]) --> transformMLPStep
-          transformMLPStep --> transformedParquet[(transformed_train.parquet, <br/> transformed_validation.parquet)]
-          transformedParquet --> trainMLPStep[["train"]]
+          transformMLPStep --> transformedParquet[(transformed_training_data, <br/> transformed_validation_data)]
+          transformedParquet --> trainMLPStep[["<font>train</font>"]]
 
           trainUserCode([steps/train.py]) --> trainMLPStep
           trainMLPStep --> run{{run}}
           trainMLPStep --> model{{model}}
 
-          model --> evaluateMLPStep[["evaluate"]]
+          model --> evaluateMLPStep[["<font>evaluate</font>"]]
           evaluateUserCode([steps/evaluate.py]) --> evaluateMLPStep
           splitData2 --> evaluateMLPStep
 
@@ -61,7 +63,8 @@
           click evaluateMLPStep noOp "# Please override the steps/evaluate.py for customization"
           click evaluateUserCode noOp "def custom_metric_fns() -> List[Callable]"
 
-          click pipeline noOp "initial config for the pipeline"
+          click pipeline renderMoreInformation "{{pipeline_yaml}}"
+          click dataParquet noOp "data ingested from source"
           click data noOp "data ingested from source"
           click splitData1 noOp "Outputs splits for training and validation"
           click splitData2 noOp "Output split for evaluating the model"
@@ -73,26 +76,41 @@
       <div id="editor"></div>
     </div>
 
-    <script>
-      mermaid.initialize({
-        startOnLoad:true,
-        securityLevel:'loose',
-        theme: (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "default",
-        flowchart:{
-            useMaxWidth:true,
-            htmlLabels:true,
+    <script src="http://requirejs.org/docs/release/2.1.5/comments/require.js"></script>
+    <script type="text/javascript">
+      require.config({
+        paths: {
+            "mermaid": "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min",
+            "ace": "https://cdnjs.cloudflare.com/ajax/libs/ace/1.5.1/",
+            "python": "https://cdnjs.cloudflare.com/ajax/libs/ace/1.5.1/mode-python.min",
+            "monokai": "https://cdnjs.cloudflare.com/ajax/libs/ace/1.5.1/theme-monokai.min"
+        },
+      });
+      require(["mermaid"],
+        function (mermaid) {
+          const config = {
+            startOnLoad:true,
+            securityLevel:'loose',
+            theme: (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "default",
+            flowchart:{
+                useMaxWidth:true,
+                htmlLabels:true,
+            }
+          };
+          mermaid.initialize(config);
+          mermaid.init();
+          const nodes = document.querySelectorAll(".node");
+          [...nodes].forEach((node) => {
+            const nodeTitle = node.getAttribute('title');
+            if(nodeTitle) {
+              const nodeLabel = node.querySelector(".nodeLabel");
+              nodeLabel.setAttribute("title", nodeTitle)
+            }
+          })
+
+          window.editor = null;
         }
-      });
-      window.addEventListener('load', function () {
-        const nodes = document.querySelectorAll(".node");
-        [...nodes].forEach((node) => {
-          const nodeTitle = node.getAttribute('title');
-          if(nodeTitle) {
-            const nodeLabel = node.querySelector(".nodeLabel");
-            nodeLabel.setAttribute("title", nodeTitle)
-          }
-        })
-      });
+      );
 
       var noOp = function() {}
       var renderMoreInformation = function(nodeId) {
@@ -117,14 +135,18 @@
         rect.style.color = "#fff";
         rect.style.strokeDasharray = "5 5";
 
-        if (!window.editor.session) {
-          const editor = ace.edit("editor");
-          editor.setTheme("ace/theme/monokai");
-          editor.session.setMode("ace/mode/python");
-          editor.setReadOnly(true);
-          window.editor = editor;
-        }
-        window.editor.setValue(title)
+        require(["ace/ace", "python", "monokai"],
+          function (ace) {
+            if (!window.editor) {
+              const editor = ace.edit("editor");
+              editor.setTheme("ace/theme/monokai");
+              editor.session.setMode("ace/mode/python");
+              editor.setReadOnly(true);
+              window.editor = editor;
+            }
+            window.editor.setValue(title)
+          }
+        );
       }
     </script>
 

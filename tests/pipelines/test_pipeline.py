@@ -1,13 +1,18 @@
 import os
 import pathlib
 import pytest
+import yaml
 
+import mlflow
 from mlflow.pipelines.pipeline import Pipeline
 from mlflow.exceptions import MlflowException
+from mlflow.tracking.client import MlflowClient
+from mlflow.utils.file_utils import path_to_local_file_uri
 
 # pylint: disable=unused-import
 from tests.pipelines.helper_functions import (
     enter_pipeline_example_directory,
+    enter_test_pipeline_directory,
 )  # pylint: enable=unused-import
 
 _STEP_NAMES = ["ingest", "split", "train", "transform", "evaluate"]
@@ -25,7 +30,6 @@ def test_create_pipeline_and_clean_works():
     p.clean()
 
 
-@pytest.mark.large
 @pytest.mark.usefixtures("enter_pipeline_example_directory")
 @pytest.mark.parametrize("custom_execution_directory", [None, "custom"])
 def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_directory, tmp_path):
@@ -59,3 +63,36 @@ def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_d
     for step_name in _STEP_NAMES:
         step_outputs_path = expected_execution_directory_location / "steps" / step_name / "outputs"
         assert not step_outputs_path.exists()
+
+
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
+def test_pipelines_log_to_expected_mlflow_backend_and_experiment(tmp_path):
+    experiment_name = "my_test_exp"
+    tracking_uri = "sqlite:///" + str((tmp_path / "tracking_dst.db").resolve())
+    artifact_location = str((tmp_path / "mlartifacts").resolve())
+
+    profile_path = pathlib.Path.cwd() / "profiles" / "local.yaml"
+    with open(profile_path, "r") as f:
+        profile_contents = yaml.safe_load(f)
+
+    profile_contents["experiment"]["name"] = experiment_name
+    profile_contents["experiment"]["tracking_uri"] = tracking_uri
+    profile_contents["experiment"]["artifact_location"] = path_to_local_file_uri(artifact_location)
+
+    with open(profile_path, "w") as f:
+        yaml.safe_dump(profile_contents, f)
+
+    pipeline = Pipeline(profile="local")
+    pipeline.clean()
+    pipeline.run()
+
+    mlflow.set_tracking_uri(tracking_uri)
+    logged_runs = mlflow.search_runs(experiment_names=[experiment_name], output_format="list")
+    assert len(logged_runs) == 1
+    logged_run = logged_runs[0]
+    assert logged_run.info.artifact_uri == path_to_local_file_uri(
+        str((pathlib.Path(artifact_location) / logged_run.info.run_id / "artifacts").resolve())
+    )
+    assert "r2_score_on_data_test" in logged_run.data.metrics
+    artifacts = MlflowClient(tracking_uri).list_artifacts(run_id=logged_run.info.run_id)
+    assert "model" in [artifact.path for artifact in artifacts]
