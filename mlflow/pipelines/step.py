@@ -6,13 +6,9 @@ import subprocess
 import yaml
 from typing import TypeVar, Dict, Any
 
-<<<<<<< HEAD
 import mlflow
 from mlflow.pipelines.cards import _CARD_HTML_NAME
-from mlflow.pipelines.utils import get_pipeline_name, get_pipeline_config
-=======
 from mlflow.pipelines.utils import get_pipeline_name
->>>>>>> master
 from mlflow.utils.file_utils import path_to_local_file_uri
 from mlflow.utils.databricks_utils import (
     is_in_databricks_runtime,
