@@ -27,15 +27,6 @@ class TrainStep(BaseStep):
             ".", 1
         )
 
-    def _log_step_card(self, step_name: str):
-        local_card_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
-            step_name=step_name,
-            relative_path="card.html",
-        )
-        if os.path.exists(local_card_path):
-            mlflow.log_artifact(local_card_path, artifact_path=step_name)
-
     def _run(self, output_directory):
         import pandas as pd
         import numpy as np
