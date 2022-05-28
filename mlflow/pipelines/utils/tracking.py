@@ -1,3 +1,4 @@
+import json
 import logging
 import pathlib
 from typing import Dict, Any, TypeVar
@@ -7,6 +8,8 @@ from mlflow.exceptions import MlflowException
 from mlflow.pipelines.utils import get_pipeline_name
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 from mlflow.tracking.client import MlflowClient
+from mlflow.tracking.context.registry import resolve_tags
+from mlflow.tracking.context.system_environment_context import MLFLOW_RUN_CONTEXT_ENV_VAR
 from mlflow.tracking.default_experiment import DEFAULT_EXPERIMENT_ID
 from mlflow.tracking.fluent import set_experiment as fluent_set_experiment, _get_experiment_id
 from mlflow.utils.databricks_utils import is_in_databricks_runtime
@@ -188,3 +191,14 @@ def apply_pipeline_tracking_config(tracking_config: TrackingConfig):
     fluent_set_experiment(
         experiment_id=tracking_config.experiment_id, experiment_name=tracking_config.experiment_name
     )
+
+
+def get_run_tags_env_vars() -> Dict[str, str]:
+    """
+    Returns environment variables that should be set during step execution to ensure that MLflow
+    Run Tags from the current context are applied to any MLflow Runs that are created during
+    pipeline execution.
+
+    :return: A dictionary of environment variable names and values.
+    """
+    return {MLFLOW_RUN_CONTEXT_ENV_VAR: json.dumps(resolve_tags())}

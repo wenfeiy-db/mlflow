@@ -13,6 +13,7 @@ from mlflow.pipelines.utils.tracking import (
     get_pipeline_tracking_config,
     apply_pipeline_tracking_config,
     TrackingConfig,
+    get_run_tags_env_vars,
 )
 from mlflow.projects.utils import get_databricks_env_vars
 from mlflow.exceptions import MlflowException
@@ -34,7 +35,7 @@ class EvaluateStep(BaseStep):
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str) -> None:
         super().__init__(step_config, pipeline_root)
         self.tracking_config = TrackingConfig.from_dict(step_config)
-        self.target_col = self.pipeline_config.get("target_col")
+        self.target_col = self.step_config.get("target_col")
         self.status = "UNKNOWN"
 
     def _get_custom_metrics(self):
@@ -163,6 +164,7 @@ class EvaluateStep(BaseStep):
                 "Config for evaluate step is not found.", error_code=INVALID_PARAMETER_VALUE
             )
         step_config["metrics"] = pipeline_config.get("metrics")
+        step_config["target_col"] = pipeline_config.get("target_col")
         step_config.update(
             get_pipeline_tracking_config(
                 pipeline_root_path=pipeline_root,
@@ -177,4 +179,6 @@ class EvaluateStep(BaseStep):
 
     @property
     def environment(self):
-        return get_databricks_env_vars(tracking_uri=self.tracking_config.tracking_uri)
+        environ = get_databricks_env_vars(tracking_uri=self.tracking_config.tracking_uri)
+        environ.update(get_run_tags_env_vars())
+        return environ
