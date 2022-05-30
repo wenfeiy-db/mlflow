@@ -184,7 +184,8 @@ class BaseStep(metaclass=abc.ABCMeta):
 
     def _log_step_card(self, step_name: str) -> None:
         """
-        Logs a step card as an artifact if there's an active MLflow run.
+        Logs a step card as an artifact (destination: <step_name>/card.html) if there's an active
+        MLflow run.
 
         :param step_name: Step name.
         """
