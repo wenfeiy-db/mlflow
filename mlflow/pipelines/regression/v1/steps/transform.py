@@ -29,6 +29,15 @@ class TransformStep(BaseStep):
         )
         train_df = pd.read_parquet(train_data_path)
 
+        validation_data_path = get_step_output_path(
+            pipeline_name=self.pipeline_name,
+            step_name="split",
+            relative_path="validation.parquet",
+        )
+        validation_df = pd.read_parquet(validation_data_path)
+
+        #TODO(apurva-koti): Output schema here
+
         sys.path.append(self.pipeline_root)
         transformer_fn = getattr(
             importlib.import_module(self.transformer_module_name), self.transformer_method_name
@@ -37,18 +46,21 @@ class TransformStep(BaseStep):
 
         transformer.fit(train_df)
 
-        # TODO: load from conf
-        X = df.drop(columns=["fare_amount"]) # we should index on feature we want
-        y = df["fare_amount"]
+        train_transformed = transformer.transform(train_df)
+        validation_transformed = transformer.transform(validation_df)
 
-        # features = transformer.fit_transform(X)
-        transformer_
+        """
+        desired features are implied in the way the transformer is written. We give the train step a transformed
+        dataset, so it also only sees desired columns. Thus desired columns don't need to be explicitly specified
+        in pipeline.yaml.
+        This means we would need to output the schema from dataset BEFORE transformation
+        """
 
         with open(os.path.join(output_directory, "transformer.pkl"), "wb") as f:
             cloudpickle.dump(transformer, f)
 
-        transformed = pd.DataFrame(data={"features": list(features), "target": y})
-        transformed.to_parquet(os.path.join(output_directory, "train_transformed.parquet"))
+        train_transformed.to_parquet(os.path.join(output_directory, "train_transformed.parquet"))
+        validation_transformed.to_parquet(os.path.join(output_directory, "validation_transformed.parquet"))
 
     def _inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
