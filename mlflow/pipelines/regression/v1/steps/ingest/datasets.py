@@ -428,7 +428,14 @@ class DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
     Representation of a dataset in delta format with files having the `.delta` extension.
     """
 
-    def __init__(self, location: str, dataset_format: str, pipeline_root: str, version: Optional[int] = None, timestamp: Optional[str] = None):
+    def __init__(
+        self,
+        location: str,
+        dataset_format: str,
+        pipeline_root: str,
+        version: Optional[int] = None,
+        timestamp: Optional[str] = None,
+    ):
         """
         :param location: The location of the dataset
                          (e.g. '/tmp/myfile.parquet', './mypath', 's3://mybucket/mypath', ...).
@@ -438,7 +445,9 @@ class DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
         :param version: The version of the Delta table to read.
         :param timestamp: The timestamp from which to read the Delta table.
         """
-        super().__init__(location=location, dataset_format=dataset_format, pipeline_root=pipeline_root)
+        super().__init__(
+            location=location, dataset_format=dataset_format, pipeline_root=pipeline_root
+        )
         self.version = version
         self.timestamp = timestamp
 
