@@ -30,7 +30,6 @@ class TrainStep(BaseStep):
 
     def _run(self, output_directory):
         import pandas as pd
-        import numpy as np
         from sklearn.pipeline import make_pipeline
 
         apply_pipeline_tracking_config(self.tracking_config)
@@ -41,6 +40,8 @@ class TrainStep(BaseStep):
             relative_path="train_transformed.parquet",
         )
         train_df = pd.read_parquet(train_transformed_data_path)
+        # TODO: load from conf
+        X_train, y_train = train_df.drop(columns=["fare_amount"]), train_df["fare_amount"]
 
         validation_transformed_data_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
@@ -48,6 +49,7 @@ class TrainStep(BaseStep):
             relative_path="train_transformed.parquet",
         )
         validation_df = pd.read_parquet(validation_transformed_data_path)
+        X_val, y_val = validation_df.drop(columns=["fare_amount"]), validation_df["fare_amount"]
 
         transformer_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
@@ -58,20 +60,10 @@ class TrainStep(BaseStep):
         sys.path.append(self.pipeline_root)
         train_fn = getattr(importlib.import_module(self.train_module_name), self.train_method_name)
         model = train_fn()
-
-        X = df["features"]
-        y = df["target"]
-
-        X = np.vstack(X)
-        y = np.array(y)
-
         mlflow.autolog(log_models=False)
 
         with mlflow.start_run() as run:
-            model.fit(X, y)
-
-            with open(transformer_path, "rb") as f:
-                transformer = cloudpickle.load(f)
+            model.fit(X_train, y_train)
 
             if hasattr(model, "best_score_"):
                 mlflow.log_metric("best_cv_score", model.best_score_)
@@ -79,8 +71,23 @@ class TrainStep(BaseStep):
             if hasattr(model, "best_params_"):
                 mlflow.log_params(model.best_params_)
 
+            # Create a pipeline consisting of the transformer+model for test data evaluation
+            with open(transformer_path, "rb") as f:
+                transformer = cloudpickle.load(f)
+
+            eval_result = mlflow.evaluate(
+                model,
+                data=X_val,
+                targets=y_val,
+                model_type="regressor",
+                evaluators="default",
+                dataset_name="test",
+                custom_metrics=[],
+            )
+            eval_result.save(output_directory)
             pipeline = make_pipeline(transformer, model)
-            mlflow.sklearn.log_model(pipeline, "model")
+            mlflow.sklearn.log_model(model, "model")
+            mlflow.sklearn.log_model(pipeline, "transformer_model")
 
             with open(os.path.join(output_directory, "run_id"), "w") as f:
                 f.write(run.info.run_id)
