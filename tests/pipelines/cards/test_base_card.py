@@ -13,6 +13,8 @@ class FakeCard(BaseCard):
         super().__init__(
             template_root=os.path.join(os.path.dirname(__file__)),
             template_name="fake.html",
+            pipeline_name="fake pipeline",
+            step_name="fake step",
         )
 
 
@@ -36,10 +38,13 @@ def test_verify_card_information():
         + html.escape(profile.to_html())
         + "' width='100%' height='500' frameborder='0'></iframe>"
     )
-    assert ingest_card._context == {
+    for key, value in {
         "MARKDOWN_1": md_to_html("#### Hello, world!"),
         "HTML_1": "<span style='color:blue'>blue</span>",
-    }
+    }.items():
+        assert key in ingest_card._context
+        assert ingest_card._context[key] == value
+
     assert ingest_card._tab_list == [
         ("Profile 1", profile_iframe(profile1)),
         ("Profile 2", profile_iframe(profile2)),

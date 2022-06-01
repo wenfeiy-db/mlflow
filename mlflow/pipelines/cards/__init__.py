@@ -5,7 +5,6 @@ import os
 import shutil
 from io import StringIO
 
-
 _CARD_PICKLE_NAME = "card.pkl"
 _CARD_HTML_NAME = "card.html"
 
@@ -14,7 +13,9 @@ _CARD_RESOURCE_DIR_NAME = f"{_CARD_HTML_NAME}.resources"
 
 
 class BaseCard:
-    def __init__(self, template_root: str, template_name: str) -> None:
+    def __init__(
+        self, template_root: str, template_name: str, pipeline_name: str, step_name: str
+    ) -> None:
         """
         BaseCard Constructor
 
@@ -26,6 +27,8 @@ class BaseCard:
 
         self.template_root = template_root
         self.template_name = template_name
+        self.pipeline_name = pipeline_name
+        self.step_name = step_name
 
         j2_env = jinja2.Environment()
         with open(os.path.join(template_root, template_name)) as f:
@@ -36,6 +39,15 @@ class BaseCard:
         self._string_builder = StringIO()
         self._tab_list = []
         self._resource_files = {}
+
+        self.add_html(
+            name="HEADER_TITLE",
+            html=f"{self.step_name.capitalize()}@{self.pipeline_name}",
+        )
+        self.add_html(
+            name="PAGE_TITLE",
+            html=f"MLflow Pipeline {self.step_name.capitalize()}@{self.pipeline_name}",
+        )
 
     def add_markdown(self, name: str, markdown: str) -> BaseCard:
         """

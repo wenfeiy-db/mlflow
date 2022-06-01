@@ -225,7 +225,7 @@ class EvaluateStep(BaseStep):
         from pandas_profiling import ProfileReport
 
         # Build card
-        card = EvaluateCard()
+        card = EvaluateCard(self.pipeline_name, self.name)
 
         run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
 
