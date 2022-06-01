@@ -24,6 +24,7 @@ class TrainStep(BaseStep):
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
         self.tracking_config = TrackingConfig.from_dict(step_config)
+        self.target_column = self.pipeline_config.get("target_col")
         self.train_module_name, self.train_method_name = self.step_config["train_method"].rsplit(
             ".", 1
         )
@@ -40,8 +41,7 @@ class TrainStep(BaseStep):
             relative_path="train_transformed.parquet",
         )
         train_df = pd.read_parquet(train_transformed_data_path)
-        # TODO: load from conf
-        X_train, y_train = train_df.drop(columns=["fare_amount"]), train_df["fare_amount"]
+        X_train, y_train = train_df.drop(columns=[self.target_column]), train_df[self.target_column]
 
         validation_transformed_data_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
@@ -49,7 +49,6 @@ class TrainStep(BaseStep):
             relative_path="train_transformed.parquet",
         )
         validation_df = pd.read_parquet(validation_transformed_data_path)
-        X_val, y_val = validation_df.drop(columns=["fare_amount"]), validation_df["fare_amount"]
 
         transformer_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
@@ -75,10 +74,11 @@ class TrainStep(BaseStep):
             with open(transformer_path, "rb") as f:
                 transformer = cloudpickle.load(f)
 
+            mlflow.sklearn.log_model(model, "non_transformed_model")
             eval_result = mlflow.evaluate(
-                model,
-                data=X_val,
-                targets=y_val,
+                model=mlflow.get_artifact_uri("non_transformed_model"),
+                data=validation_df,
+                targets=self.target_column,
                 model_type="regressor",
                 evaluators="default",
                 dataset_name="test",
@@ -86,8 +86,7 @@ class TrainStep(BaseStep):
             )
             eval_result.save(output_directory)
             pipeline = make_pipeline(transformer, model)
-            mlflow.sklearn.log_model(model, "model")
-            mlflow.sklearn.log_model(pipeline, "transformer_model")
+            mlflow.sklearn.log_model(pipeline, "model")
 
             with open(os.path.join(output_directory, "run_id"), "w") as f:
                 f.write(run.info.run_id)

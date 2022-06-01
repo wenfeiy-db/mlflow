@@ -15,6 +15,7 @@ _logger = logging.getLogger(__name__)
 class TransformStep(BaseStep):
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
+        self.target_column = self.pipeline_config.get("target_col")
         (self.transformer_module_name, self.transformer_method_name,) = self.step_config[
             "transformer_method"
         ].rsplit(".", 1)
@@ -44,13 +45,12 @@ class TransformStep(BaseStep):
         transformer.fit(train_df)
 
         def process_dataset(dataset):
-            #TODO(apurva-koti): remove hardcoding
-            features = dataset.drop(columns=["fare_amount"])
-            labels = dataset["fare_amount"]
+            features = dataset.drop(columns=[self.target_column])
+            labels = dataset[self.target_column]
             transformed_feature_array = transformer.transform(features)
             num_features = transformed_feature_array.shape[1]
             df = pd.DataFrame(transformed_feature_array, columns=[f"feature_{i}" for i in range(num_features)])
-            df["fare_amount"] = labels.values
+            df[self.target_column] = labels.values
             return df
 
         train_transformed = process_dataset(train_df)
