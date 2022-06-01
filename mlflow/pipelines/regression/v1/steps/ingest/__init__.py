@@ -81,7 +81,7 @@ class IngestStep(BaseStep):
         ingested_dataset_profile.to_file(output_file=dataset_profile_path)
         _logger.info(f"Wrote dataset profile to '{dataset_profile_path}'")
 
-        step_card = IngestStep._build_step_card(
+        step_card = self._build_step_card(
             ingested_dataset_profile=ingested_dataset_profile,
             ingested_dataset_path=dataset_dst_path,
             dataset_src_location=getattr(self.dataset, "location", None),
@@ -90,8 +90,8 @@ class IngestStep(BaseStep):
         step_card.save_as_html(path=os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME))
         step_card.save(path=os.path.join(output_directory, IngestStep._STEP_CARD_OUTPUT_NAME))
 
-    @staticmethod
     def _build_step_card(
+        self,
         ingested_dataset_profile: str,
         ingested_dataset_path: str,
         dataset_src_location: str = None,
@@ -121,7 +121,7 @@ class IngestStep(BaseStep):
                 error_code=INVALID_PARAMETER_VALUE,
             )
 
-        card = IngestCard()
+        card = IngestCard(self.pipeline_name, self.name)
         card.add_markdown(
             name="DATASET_SOURCE",
             markdown=(

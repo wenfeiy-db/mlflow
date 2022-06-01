@@ -6,7 +6,7 @@ import subprocess
 import yaml
 from typing import TypeVar, Dict, Any
 
-from mlflow.pipelines.utils import get_pipeline_name, get_pipeline_config
+from mlflow.pipelines.utils import get_pipeline_name
 from mlflow.utils.file_utils import path_to_local_file_uri
 from mlflow.utils.databricks_utils import (
     is_in_databricks_runtime,
@@ -30,7 +30,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         self.step_config = step_config
         self.pipeline_root = pipeline_root
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
-        self.pipeline_config = get_pipeline_config(pipeline_root_path=pipeline_root)
         self.OUTPUT_CARD_FILE_NAME = None
 
     def run(self, output_directory: str):

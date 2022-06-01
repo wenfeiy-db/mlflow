@@ -14,7 +14,10 @@ h3.section-title {
 }
 {% endblock %}
 {% block BODY %}
-<h3 class="section-title">Dataset info</h3>
-{{ DATASET_SOURCE }}
-{{ RESOLVED_DATASET_LOCATION }}
+
+<h3 class="section-title">Model performance summary metrics</h3>
+{{ METRICS }}
+{{ METRIC_VALIDATION_RESULTS }}
+<hr>
+
 {% endblock %}

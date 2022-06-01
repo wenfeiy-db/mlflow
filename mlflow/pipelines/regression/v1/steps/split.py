@@ -93,12 +93,12 @@ class SplitStep(BaseStep):
         self.num_dropped_rows = None
         self.OUTPUT_CARD_FILE_NAME = "card.html"
 
-        if "target_col" not in self.pipeline_config:
+        if "target_col" not in self.step_config:
             raise MlflowException(
                 "Missing target_col config in pipeline config.",
                 error_code=INVALID_PARAMETER_VALUE,
             )
-        self.target_col = self.pipeline_config.get("target_col")
+        self.target_col = self.step_config.get("target_col")
 
         split_ratios = self.step_config.get("split_ratios", [0.75, 0.125, 0.125])
         if not (
@@ -124,7 +124,7 @@ class SplitStep(BaseStep):
         test_profile = ProfileReport(test_df, title="Profile of Test Dataset", minimal=True)
 
         # Build card
-        card = SplitCard()
+        card = SplitCard(self.pipeline_name, self.name)
 
         run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
         card.add_markdown(
@@ -194,9 +194,9 @@ class SplitStep(BaseStep):
             validation_df.to_parquet(os.path.join(output_directory, _OUTPUT_VALIDATION_FILE_NAME))
             test_df.to_parquet(os.path.join(output_directory, _OUTPUT_TEST_FILE_NAME))
 
-            self.status = "Done"
+            self.status = "DONE"
         except Exception:
-            self.status = "Failed"
+            self.status = "FAILED"
             raise
         finally:
             self.run_end_time = time.time()
@@ -218,6 +218,7 @@ class SplitStep(BaseStep):
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
         try:
             step_config = pipeline_config["steps"]["split"]
+            step_config["target_col"] = pipeline_config.get("target_col")
         except KeyError:
             raise MlflowException(
                 "Config for split step is not found.", error_code=INVALID_PARAMETER_VALUE

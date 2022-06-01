@@ -5,7 +5,7 @@ import pathlib
 import posixpath
 import sys
 from abc import abstractmethod
-from typing import Dict, Any, List, TypeVar
+from typing import Dict, Any, List, TypeVar, Optional
 from urllib.parse import urlparse
 
 from mlflow.artifacts import download_artifacts
@@ -428,15 +428,53 @@ class DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
     Representation of a dataset in delta format with files having the `.delta` extension.
     """
 
+    def __init__(
+        self,
+        location: str,
+        dataset_format: str,
+        pipeline_root: str,
+        version: Optional[int] = None,
+        timestamp: Optional[str] = None,
+    ):
+        """
+        :param location: The location of the dataset
+                         (e.g. '/tmp/myfile.parquet', './mypath', 's3://mybucket/mypath', ...).
+        :param dataset_format: The format of the dataset (e.g. 'csv', 'parquet', ...).
+        :param pipeline_root: The absolute path of the associated pipeline root directory on the
+                              local filesystem.
+        :param version: The version of the Delta table to read.
+        :param timestamp: The timestamp at which to read the Delta table.
+        """
+        super().__init__(
+            location=location, dataset_format=dataset_format, pipeline_root=pipeline_root
+        )
+        self.version = version
+        self.timestamp = timestamp
+
     def resolve_to_parquet(self, dst_path: str):
         spark_session = self._get_spark_session()
-        spark_df = spark_session.read.format("delta").load(self.location)
+        spark_read_op = spark_session.read.format("delta")
+        if self.version is not None:
+            spark_read_op = spark_read_op.option("versionAsOf", self.version)
+        if self.timestamp is not None:
+            spark_read_op = spark_read_op.option("timestampAsOf", self.timestamp)
+        spark_df = spark_read_op.load(self.location)
         pandas_df = spark_df.toPandas()
         write_pandas_df_as_parquet(df=pandas_df, data_parquet_path=dst_path)
 
     @staticmethod
     def handles_format(dataset_format: str) -> bool:
         return dataset_format == "delta"
+
+    @classmethod
+    def _from_config(cls, dataset_config: Dict[str, Any], pipeline_root: str) -> _DatasetType:
+        return cls(
+            location=cls._get_required_config(dataset_config=dataset_config, key="location"),
+            pipeline_root=pipeline_root,
+            dataset_format=cls._get_required_config(dataset_config=dataset_config, key="format"),
+            version=dataset_config.get("version"),
+            timestamp=dataset_config.get("timestamp"),
+        )
 
 
 class SparkSqlDataset(_SparkDatasetMixin, _Dataset):

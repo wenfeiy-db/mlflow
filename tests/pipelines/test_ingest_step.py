@@ -1,4 +1,6 @@
 import os
+import time
+from datetime import datetime
 from unittest import mock
 
 import pandas as pd
@@ -327,6 +329,99 @@ def test_ingests_delta_successfully(use_relative_path, spark_df, tmp_path):
         .reset_index(drop=True)
     )
     spark_to_pandas_df = spark_df.toPandas().sort_values(by="id").reset_index(drop=True)
+    pd.testing.assert_frame_equal(reloaded_df, spark_to_pandas_df)
+
+
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
+@pytest.mark.parametrize("version", [0, 1])
+def test_ingests_delta_with_table_version_successfully(spark_session, spark_df, tmp_path, version):
+    dataset_path = tmp_path / "test.delta"
+    v0_df = spark_df
+    v1_df = spark_session.createDataFrame(
+        [
+            (0, "new df row 0", 10.0),
+        ],
+        ["id", "text", "label"],
+    )
+    v0_df.write.format("delta").save(str(dataset_path))
+    v1_df.write.format("delta").mode("overwrite").save(str(dataset_path))
+
+    IngestStep.from_pipeline_config(
+        pipeline_config={
+            "data": {
+                "format": "delta",
+                "location": str(dataset_path),
+                "version": version,
+            }
+        },
+        pipeline_root=os.getcwd(),
+    ).run(output_directory=tmp_path)
+
+    # Spark DataFrames are not ingested with a consistent row order, as doing so would incur a
+    # substantial performance cost. Accordingly, we sort the ingested DataFrame and the original
+    # DataFrame on the `id` column and reset the DataFrame index to achieve a consistent ordering
+    # before testing their equivalence
+    reloaded_df = (
+        pd.read_parquet(str(tmp_path / "dataset.parquet"))
+        .sort_values(by="id")
+        .reset_index(drop=True)
+    )
+    expected_spark_df = v0_df if version == 0 else v1_df
+    spark_to_pandas_df = expected_spark_df.toPandas().sort_values(by="id").reset_index(drop=True)
+    pd.testing.assert_frame_equal(reloaded_df, spark_to_pandas_df)
+
+
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
+@pytest.mark.parametrize("timestamp_idx", [0, 1])
+def test_ingests_delta_with_timestamp_successfully(
+    spark_session, spark_df, tmp_path, timestamp_idx
+):
+    dataset_path = tmp_path / "test.delta"
+    v0_df = spark_df
+    v1_df = spark_session.createDataFrame(
+        [
+            (0, "new df row 0", 10.0),
+        ],
+        ["id", "text", "label"],
+    )
+    v0_df.write.format("delta").save(str(dataset_path))
+    timestamps = [datetime.now().isoformat()]
+    time.sleep(2)
+    v1_df.write.format("delta").mode("overwrite").save(str(dataset_path))
+    timestamps.append(datetime.now().isoformat())
+    # Wait a couple of seconds and perform extra write so that all computed timestamps are
+    # guaranteed to lie within the range of delta table write times (otherwise, Delta throws a
+    # "timestamp out of range" error)
+    time.sleep(2)
+    spark_session.createDataFrame(
+        [
+            (0, "row for dummy write", 10.0),
+        ],
+        ["id", "text", "label"],
+    ).write.format("delta").mode("overwrite").save(str(dataset_path))
+
+    IngestStep.from_pipeline_config(
+        pipeline_config={
+            "data": {
+                "format": "delta",
+                "location": str(dataset_path),
+                "timestamp": timestamps[timestamp_idx],
+            }
+        },
+        pipeline_root=os.getcwd(),
+    ).run(output_directory=tmp_path)
+
+    # Spark DataFrames are not ingested with a consistent row order, as doing so would incur a
+    # substantial performance cost. Accordingly, we sort the ingested DataFrame and the original
+    # DataFrame on the `id` column and reset the DataFrame index to achieve a consistent ordering
+    # before testing their equivalence
+    reloaded_df = (
+        pd.read_parquet(str(tmp_path / "dataset.parquet"))
+        .sort_values(by="id")
+        .reset_index(drop=True)
+    )
+    expected_spark_df = v0_df if timestamp_idx == 0 else v1_df
+    spark_to_pandas_df = expected_spark_df.toPandas().sort_values(by="id").reset_index(drop=True)
     pd.testing.assert_frame_equal(reloaded_df, spark_to_pandas_df)
 
 
