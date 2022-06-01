@@ -12,6 +12,7 @@ from mlflow.pipelines.utils.tracking import (
     get_pipeline_tracking_config,
     apply_pipeline_tracking_config,
     TrackingConfig,
+    get_run_tags_env_vars,
 )
 from mlflow.projects.utils import get_databricks_env_vars
 from mlflow.utils.file_utils import read_yaml
@@ -83,7 +84,7 @@ class TrainStep(BaseStep):
             # Do step-specific code to execute the train step
             _logger.info("train run code %s", output_directory)
 
-    def inspect(self, output_directory):
+    def _inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
         _logger.info("train inspect code %s", output_directory)
         pass
@@ -105,4 +106,6 @@ class TrainStep(BaseStep):
 
     @property
     def environment(self):
-        return get_databricks_env_vars(tracking_uri=self.tracking_config.tracking_uri)
+        environ = get_databricks_env_vars(tracking_uri=self.tracking_config.tracking_uri)
+        environ.update(get_run_tags_env_vars())
+        return environ

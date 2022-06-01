@@ -77,7 +77,7 @@ def clean_execution_state(pipeline_name: str, pipeline_steps: List[BaseStep]) ->
     :param pipeline_name: The name of the pipeline.
     :param pipeline_steps: The pipeline steps for which to remove execution state.
     """
-    execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
+    execution_dir_path = get_execution_directory_path(pipeline_name=pipeline_name)
     for step in pipeline_steps:
         step_outputs_path = _get_step_output_directory_path(
             execution_directory_path=execution_dir_path,
@@ -100,7 +100,7 @@ def get_step_output_path(pipeline_name: str, step_name: str, relative_path: str)
     :return The absolute path of the step output on the local filesystem, which may or may
             not exist.
     """
-    execution_dir_path = _get_execution_directory_path(pipeline_name=pipeline_name)
+    execution_dir_path = get_execution_directory_path(pipeline_name=pipeline_name)
     step_outputs_path = _get_step_output_directory_path(
         execution_directory_path=execution_dir_path,
         step_name=step_name,
@@ -123,7 +123,7 @@ def _get_or_create_execution_directory(
     :return: The absolute path of the execution directory on the local filesystem for the specified
              pipeline.
     """
-    execution_dir_path = _get_execution_directory_path(pipeline_name)
+    execution_dir_path = get_execution_directory_path(pipeline_name)
 
     os.makedirs(execution_dir_path, exist_ok=True)
     _create_makefile(pipeline_root_path, execution_dir_path)
@@ -169,7 +169,7 @@ def _write_updated_step_confs(
             )
 
 
-def _get_execution_directory_path(pipeline_name: str) -> str:
+def get_execution_directory_path(pipeline_name: str) -> str:
     """
     Obtains the path of the execution directory on the local filesystem corresponding to the
     specified pipeline, which may or may not exist.
@@ -373,6 +373,14 @@ evaluate: $(evaluate_objects)
 steps/%/outputs/metrics.json steps/%/outputs/artifacts steps/%/outputs/artifacts_metadata.json steps/%/outputs/model_validation_status: steps/train/outputs/pipeline.pkl steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/train/outputs/run_id steps/evaluate/conf.yaml
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep; EvaluateStep.from_step_config_path(step_config_path='{path:exe/steps/evaluate/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/evaluate/outputs}')"
+
+register_objects = steps/register/outputs/register_card.html
+
+register: $(register_objects)
+
+steps/register/outputs/register_card.html: steps/train/outputs/run_id steps/register/conf.yaml steps/evaluate/outputs/model_validation_status
+	cd {path:prp/} && \
+        python -c "from mlflow.pipelines.regression.v1.steps.register import RegisterStep; RegisterStep.from_step_config_path(step_config_path='{path:exe/steps/register/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/register/outputs}')"
 
 clean:
 	rm -rf $(split_objects) $(transform_objects) $(train_objects) $(evaluate_objects)

@@ -2,6 +2,8 @@ import datetime
 import logging
 import os
 import time
+import importlib
+import sys
 from typing import Dict, Any
 
 from mlflow.pipelines.step import BaseStep
@@ -17,7 +19,6 @@ _INPUT_FILE_NAME = "dataset.parquet"
 _OUTPUT_TRAIN_FILE_NAME = "train.parquet"
 _OUTPUT_VALIDATION_FILE_NAME = "validation.parquet"
 _OUTPUT_TEST_FILE_NAME = "test.parquet"
-_OUTPUT_CARD_FILE_NAME = "card.html"
 
 
 def _make_elem_hashable(elem):
@@ -89,13 +90,14 @@ class SplitStep(BaseStep):
         self.run_end_time = None
         self.execution_duration = None
         self.num_dropped_rows = None
+        self.OUTPUT_CARD_FILE_NAME = "card.html"
 
-        if "target_col" not in self.pipeline_config:
+        if "target_col" not in self.step_config:
             raise MlflowException(
                 "Missing target_col config in pipeline config.",
                 error_code=INVALID_PARAMETER_VALUE,
             )
-        self.target_col = self.pipeline_config.get("target_col")
+        self.target_col = self.step_config.get("target_col")
 
         split_ratios = self.step_config.get("split_ratios", [0.75, 0.125, 0.125])
         if not (
@@ -149,7 +151,7 @@ class SplitStep(BaseStep):
         card.add_pandas_profile("Profile of Validation Dataset", validation_profile)
         card.add_pandas_profile("Profile of Test Dataset", test_profile)
 
-        with open(os.path.join(output_directory, _OUTPUT_CARD_FILE_NAME), "w") as f:
+        with open(os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME), "w") as f:
             f.write(card.to_html())
 
     def _run(self, output_directory):
@@ -176,6 +178,15 @@ class SplitStep(BaseStep):
             train_df, validation_df, test_df = _get_split_df(
                 input_df, hash_buckets, self.split_ratios
             )
+            # Import from user function module to process dataframes
+            post_split_config = self.step_config.get("post_split_method", None)
+            if post_split_config is not None:
+                (post_split_module_name, post_split_fn_name) = post_split_config.rsplit(".", 1)
+                sys.path.append(self.pipeline_root)
+                post_split = getattr(
+                    importlib.import_module(post_split_module_name), post_split_fn_name
+                )
+                (train_df, validation_df, test_df) = post_split(train_df, validation_df, test_df)
 
             # Output train / validation / test splits
             train_df.to_parquet(os.path.join(output_directory, _OUTPUT_TRAIN_FILE_NAME))
@@ -195,7 +206,7 @@ class SplitStep(BaseStep):
                 # When log level is DEBUG, also log the error stack trace.
                 _logger.debug("", exc_info=True)
 
-    def inspect(self, output_directory):
+    def _inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
         _logger.info("split inspect code %s", output_directory)
         pass
@@ -204,6 +215,7 @@ class SplitStep(BaseStep):
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
         try:
             step_config = pipeline_config["steps"]["split"]
+            step_config["target_col"] = pipeline_config.get("target_col")
         except KeyError:
             raise MlflowException(
                 "Config for split step is not found.", error_code=INVALID_PARAMETER_VALUE

@@ -1,12 +1,22 @@
 import abc
 import logging
 import os
+<<<<<<< HEAD
+=======
+import shutil
+import subprocess
+>>>>>>> origin/master
 import yaml
 from enum import Enum
 from typing import TypeVar, Dict, Any
 
-from mlflow.pipelines.utils import get_pipeline_name, get_pipeline_config
-from mlflow.utils.databricks_utils import is_in_databricks_runtime
+from mlflow.pipelines.utils import get_pipeline_name
+from mlflow.utils.file_utils import path_to_local_file_uri
+from mlflow.utils.databricks_utils import (
+    is_in_databricks_runtime,
+    is_running_in_ipython_environment,
+)
+
 
 _logger = logging.getLogger(__name__)
 
@@ -34,7 +44,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         self.step_config = step_config
         self.pipeline_root = pipeline_root
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
-        self.pipeline_config = get_pipeline_config(pipeline_root_path=pipeline_root)
+        self.OUTPUT_CARD_FILE_NAME = None
 
     def run(self, output_directory: str):
         """
@@ -45,6 +55,7 @@ class BaseStep(metaclass=abc.ABCMeta):
                                  outputs should be stored.
         :return: Results from executing the corresponding step.
         """
+<<<<<<< HEAD
         self._initialize_databricks_pyspark_connection_if_applicable()
         try:
             self._update_status(status=StepStatus.RUNNING, output_directory=output_directory)
@@ -55,6 +66,34 @@ class BaseStep(metaclass=abc.ABCMeta):
             raise
 
         return self.inspect(output_directory=output_directory)
+=======
+        self._initialize_databricks_spark_connection_and_hooks_if_applicable()
+        self._run(output_directory)
+        return self.inspect(output_directory)
+>>>>>>> origin/master
+
+    def inspect(self, output_directory: str):
+        """
+        Inspect the step output state by running the generic inspect information here and
+        running the step specific inspection code in the step's _inspect() method.
+
+        :param output_directory: String file path where to the directory where step
+                                 outputs are located.
+        :return: Results from the last execution of the corresponding step.
+        """
+        # Open the step card here
+        from IPython.display import display, HTML
+
+        if self.OUTPUT_CARD_FILE_NAME is not None:
+            relative_path = os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME)
+            output_filename = path_to_local_file_uri(os.path.abspath(relative_path))
+            if is_running_in_ipython_environment():
+                display(HTML(filename=output_filename))
+            else:
+                if shutil.which("open") is not None:
+                    subprocess.run(["open", output_filename], check=True)
+
+        return self._inspect(output_directory)
 
     @abc.abstractmethod
     def _run(self, output_directory: str):
@@ -70,7 +109,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def inspect(self, output_directory: str):
+    def _inspect(self, output_directory: str):
         """
         Inspect the step output state that was stored as part of the last execution.
         Each individual step needs to implement this function to return a materialized
@@ -145,10 +184,11 @@ class BaseStep(metaclass=abc.ABCMeta):
         with open(os.path.join(output_directory, BaseStep._STATUS_FILE_NAME), "w") as f:
             f.write(status.value)
 
-    def _initialize_databricks_pyspark_connection_if_applicable(self) -> None:
+    def _initialize_databricks_spark_connection_and_hooks_if_applicable(self) -> None:
         """
-        Initializes a connection to the Databricks PySpark Gateway if MLflow Pipelines is running
-        in the Databricks Runtime.
+        Initializes a connection to the Databricks Spark Gateway and sets up associated hooks
+        (e.g. MLflow Run creation notification hooks) if MLflow Pipelines is running in the
+        Databricks Runtime.
         """
         if is_in_databricks_runtime():
             try:
@@ -157,10 +197,24 @@ class BaseStep(metaclass=abc.ABCMeta):
                     is_pinn_mode_enabled,
                 )
 
-                initialize_spark_connection(is_pinn_mode_enabled())
+                spark_handles, entry_point = initialize_spark_connection(is_pinn_mode_enabled())
             except Exception as e:
                 _logger.warning(
                     "Encountered unexpected failure while initializing Spark connection. Spark"
                     " operations may not succeed. Exception: %s",
                     e,
                 )
+            else:
+                try:
+                    from dbruntime.MlflowCreateRunHook import get_mlflow_create_run_hook
+
+                    # `get_mlflow_create_run_hook` sets up a patch to trigger a Databricks command
+                    # notification every time an MLflow Run is created. This notification is
+                    # visible to users in notebook environments
+                    get_mlflow_create_run_hook(spark_handles["sc"], entry_point)
+                except Exception as e:
+                    _logger.warning(
+                        "Encountered unexpected failure while setting up Databricks MLflow Run"
+                        " creation hooks. Exception: %s",
+                        e,
+                    )
