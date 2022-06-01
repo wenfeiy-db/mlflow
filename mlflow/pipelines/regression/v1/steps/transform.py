@@ -49,8 +49,10 @@ class TransformStep(BaseStep):
             labels = dataset[self.target_col]
             transformed_feature_array = transformer.transform(features)
             num_features = transformed_feature_array.shape[1]
-            #TODO: get the correct feature names from the transformer
-            df = pd.DataFrame(transformed_feature_array, columns=[f"feature_{i}" for i in range(num_features)])
+            # TODO: get the correct feature names from the transformer
+            df = pd.DataFrame(
+                transformed_feature_array, columns=[f"feature_{i}" for i in range(num_features)]
+            )
             df[self.target_col] = labels.values
             return df
 
@@ -67,7 +69,9 @@ class TransformStep(BaseStep):
             cloudpickle.dump(transformer, f)
 
         train_transformed.to_parquet(os.path.join(output_directory, "train_transformed.parquet"))
-        validation_transformed.to_parquet(os.path.join(output_directory, "validation_transformed.parquet"))
+        validation_transformed.to_parquet(
+            os.path.join(output_directory, "validation_transformed.parquet")
+        )
 
     def _inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step

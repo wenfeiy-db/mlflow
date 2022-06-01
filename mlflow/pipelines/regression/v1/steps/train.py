@@ -74,18 +74,18 @@ class TrainStep(BaseStep):
             with open(transformer_path, "rb") as f:
                 transformer = cloudpickle.load(f)
 
-            #TODO: log this as a pyfunc model
+            # TODO: log this as a pyfunc model
             logged_estimator = mlflow.sklearn.log_model(estimator, "estimator")
             mlflow.sklearn.log_model(transformer, "transformer")
 
             eval_result = mlflow.evaluate(
-                model= logged_estimator.model_uri,
+                model=logged_estimator.model_uri,
                 data=validation_df,
                 targets=self.target_col,
                 model_type="regressor",
                 evaluators="default",
                 dataset_name="validation",
-                #TODO: add custom metrics
+                # TODO: add custom metrics
                 custom_metrics=[],
             )
             eval_result.save(output_directory)
