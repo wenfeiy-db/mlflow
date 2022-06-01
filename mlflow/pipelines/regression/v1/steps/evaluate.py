@@ -7,6 +7,7 @@ from typing import Dict, Any
 
 import mlflow
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, BAD_REQUEST
+from mlflow.pipelines.regression.v1.cards.evaluate import EvaluateCard 
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.pipelines.utils.tracking import (
@@ -148,10 +149,7 @@ class EvaluateStep(BaseStep):
 
         Path(output_directory, "model_validation_status").write_text(model_validation_status)
 
-    def _inspect(self, output_directory):
-        # Do step-specific code to inspect/materialize the output of the step
-        _logger.info("evaluate inspect code %s", output_directory)
-        pass
+        return EvaluateCard()
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):

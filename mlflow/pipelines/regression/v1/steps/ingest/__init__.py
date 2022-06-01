@@ -37,7 +37,6 @@ class IngestStep(BaseStep):
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         super().__init__(step_config, pipeline_root)
 
-        self.OUTPUT_CARD_FILE_NAME = "card.html"
         dataset_format = step_config.get("format")
         if not dataset_format:
             raise MlflowException(
@@ -87,8 +86,7 @@ class IngestStep(BaseStep):
             dataset_src_location=getattr(self.dataset, "location", None),
             dataset_sql=getattr(self.dataset, "sql", None),
         )
-        step_card.save_as_html(path=os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME))
-        step_card.save(path=os.path.join(output_directory, IngestStep._STEP_CARD_OUTPUT_NAME))
+        return step_card
 
     @staticmethod
     def _build_step_card(
@@ -136,11 +134,6 @@ class IngestStep(BaseStep):
         )
         card.add_pandas_profile("Profile of Ingested Dataset", ingested_dataset_profile)
         return card
-
-    def _inspect(self, output_directory: str):
-        return IngestCard.load(
-            path=os.path.join(output_directory, IngestStep._STEP_CARD_OUTPUT_NAME)
-        )
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config: Dict[str, Any], pipeline_root: str):

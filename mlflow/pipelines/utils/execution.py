@@ -342,11 +342,11 @@ ingest:
 steps/ingest/outputs/dataset.parquet: steps/ingest/conf.yaml
 	$(MAKE) ingest
 
-split_objects = steps/split/outputs/train.parquet steps/split/outputs/validation.parquet steps/split/outputs/test.parquet steps/split/outputs/card.html
+split_objects = steps/split/outputs/train.parquet steps/split/outputs/validation.parquet steps/split/outputs/test.parquet
 
 split: $(split_objects)
 
-steps/%/outputs/train.parquet steps/%/outputs/validation.parquet steps/%/outputs/test.parquet steps/%/outputs/card.html: steps/ingest/outputs/dataset.parquet steps/split/conf.yaml
+steps/%/outputs/train.parquet steps/%/outputs/validation.parquet steps/%/outputs/test.parquet: steps/ingest/outputs/dataset.parquet steps/split/conf.yaml
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.split import SplitStep; SplitStep.from_step_config_path(step_config_path='{path:exe/steps/split/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/split/outputs}')"
 
@@ -374,11 +374,11 @@ steps/%/outputs/metrics.json steps/%/outputs/artifacts steps/%/outputs/artifacts
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep; EvaluateStep.from_step_config_path(step_config_path='{path:exe/steps/evaluate/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/evaluate/outputs}')"
 
-register_objects = steps/register/outputs/register_card.html
+register_objects = steps/register/outputs/card.html
 
 register: $(register_objects)
 
-steps/register/outputs/register_card.html: steps/train/outputs/run_id steps/register/conf.yaml steps/evaluate/outputs/model_validation_status
+steps/register/outputs/card.html: steps/train/outputs/run_id steps/register/conf.yaml steps/evaluate/outputs/model_validation_status
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.register import RegisterStep; RegisterStep.from_step_config_path(step_config_path='{path:exe/steps/register/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/register/outputs}')"
 

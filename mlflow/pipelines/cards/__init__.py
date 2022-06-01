@@ -5,8 +5,8 @@ import os
 from io import StringIO
 
 
-_CARD_PICKLE_NAME = "card.pkl"
-_CARD_HTML_NAME = "card.html"
+CARD_PICKLE_NAME = "card.pkl"
+CARD_HTML_NAME = "card.html"
 
 
 class BaseCard:
@@ -123,13 +123,13 @@ class BaseCard:
 
     def save_as_html(self, path) -> None:
         if os.path.isdir(path):
-            path = os.path.join(path, _CARD_HTML_NAME)
+            path = os.path.join(path, CARD_HTML_NAME)
         with open(path, "w") as f:
             f.write(self.to_html())
 
     def save(self, path: str) -> None:
         if os.path.isdir(path):
-            path = os.path.join(path, _CARD_PICKLE_NAME)
+            path = os.path.join(path, CARD_PICKLE_NAME)
         with open(path, "wb") as out:
             import pickle
 
@@ -138,7 +138,7 @@ class BaseCard:
     @staticmethod
     def load(path):
         if os.path.isdir(path):
-            path = os.path.join(path, _CARD_PICKLE_NAME)
+            path = os.path.join(path, CARD_PICKLE_NAME)
         with open(path, "rb") as f:
             import pickle
 

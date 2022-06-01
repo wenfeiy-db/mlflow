@@ -1,6 +1,5 @@
 import datetime
 import logging
-import os
 import time
 from typing import Dict, Any
 
@@ -34,7 +33,6 @@ class RegisterStep(BaseStep):
         self.model_details = None
         self.alerts = None
         self.version = None
-        self.OUTPUT_CARD_FILE_NAME = "register_card.html"
 
         if "model_name" not in self.step_config:
             raise MlflowException(
@@ -97,7 +95,7 @@ class RegisterStep(BaseStep):
             self.run_end_time = time.time()
             self.execution_duration = self.run_end_time - run_start_time
             try:
-                self._build_card(output_directory)
+                return self._build_card(output_directory)
             except Exception as e:
                 # swallow exception raised during building profiles and card.
                 _logger.warning(f"Build card failed: {repr(e)}")
@@ -134,13 +132,7 @@ class RegisterStep(BaseStep):
         final_markdown.append(f"**Execution duration (s):** `{self.execution_duration:.2f}`")
         final_markdown.append(f"**Run status:** `{self.status}`")
         card.add_markdown("REGISTER_SUMMARY", "<br>\n".join(final_markdown))
-        with open(os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME), "w") as f:
-            f.write(card.to_html())
-
-    def _inspect(self, output_directory):
-        # Do step-specific code to inspect/materialize the output of the step
-        _logger.info("register inspect code %s", output_directory)
-        pass
+        return card
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):

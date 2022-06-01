@@ -1,15 +1,13 @@
 import abc
 import logging
 import os
-<<<<<<< HEAD
-=======
 import shutil
 import subprocess
->>>>>>> origin/master
 import yaml
 from enum import Enum
 from typing import TypeVar, Dict, Any
 
+from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME 
 from mlflow.pipelines.utils import get_pipeline_name
 from mlflow.utils.file_utils import path_to_local_file_uri
 from mlflow.utils.databricks_utils import (
@@ -44,7 +42,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         self.step_config = step_config
         self.pipeline_root = pipeline_root
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
-        self.OUTPUT_CARD_FILE_NAME = None
 
     def run(self, output_directory: str):
         """
@@ -55,22 +52,18 @@ class BaseStep(metaclass=abc.ABCMeta):
                                  outputs should be stored.
         :return: Results from executing the corresponding step.
         """
-<<<<<<< HEAD
-        self._initialize_databricks_pyspark_connection_if_applicable()
+        self._initialize_databricks_spark_connection_and_hooks_if_applicable()
         try:
             self._update_status(status=StepStatus.RUNNING, output_directory=output_directory)
-            self._run(output_directory=output_directory)
+            step_card = self._run(output_directory=output_directory)
+            step_card.save(path=output_directory)
+            step_card.save_as_html(path=output_directory)
             self._update_status(status=StepStatus.SUCCEEDED, output_directory=output_directory)
         except Exception:
             self._update_status(status=StepStatus.FAILED, output_directory=output_directory)
             raise
 
         return self.inspect(output_directory=output_directory)
-=======
-        self._initialize_databricks_spark_connection_and_hooks_if_applicable()
-        self._run(output_directory)
-        return self.inspect(output_directory)
->>>>>>> origin/master
 
     def inspect(self, output_directory: str):
         """
@@ -81,19 +74,22 @@ class BaseStep(metaclass=abc.ABCMeta):
                                  outputs are located.
         :return: Results from the last execution of the corresponding step.
         """
+        card_path = os.path.join(output_directory, CARD_PICKLE_NAME)
+        if os.path.exists(card_path):
+            return BaseCard.load(card_path)
+
+        # TODO: MOVE TO PIPELINE AND CLI
         # Open the step card here
-        from IPython.display import display, HTML
-
-        if self.OUTPUT_CARD_FILE_NAME is not None:
-            relative_path = os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME)
-            output_filename = path_to_local_file_uri(os.path.abspath(relative_path))
-            if is_running_in_ipython_environment():
-                display(HTML(filename=output_filename))
-            else:
-                if shutil.which("open") is not None:
-                    subprocess.run(["open", output_filename], check=True)
-
-        return self._inspect(output_directory)
+        # from IPython.display import display, HTML
+        #
+        # if BaseStep._OUTPUT_CARD_FILE_NAME is not None:
+        #     relative_path = os.path.join(output_directory, BaseStep._OUTPUT_CARD_FILE_NAME)
+        #     output_filename = path_to_local_file_uri(os.path.abspath(relative_path))
+        #     if is_running_in_ipython_environment():
+        #         display(HTML(filename=output_filename))
+        #     else:
+        #         if shutil.which("open") is not None:
+        #             subprocess.run(["open", output_filename], check=True)
 
     @abc.abstractmethod
     def _run(self, output_directory: str):
@@ -105,19 +101,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         :param output_directory: String file path to the directory where step outputs
                                  should be stored.
         :return: Results from executing the corresponding step.
-        """
-        pass
-
-    @abc.abstractmethod
-    def _inspect(self, output_directory: str):
-        """
-        Inspect the step output state that was stored as part of the last execution.
-        Each individual step needs to implement this function to return a materialized
-        output to display to the end user.
-
-        :param output_directory: String file path where to the directory where step
-                                 outputs are located.
-        :return: Results from the last execution of the corresponding step.
         """
         pass
 

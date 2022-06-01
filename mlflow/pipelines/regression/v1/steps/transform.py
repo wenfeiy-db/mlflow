@@ -5,6 +5,7 @@ import sys
 
 import cloudpickle
 
+from mlflow.pipelines.regression.v1.cards.transform import TransformCard 
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.utils.file_utils import read_yaml
@@ -47,10 +48,7 @@ class TransformStep(BaseStep):
         transformed = pd.DataFrame(data={"features": list(features), "target": y})
         transformed.to_parquet(os.path.join(output_directory, "train_transformed.parquet"))
 
-    def _inspect(self, output_directory):
-        # Do step-specific code to inspect/materialize the output of the step
-        _logger.info("transform inspect code %s", output_directory)
-        pass
+        return TransformCard()
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
