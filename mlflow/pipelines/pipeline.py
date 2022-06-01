@@ -16,6 +16,11 @@ from mlflow.pipelines.utils.execution import (
 )
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, INTERNAL_ERROR
 from mlflow.utils.class_utils import _get_class_from_string
+from mlflow.utils.file_utils import path_to_local_file_uri
+from mlflow.utils.databricks_utils import (
+    is_in_databricks_runtime,
+    is_running_in_ipython_environment,
+)
 from mlflow.utils.databricks_utils import is_running_in_ipython_environment
 from typing import List
 
@@ -137,7 +142,7 @@ class _BasePipeline:
                 _logger.info(f"MLflow regression v1 pipeline snapshot DAG: '{file_uri}'")
         else:
             output_directory = get_step_output_path(self.name, step, "")
-            self._get_step(step).inspect(output_directory)
+            return self._get_step(step).inspect(output_directory)
 
     def clean(self, step: str = None) -> None:
         """

@@ -7,7 +7,7 @@ import yaml
 from enum import Enum
 from typing import TypeVar, Dict, Any
 
-from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME 
+from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME, CARD_HTML_NAME
 from mlflow.pipelines.utils import get_pipeline_name
 from mlflow.utils.file_utils import path_to_local_file_uri
 from mlflow.utils.databricks_utils import (
@@ -75,21 +75,18 @@ class BaseStep(metaclass=abc.ABCMeta):
         :return: Results from the last execution of the corresponding step.
         """
         card_path = os.path.join(output_directory, CARD_PICKLE_NAME)
-        if os.path.exists(card_path):
-            return BaseCard.load(card_path)
+        if not os.path.exists(card_path):
+            return None
 
-        # TODO: MOVE TO PIPELINE AND CLI
-        # Open the step card here
-        # from IPython.display import display, HTML
-        #
-        # if BaseStep._OUTPUT_CARD_FILE_NAME is not None:
-        #     relative_path = os.path.join(output_directory, BaseStep._OUTPUT_CARD_FILE_NAME)
-        #     output_filename = path_to_local_file_uri(os.path.abspath(relative_path))
-        #     if is_running_in_ipython_environment():
-        #         display(HTML(filename=output_filename))
-        #     else:
-        #         if shutil.which("open") is not None:
-        #             subprocess.run(["open", output_filename], check=True)
+        card = BaseCard.load(card_path)
+        if is_running_in_ipython_environment():
+            card.display()
+        else:
+            card_html_path = os.path.join(output_directory, CARD_HTML_NAME)
+            if os.path.exists(card_html_path) and shutil.which("open") is not None:
+                subprocess.run(["open", card_html_path], check=True)
+
+        return card
 
     @abc.abstractmethod
     def _run(self, output_directory: str):

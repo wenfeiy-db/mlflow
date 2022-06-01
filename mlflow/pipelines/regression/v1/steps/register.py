@@ -4,7 +4,6 @@ import time
 from typing import Dict, Any
 
 import mlflow
-from mlflow.entities.model_registry.model_version_status import ModelVersionStatus
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
@@ -14,7 +13,6 @@ from mlflow.pipelines.utils.tracking import (
     TrackingConfig,
 )
 from mlflow.projects.utils import get_databricks_env_vars
-from mlflow.tracking.client import MlflowClient
 from mlflow.tracking._model_registry import DEFAULT_AWAIT_MAX_SLEEP_SECONDS
 
 _logger = logging.getLogger(__name__)
