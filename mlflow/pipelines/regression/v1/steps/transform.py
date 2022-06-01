@@ -15,7 +15,7 @@ _logger = logging.getLogger(__name__)
 class TransformStep(BaseStep):
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
-        self.target_column = self.pipeline_config.get("target_col")
+        self.target_col = self.pipeline_config.get("target_col")
         (self.transformer_module_name, self.transformer_method_name,) = self.step_config[
             "transformer_method"
         ].rsplit(".", 1)
@@ -44,17 +44,18 @@ class TransformStep(BaseStep):
         transformer = transformer_fn()
         transformer.fit(train_df)
 
-        def process_dataset(dataset):
-            features = dataset.drop(columns=[self.target_column])
-            labels = dataset[self.target_column]
+        def transform_dataset(dataset):
+            features = dataset.drop(columns=[self.target_col])
+            labels = dataset[self.target_col]
             transformed_feature_array = transformer.transform(features)
             num_features = transformed_feature_array.shape[1]
+            #TODO: get the correct feature names from the transformer
             df = pd.DataFrame(transformed_feature_array, columns=[f"feature_{i}" for i in range(num_features)])
-            df[self.target_column] = labels.values
+            df[self.target_col] = labels.values
             return df
 
-        train_transformed = process_dataset(train_df)
-        validation_transformed = process_dataset(validation_df)
+        train_transformed = transform_dataset(train_df)
+        validation_transformed = transform_dataset(validation_df)
         """
         desired features are implied in the way the transformer is written. We give the train step a transformed
         dataset, so it also only sees desired columns. Thus desired columns don't need to be explicitly specified

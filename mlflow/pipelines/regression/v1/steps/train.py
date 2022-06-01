@@ -24,7 +24,7 @@ class TrainStep(BaseStep):
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
         self.tracking_config = TrackingConfig.from_dict(step_config)
-        self.target_column = self.pipeline_config.get("target_col")
+        self.target_col = self.pipeline_config.get("target_col")
         self.train_module_name, self.train_method_name = self.step_config["train_method"].rsplit(
             ".", 1
         )
@@ -41,7 +41,7 @@ class TrainStep(BaseStep):
             relative_path="train_transformed.parquet",
         )
         train_df = pd.read_parquet(train_transformed_data_path)
-        X_train, y_train = train_df.drop(columns=[self.target_column]), train_df[self.target_column]
+        X_train, y_train = train_df.drop(columns=[self.target_col]), train_df[self.target_col]
 
         validation_transformed_data_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
@@ -58,34 +58,39 @@ class TrainStep(BaseStep):
 
         sys.path.append(self.pipeline_root)
         train_fn = getattr(importlib.import_module(self.train_module_name), self.train_method_name)
-        model = train_fn()
+        estimator = train_fn()
         mlflow.autolog(log_models=False)
 
         with mlflow.start_run() as run:
-            model.fit(X_train, y_train)
+            estimator.fit(X_train, y_train)
 
-            if hasattr(model, "best_score_"):
-                mlflow.log_metric("best_cv_score", model.best_score_)
+            if hasattr(estimator, "best_score_"):
+                mlflow.log_metric("best_cv_score", estimator.best_score_)
 
-            if hasattr(model, "best_params_"):
-                mlflow.log_params(model.best_params_)
+            if hasattr(estimator, "best_params_"):
+                mlflow.log_params(estimator.best_params_)
 
             # Create a pipeline consisting of the transformer+model for test data evaluation
             with open(transformer_path, "rb") as f:
                 transformer = cloudpickle.load(f)
 
-            mlflow.sklearn.log_model(model, "non_transformed_model")
+            #TODO: log this as a pyfunc model
+            logged_estimator = mlflow.sklearn.log_model(estimator, "estimator")
+            mlflow.sklearn.log_model(transformer, "transformer")
+
             eval_result = mlflow.evaluate(
-                model=mlflow.get_artifact_uri("non_transformed_model"),
+                model= logged_estimator.model_uri,
                 data=validation_df,
-                targets=self.target_column,
+                targets=self.target_col,
                 model_type="regressor",
                 evaluators="default",
-                dataset_name="test",
+                dataset_name="validation",
+                #TODO: add custom metrics
                 custom_metrics=[],
             )
             eval_result.save(output_directory)
-            pipeline = make_pipeline(transformer, model)
+
+            pipeline = make_pipeline(transformer, estimator)
             mlflow.sklearn.log_model(pipeline, "model")
 
             with open(os.path.join(output_directory, "run_id"), "w") as f:
