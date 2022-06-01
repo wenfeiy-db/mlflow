@@ -75,18 +75,17 @@ class TrainStep(BaseStep):
             pipeline = make_pipeline(transformer, model)
             mlflow.sklearn.log_model(pipeline, "model")
             mlflow.log_artifact(transformer_path)
-
             with open(os.path.join(output_directory, "run_id"), "w") as f:
                 f.write(run.info.run_id)
-
-            for step_name in ("ingest", "split", "transform"):
-                self._log_step_card(run.info.run_id, step_name)
 
         with open(os.path.join(output_directory, "pipeline.pkl"), "wb") as f:
             cloudpickle.dump(pipeline, f)
 
             # Do step-specific code to execute the train step
             _logger.info("train run code %s", output_directory)
+
+        for step_name in ("ingest", "split", "transform", "train"):
+            self._log_step_card(run.info.run_id, step_name)
 
     def _inspect(self, output_directory):
         # Do step-specific code to inspect/materialize the output of the step
