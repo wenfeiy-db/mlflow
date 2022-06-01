@@ -443,7 +443,7 @@ class DeltaTableDataset(_SparkDatasetMixin, _LocationBasedDataset):
         :param pipeline_root: The absolute path of the associated pipeline root directory on the
                               local filesystem.
         :param version: The version of the Delta table to read.
-        :param timestamp: The timestamp from which to read the Delta table.
+        :param timestamp: The timestamp at which to read the Delta table.
         """
         super().__init__(
             location=location, dataset_format=dataset_format, pipeline_root=pipeline_root
