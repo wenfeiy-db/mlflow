@@ -80,7 +80,7 @@ class TrainStep(BaseStep):
                 f.write(run.info.run_id)
 
             for step_name in ("ingest", "split", "transform"):
-                self._log_step_card(step_name=step_name)
+                self._log_step_card(run.info.run_id, step_name)
 
         with open(os.path.join(output_directory, "pipeline.pkl"), "wb") as f:
             cloudpickle.dump(pipeline, f)

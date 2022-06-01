@@ -6,7 +6,7 @@ import subprocess
 import yaml
 from typing import TypeVar, Dict, Any
 
-import mlflow
+from mlflow.tracking import MlflowClient
 from mlflow.pipelines.cards import _CARD_HTML_NAME
 from mlflow.pipelines.utils import get_pipeline_name
 from mlflow.utils.file_utils import path_to_local_file_uri
@@ -182,17 +182,15 @@ class BaseStep(metaclass=abc.ABCMeta):
                         e,
                     )
 
-    def _log_step_card(self, step_name: str) -> None:
+    def _log_step_card(self, run_id: str, step_name: str) -> None:
         """
-        Logs a step card as an artifact (destination: <step_name>/card.html) if there's an active
-        MLflow run.
+        Logs a step card as an artifact (destination: <step_name>/card.html) in a specified run.
+        If the step card does not exist, skips logging.
 
+        :param run_id: Run ID to which the step card should be logged.
         :param step_name: Step name.
         """
         from mlflow.pipelines.utils.execution import get_step_output_path
-
-        if mlflow.active_run() is None:
-            return
 
         local_card_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
@@ -200,4 +198,4 @@ class BaseStep(metaclass=abc.ABCMeta):
             relative_path=_CARD_HTML_NAME,
         )
         if os.path.exists(local_card_path):
-            mlflow.log_artifact(local_card_path, artifact_path=step_name)
+            MlflowClient().log_artifact(run_id, local_card_path, artifact_path=step_name)
