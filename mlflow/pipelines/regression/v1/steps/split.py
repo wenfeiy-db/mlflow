@@ -111,6 +111,7 @@ class SplitStep(BaseStep):
             )
 
         self.split_ratios = split_ratios
+
     def _build_profiles_and_card(self, train_df, validation_df, test_df, output_directory):
         from pandas_profiling import ProfileReport
         from mlflow.pipelines.regression.v1.cards.split import SplitCard

@@ -36,18 +36,20 @@ class TransformStep(BaseStep):
         )
         validation_df = pd.read_parquet(validation_data_path)
 
-        #TODO(apurva-koti): Output schema here
+        # TODO(apurva-koti): Output schema here
 
         sys.path.append(self.pipeline_root)
         transformer_fn = getattr(
             importlib.import_module(self.transformer_module_name), self.transformer_method_name
         )
         transformer = transformer_fn()
-
         transformer.fit(train_df)
 
-        train_transformed = transformer.transform(train_df)
-        validation_transformed = transformer.transform(validation_df)
+        train_array = transformer.transform(train_df)
+        validation_array = transformer.transform(validation_df)
+        num_cols = train_array.shape[1]
+        train_transformed = pd.DataFrame(train_array, columns=[f"feature_{i}" for i in range(num_cols)])
+        validation_transformed = pd.DataFrame(validation_array, columns=[f"feature_{i}" for i in range(num_cols)])
 
         """
         desired features are implied in the way the transformer is written. We give the train step a transformed

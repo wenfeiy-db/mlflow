@@ -35,12 +35,19 @@ class TrainStep(BaseStep):
 
         apply_pipeline_tracking_config(self.tracking_config)
 
-        transformed_train_data_path = get_step_output_path(
+        train_transformed_data_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
             step_name="transform",
             relative_path="train_transformed.parquet",
         )
-        df = pd.read_parquet(transformed_train_data_path)
+        train_df = pd.read_parquet(train_transformed_data_path)
+
+        validation_transformed_data_path = get_step_output_path(
+            pipeline_name=self.pipeline_name,
+            step_name="transform",
+            relative_path="train_transformed.parquet",
+        )
+        validation_df = pd.read_parquet(validation_transformed_data_path)
 
         transformer_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
