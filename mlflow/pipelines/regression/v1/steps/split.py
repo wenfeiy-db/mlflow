@@ -194,9 +194,9 @@ class SplitStep(BaseStep):
             validation_df.to_parquet(os.path.join(output_directory, _OUTPUT_VALIDATION_FILE_NAME))
             test_df.to_parquet(os.path.join(output_directory, _OUTPUT_TEST_FILE_NAME))
 
-            self.status = "Done"
+            self.status = "DONE"
         except Exception:
-            self.status = "Failed"
+            self.status = "FAILED"
             raise
         finally:
             self.run_end_time = time.time()

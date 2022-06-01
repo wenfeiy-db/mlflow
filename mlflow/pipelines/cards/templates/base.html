@@ -60,17 +60,17 @@
                 <button id="0" class="tablinks active">
                     Summary
                 </button>
-                {% for profile in pandas_profiles %}
+                {% for tab in tab_list %}
                     <button id={{loop.index}} class="tablinks">
-                        {{profile.0}}
+                        {{tab.0}}
                     </button>
                 {% endfor %}
             </div>
         </div>
         <div class="tabcontent">
             <div class="content content-active">{% block BODY %}{% endblock %}</div>
-            {% for profile in pandas_profiles %}
-                <div class="content content-hide">{{ profile.1 }}</div>
+            {% for tab in tab_list %}
+                <div class="content content-hide">{{ tab.1 }}</div>
             {% endfor %}
         </div>
         <script>

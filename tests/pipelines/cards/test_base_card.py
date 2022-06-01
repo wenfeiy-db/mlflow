@@ -40,7 +40,7 @@ def test_verify_card_information():
         "MARKDOWN_1": md_to_html("#### Hello, world!"),
         "HTML_1": "<span style='color:blue'>blue</span>",
     }
-    assert ingest_card._pandas_profiles == [
+    assert ingest_card._tab_list == [
         ("Profile 1", profile_iframe(profile1)),
         ("Profile 2", profile_iframe(profile2)),
     ]
