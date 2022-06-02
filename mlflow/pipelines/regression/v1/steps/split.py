@@ -170,9 +170,7 @@ class SplitStep(BaseStep):
 
         # split dataset
         hash_buckets = _create_hash_buckets(input_df)
-        train_df, validation_df, test_df = _get_split_df(
-            input_df, hash_buckets, self.split_ratios
-        )
+        train_df, validation_df, test_df = _get_split_df(input_df, hash_buckets, self.split_ratios)
         # Import from user function module to process dataframes
         post_split_config = self.step_config.get("post_split_method", None)
         if post_split_config is not None:

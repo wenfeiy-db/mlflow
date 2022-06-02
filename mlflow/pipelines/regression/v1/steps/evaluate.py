@@ -180,9 +180,7 @@ class EvaluateStep(BaseStep):
             self.model_validation_status = "UNKNOWN"
             criteria_summary = None
 
-        Path(output_directory, "model_validation_status").write_text(
-            self.model_validation_status
-        )
+        Path(output_directory, "model_validation_status").write_text(self.model_validation_status)
 
         self.run_end_time = time.time()
         self.execution_duration = self.run_end_time - run_start_time

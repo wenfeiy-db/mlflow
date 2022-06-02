@@ -129,7 +129,9 @@ class BaseStep(metaclass=abc.ABCMeta):
         pass
 
     def get_execution_state(self, output_directory: str) -> StepExecutionState:
-        execution_state_file_path = os.path.join(output_directory, BaseStep._EXECUTION_STATE_FILE_NAME)
+        execution_state_file_path = os.path.join(
+            output_directory, BaseStep._EXECUTION_STATE_FILE_NAME
+        )
         if os.path.exists(execution_state_file_path):
             with open(execution_state_file_path, "r") as f:
                 return StepExecutionState.from_dict(json.load(f))

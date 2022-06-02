@@ -29,7 +29,7 @@ def run_pipeline_step(
     :param pipeline_name: The name of the pipeline.
     :param pipeline_steps: A list of all the steps contained in the specified pipeline. Pipeline
                            steps must be provided in the order that they are intended to be
-                           executed. 
+                           executed.
     :param target_step: The step to run.
     :return: The last step that successfully completed during the pipeline execution. If execution
              was successful, this always corresponds to the supplied target step. If execution was
@@ -39,15 +39,15 @@ def run_pipeline_step(
     execution_dir_path = _get_or_create_execution_directory(
         pipeline_root_path, pipeline_name, pipeline_steps
     )
-    
+
     # Check the previous execution state of the target step and all of its
     # dependencies. If any of these steps previously failed, clear its execution
-    # state to ensure that the step is run again during the upcoming execution 
+    # state to ensure that the step is run again during the upcoming execution
     clean_execution_state(
         pipeline_name=pipeline_name,
         pipeline_steps=[
             step
-            for step in pipeline_steps[:target_step_index + 1]
+            for step in pipeline_steps[: target_step_index + 1]
             if step.get_execution_state(
                 output_directory=_get_step_output_directory_path(
                     execution_directory_path=execution_dir_path,
@@ -62,7 +62,7 @@ def run_pipeline_step(
         pipeline_steps=pipeline_steps,
         execution_directory_path=execution_dir_path,
     )
-    
+
     # Aggregate step-specific environment variables into a single environment dictionary
     # that is passed to the Make subprocess. In the future, steps with different environments
     # should be isolated in different subprocesses
@@ -97,13 +97,13 @@ def run_pipeline_step(
                     step_name=step.name,
                 )
             ).last_updated_timestamp
-            < target_step_execution_state.last_updated_timestamp 
+            < target_step_execution_state.last_updated_timestamp
         ],
     )
-   
+
     # Identify and return the last step that successfully completed, excluding steps
     # that are downstream of the target step
-    for step in reversed(pipeline_steps[:target_step_index + 1]):
+    for step in reversed(pipeline_steps[: target_step_index + 1]):
         if step.get_execution_state(
             output_directory=_get_step_output_directory_path(
                 execution_directory_path=execution_dir_path,
@@ -115,6 +115,7 @@ def run_pipeline_step(
         # If for whatever reason no step reached a terminal state, return the first step
         # in the pipeline
         return pipeline_steps[0]
+
 
 def clean_execution_state(pipeline_name: str, pipeline_steps: List[BaseStep]) -> None:
     """

@@ -5,7 +5,7 @@ import sys
 
 import cloudpickle
 
-from mlflow.pipelines.regression.v1.cards.transform import TransformCard 
+from mlflow.pipelines.regression.v1.cards.transform import TransformCard
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.utils.file_utils import read_yaml
