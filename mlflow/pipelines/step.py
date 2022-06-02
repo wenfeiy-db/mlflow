@@ -1,7 +1,6 @@
 import abc
 import logging
 import os
-import shutil
 import subprocess
 import yaml
 from typing import TypeVar, Dict, Any
@@ -45,7 +44,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         self._initialize_databricks_spark_connection_and_hooks_if_applicable()
         self._run(output_directory)
-        return self.inspect(output_directory)
 
     def inspect(self, output_directory: str):
         """
@@ -57,16 +55,19 @@ class BaseStep(metaclass=abc.ABCMeta):
         :return: Results from the last execution of the corresponding step.
         """
         # Open the step card here
-        from IPython.display import display, HTML
 
         if self.OUTPUT_CARD_FILE_NAME is not None:
-            relative_path = os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME)
-            output_filename = path_to_local_file_uri(os.path.abspath(relative_path))
+            file_path = os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME)
+            abs_path = os.path.abspath(file_path) if not os.path.isabs(file_path) else file_path
             if is_running_in_ipython_environment():
-                display(HTML(filename=output_filename))
+                from IPython.display import display, HTML
+
+                display(HTML(filename=abs_path))
             else:
+                import shutil
+
                 if shutil.which("open") is not None:
-                    subprocess.run(["open", output_filename], check=True)
+                    subprocess.run(["open", path_to_local_file_uri(abs_path)], check=True)
 
         return self._inspect(output_directory)
 

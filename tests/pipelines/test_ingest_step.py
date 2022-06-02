@@ -478,7 +478,7 @@ def test_ingest_produces_expected_step_card(pandas_df, tmp_path):
 
 
 @pytest.mark.usefixtures("enter_test_pipeline_directory")
-def test_ingest_run_and_inspect_return_expected_step_card(pandas_df, tmp_path):
+def test_ingest_inspect_return_expected_step_card(pandas_df, tmp_path):
     dataset_path = tmp_path / "df.parquet"
     pandas_df.to_parquet(dataset_path)
 
@@ -491,18 +491,14 @@ def test_ingest_run_and_inspect_return_expected_step_card(pandas_df, tmp_path):
         },
         pipeline_root=os.getcwd(),
     )
-
-    run_output = ingest_step.run(output_directory=tmp_path)
-    inspect_output = ingest_step.inspect(output_directory=tmp_path)
-
+    ingest_step.run(output_directory=tmp_path)
     step_card_output_path = os.path.join(tmp_path, "card.html")
     with open(step_card_output_path, "r") as f:
         step_card_html_content = f.read()
 
-    assert isinstance(run_output, IngestCard)
+    inspect_output = ingest_step.inspect(output_directory=tmp_path)
     assert isinstance(inspect_output, IngestCard)
-    assert run_output.to_html() == inspect_output.to_html()
-    assert run_output.to_html() == step_card_html_content
+    assert inspect_output.to_html() == step_card_html_content
 
 
 @pytest.mark.usefixtures("enter_test_pipeline_directory")
