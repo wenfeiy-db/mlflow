@@ -122,7 +122,7 @@ class SplitStep(BaseStep):
         test_profile = ProfileReport(test_df, title="Profile of Test Dataset", minimal=True)
 
         # Build card
-        card = SplitCard()
+        card = SplitCard(self.pipeline_name, self.name)
 
         run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
         card.add_markdown(

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block HEADER_TITLE %}{{ HEADER_TITLE }}{% endblock %}
+{% block PAGE_TITLE %}{{ PAGE_TITLE }}{% endblock %}
+
+{% block CSS %}
+h3.section-title {
+    color: #57a8de;
+}
+.dataset-container {
+    width: max;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+{% endblock %}
+{% block BODY %}
+
+<h3 class="section-title">Model performance summary metrics</h3>
+{{ METRICS }}
+{{ METRIC_VALIDATION_RESULTS }}
+<hr>
+
+{% endblock %}

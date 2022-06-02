@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <title>{% block HEADER_TITLE %}{% endblock %}</title>
         <style>
             h1.title {
             color: #4287f5;
@@ -51,26 +52,24 @@
     </head>
    <body>
         <header>
-            <h1 class="title">MLflow Pipeline</h1>
-            <h2 class="step-title">{% block STEP_TITLE %}{% endblock %}</h2>
-            <hr>
+            <h2 class="title">{% block PAGE_TITLE %}{% endblock %}</h2>
         </header>
         <div class="tab">
             <div class="button-container">
                 <button id="0" class="tablinks active">
                     Summary
                 </button>
-                {% for profile in pandas_profiles %}
+                {% for tab in tab_list %}
                     <button id={{loop.index}} class="tablinks">
-                        {{profile.0}}
+                        {{tab.0}}
                     </button>
                 {% endfor %}
             </div>
         </div>
         <div class="tabcontent">
             <div class="content content-active">{% block BODY %}{% endblock %}</div>
-            {% for profile in pandas_profiles %}
-                <div class="content content-hide">{{ profile.1 }}</div>
+            {% for tab in tab_list %}
+                <div class="content content-hide">{{ tab.1 }}</div>
             {% endfor %}
         </div>
         <script>

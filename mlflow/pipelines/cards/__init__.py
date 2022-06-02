@@ -2,15 +2,21 @@ from __future__ import annotations
 
 import html
 import os
+import shutil
 from io import StringIO
 
 
 CARD_PICKLE_NAME = "card.pkl"
 CARD_HTML_NAME = "card.html"
 
+# TODO: Make card save / load including card_resources directory
+_CARD_RESOURCE_DIR_NAME = f"{CARD_HTML_NAME}.resources"
+
 
 class BaseCard:
-    def __init__(self, template_root: str, template_name: str) -> None:
+    def __init__(
+        self, template_root: str, template_name: str, pipeline_name: str, step_name: str
+    ) -> None:
         """
         BaseCard Constructor
 
@@ -22,6 +28,8 @@ class BaseCard:
 
         self.template_root = template_root
         self.template_name = template_name
+        self.pipeline_name = pipeline_name
+        self.step_name = step_name
 
         j2_env = jinja2.Environment()
         with open(os.path.join(template_root, template_name)) as f:
@@ -30,7 +38,17 @@ class BaseCard:
 
         self._context = {}
         self._string_builder = StringIO()
-        self._pandas_profiles = []
+        self._tab_list = []
+        self._resource_files = {}
+
+        self.add_html(
+            name="HEADER_TITLE",
+            html=f"{self.step_name.capitalize()}@{self.pipeline_name}",
+        )
+        self.add_html(
+            name="PAGE_TITLE",
+            html=f"MLflow Pipeline {self.step_name.capitalize()}@{self.pipeline_name}",
+        )
 
     def add_markdown(self, name: str, markdown: str) -> BaseCard:
         """
@@ -63,7 +81,32 @@ class BaseCard:
             + html.escape(profile.to_html())
             + "' width='100%' height='500' frameborder='0'></iframe>"
         )
-        self._pandas_profiles.append((name, profile_iframe))
+        self._tab_list.append((name, profile_iframe))
+        return self
+
+    def _add_tab(
+        self,
+        name,
+        html_templates,
+        *,
+        html_variables=None,
+        markdown_variables=None,
+    ):
+        """
+        Add a new tab with arbitrary content.
+        This is a temporary API and it might change in future.
+        :param name: tab name
+        :param html_templates: HTML template for the content.
+        :param html_variables: a dict for html variables in the template.
+        :param markdown_variables: a dict for markdown_variables in the template.
+        """
+        from markdown import markdown as md_to_html
+
+        html_variables = html_variables or {}
+        markdown_variables = markdown_variables or {}
+        converted_html_variables = {k: md_to_html(v) for k, v in markdown_variables.items()}
+        html_content = html_templates.format(**html_variables, **converted_html_variables)
+        self._tab_list.append((name, html_content))
         return self
 
     def add_html(self, name: str, html: str) -> BaseCard:
@@ -104,7 +147,7 @@ class BaseCard:
             loader=jinja2.FileSystemLoader([self.template_root, baseTemplatePath])
         )
         return j2_env.get_template(self.template_name).render(
-            {**self._context, "pandas_profiles": self._pandas_profiles}
+            {**self._context, "tab_list": self._tab_list}
         )
 
     def to_text(self) -> str:
@@ -121,11 +164,34 @@ class BaseCard:
 
         display(HTML(self.to_html()))
 
+    def _add_resource_file(self, path):
+        """
+        Add a resource file. Return a relative path pointing to the file.
+        In html content, use the returned relative path instead of original path.
+        When calling `save_as_html`, resource files will be saved to the
+        `_CARD_RESOURCE_DIR_NAME` subdirectory in the same directory.
+        This is a private method and it might change in future.
+
+        TODO: Make pickling / unpickling support resource files.
+        """
+        res_name = f"r{len(self._resource_files) + 1}_{os.path.basename(path)}"
+        rel_path = os.path.join(_CARD_RESOURCE_DIR_NAME, res_name)
+        self._resource_files[path] = rel_path
+        return rel_path
+
     def save_as_html(self, path) -> None:
         if os.path.isdir(path):
             path = os.path.join(path, CARD_HTML_NAME)
         with open(path, "w") as f:
             f.write(self.to_html())
+
+        if len(self._resource_files) > 0:
+            dir_path = os.path.dirname(path)
+            resource_dir = os.path.join(dir_path, _CARD_RESOURCE_DIR_NAME)
+            os.makedirs(resource_dir, exist_ok=True)
+            for original_path, rel_path in self._resource_files.items():
+                dest_path = os.path.join(resource_dir, os.path.basename(rel_path))
+                shutil.copy(original_path, dest_path)
 
     def save(self, path: str) -> None:
         if os.path.isdir(path):

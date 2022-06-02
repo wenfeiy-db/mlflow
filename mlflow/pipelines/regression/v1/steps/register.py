@@ -85,7 +85,7 @@ class RegisterStep(BaseStep):
         from mlflow.pipelines.regression.v1.cards.register import RegisterCard
 
         # Build card
-        card = RegisterCard()
+        card = RegisterCard(self.pipeline_name, self.name)
 
         run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
         final_markdown = []

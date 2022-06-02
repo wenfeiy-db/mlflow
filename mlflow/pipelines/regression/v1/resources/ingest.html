@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
-{% block STEP_TITLE %}Ingest{% endblock %}
+{% block HEADER_TITLE %}{{ HEADER_TITLE }}{% endblock %}
+{% block PAGE_TITLE %}{{ PAGE_TITLE }}{% endblock %}
 
 {% block CSS %}
 h3.section-title {
@@ -16,5 +17,4 @@ h3.section-title {
 <h3 class="section-title">Dataset info</h3>
 {{ DATASET_SOURCE }}
 {{ RESOLVED_DATASET_LOCATION }}
-
 {% endblock %}
