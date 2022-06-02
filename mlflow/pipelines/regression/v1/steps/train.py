@@ -63,6 +63,7 @@ class TrainStep(BaseStep):
         with mlflow.start_run() as run:
             model.fit(X, y)
 
+            mlflow.log_artifact(transformer_path, artifact_path="transform")
             with open(transformer_path, "rb") as f:
                 transformer = cloudpickle.load(f)
 
@@ -74,7 +75,6 @@ class TrainStep(BaseStep):
 
             pipeline = make_pipeline(transformer, model)
             mlflow.sklearn.log_model(pipeline, "model")
-            mlflow.log_artifact(transformer_path)
             with open(os.path.join(output_directory, "run_id"), "w") as f:
                 f.write(run.info.run_id)
 
