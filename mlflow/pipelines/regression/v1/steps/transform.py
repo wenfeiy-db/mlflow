@@ -91,7 +91,9 @@ class TransformStep(BaseStep):
                 ).to_dict()
             )
         except KeyError:
-            step_config = {}
+            raise MlflowException(
+                "Config for transform step is not found.", error_code=INVALID_PARAMETER_VALUE
+            )
         step_config["target_col"] = pipeline_config.get("target_col")
         return cls(step_config, pipeline_root)
 
