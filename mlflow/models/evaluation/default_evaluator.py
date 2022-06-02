@@ -547,6 +547,7 @@ class DefaultEvaluator(ModelEvaluator):
         sampled_X = shap.sample(X_df, sample_rows, random_state=0)
 
         mode_or_mean_dict = _compute_df_mode_or_mean(X_df)
+        mode_or_mean_dict = {truncated_feature_name_map[k]: v for k, v in mode_or_mean_dict.items()}
         sampled_X = sampled_X.fillna(mode_or_mean_dict)
 
         # shap explainer might call provided `predict_fn` with a `numpy.ndarray` type
@@ -994,9 +995,10 @@ class DefaultEvaluator(ModelEvaluator):
                     f"verify that you set the `model_type` and `dataset` arguments correctly."
                 )
 
-            if model_type == "classifier":
-                return self._evaluate_classifier()
-            elif model_type == "regressor":
-                return self._evaluate_regressor()
-            else:
-                raise ValueError(f"Unsupported model type {model_type}")
+            with mlflow.utils.autologging_utils.disable_autologging():
+                if model_type == "classifier":
+                    return self._evaluate_classifier()
+                elif model_type == "regressor":
+                    return self._evaluate_regressor()
+                else:
+                    raise ValueError(f"Unsupported model type {model_type}")
