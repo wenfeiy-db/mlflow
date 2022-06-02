@@ -217,7 +217,7 @@ def _run_make(execution_directory_path, rule_name: str, extra_env: Dict[str, str
     :param rule_name: The name of the Make rule to run.
     """
     _exec_cmd(
-        ["make", "-f", "Makefile", rule_name],
+        ["make", "-s", "-f", "Makefile", rule_name],
         capture_output=False,
         stream_output=True,
         synchronous=True,

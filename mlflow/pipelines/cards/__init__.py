@@ -209,3 +209,13 @@ class BaseCard:
             import pickle
 
             return pickle.load(f)
+
+
+class FailureCard(BaseCard):
+    def __init__(self, pipeline_name: str, step_name: str, exception: Exception):
+        super().__init__(
+            template_root=os.path.join(os.path.dirname(__file__), "templates"),
+            template_name="failure.html",
+            pipeline_name=pipeline_name,
+            step_name=step_name,
+        )

@@ -7,9 +7,8 @@ import yaml
 from enum import Enum
 from typing import TypeVar, Dict, Any
 
-from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME, CARD_HTML_NAME
+from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME, FailureCard, CARD_HTML_NAME
 from mlflow.pipelines.utils import get_pipeline_name
-from mlflow.utils.file_utils import path_to_local_file_uri
 from mlflow.utils.databricks_utils import (
     is_in_databricks_runtime,
     is_running_in_ipython_environment,
@@ -57,14 +56,14 @@ class BaseStep(metaclass=abc.ABCMeta):
             self._update_status(status=StepStatus.RUNNING, output_directory=output_directory)
             step_card = self._run(output_directory=output_directory)
             self._update_status(status=StepStatus.SUCCEEDED, output_directory=output_directory)
-        except Exception:
+        except Exception as e:
             self._update_status(status=StepStatus.FAILED, output_directory=output_directory)
+            step_card = FailureCard(self.pipeline_name, self.name, e)
             raise
         finally:
             step_card.save(path=output_directory)
             step_card.save_as_html(path=output_directory)
-
-        return self.inspect(output_directory=output_directory)
+            self.inspect(output_directory=output_directory)
 
     def inspect(self, output_directory: str):
         """
