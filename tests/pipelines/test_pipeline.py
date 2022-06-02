@@ -2,9 +2,11 @@ import os
 import pathlib
 import pytest
 import yaml
+from typing import Generator
 
 import mlflow
 from mlflow.pipelines.pipeline import Pipeline
+from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.exceptions import MlflowException
 from mlflow.tracking.client import MlflowClient
 from mlflow.tracking.context.registry import resolve_tags
@@ -17,6 +19,17 @@ from tests.pipelines.helper_functions import (
 )  # pylint: enable=unused-import
 
 _STEP_NAMES = ["ingest", "split", "train", "transform", "evaluate"]
+
+
+def list_all_artifacts(
+    tracking_uri: str, run_id: str, path: str = None
+) -> Generator[str, None, None]:
+    artifacts = mlflow.tracking.MlflowClient(tracking_uri).list_artifacts(run_id, path)
+    for artifact in artifacts:
+        if artifact.is_dir:
+            yield from list_all_artifacts(tracking_uri, run_id, artifact.path)
+        else:
+            yield artifact.path
 
 
 @pytest.mark.usefixtures("enter_pipeline_example_directory")
@@ -99,3 +112,30 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment_with_expected_r
     assert "model" in [artifact.path for artifact in artifacts]
     run_tags = MlflowClient(tracking_uri).get_run(run_id=logged_run.info.run_id).data.tags
     assert resolve_tags().items() <= run_tags.items()
+
+
+@pytest.mark.usefixtures("enter_pipeline_example_directory")
+def test_test_step_logs_step_cards_as_artifacts():
+    pipeline = Pipeline()
+    pipeline.run("ingest")
+    pipeline.run("split")
+    pipeline.run("transform")
+    pipeline.run("train")
+
+    tracking_uri = pipeline._get_step("train").tracking_config.tracking_uri
+    local_run_id_path = get_step_output_path(
+        pipeline_name=pipeline.name,
+        step_name="train",
+        relative_path="run_id",
+    )
+    run_id = pathlib.Path(local_run_id_path).read_text()
+    artifacts = set(list_all_artifacts(tracking_uri, run_id))
+    assert artifacts.issuperset(
+        {
+            "ingest/card.html",
+            "split/card.html",
+            # TODO: Uncomment once we update transform and train steps to log a step card.
+            # "transform/card.html",
+            # "train/card.html",
+        }
+    )
