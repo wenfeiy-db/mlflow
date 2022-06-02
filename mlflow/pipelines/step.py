@@ -185,9 +185,9 @@ class BaseStep(metaclass=abc.ABCMeta):
     def _log_step_card(self, run_id: str, step_name: str) -> None:
         """
         Logs a step card as an artifact (destination: <step_name>/card.html) in a specified run.
-        If the step card does not exist, skips logging it.
+        If the step card does not exist, logging is skipped.
 
-        :param run_id: Run ID to which the step card should be logged.
+        :param run_id: Run ID to which the step card is logged.
         :param step_name: Step name.
         """
         from mlflow.pipelines.utils.execution import get_step_output_path
