@@ -70,9 +70,9 @@ class TransformStep(BaseStep):
         with open(os.path.join(output_directory, "transformer.pkl"), "wb") as f:
             cloudpickle.dump(transformer, f)
 
-        train_transformed.to_parquet(os.path.join(output_directory, "train_transformed.parquet"))
+        train_transformed.to_parquet(os.path.join(output_directory, "transformed_training_data.parquet"))
         validation_transformed.to_parquet(
-            os.path.join(output_directory, "validation_transformed.parquet")
+            os.path.join(output_directory, "transformed_validation_data.parquet")
         )
 
     def _inspect(self, output_directory):
