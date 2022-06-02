@@ -16,7 +16,6 @@ from mlflow.pipelines.utils.tracking import (
     get_run_tags_env_vars,
 )
 from mlflow.projects.utils import get_databricks_env_vars
-from mlflow.utils.file_utils import read_yaml
 
 _logger = logging.getLogger(__name__)
 

@@ -959,7 +959,9 @@ def test_custom_metric_logs_artifacts_from_objects(
     assert "test_npy_artifact" in result.artifacts
     assert "test_npy_artifact_on_data_breast_cancer_dataset.npy" in artifacts
     assert isinstance(result.artifacts["test_npy_artifact"], NumpyEvaluationArtifact)
-    assert np.array_equal(result.artifacts["test_npy_artifact"].content, np.array([1, 2, 3, 4, 5]))
+    assert np.array_equal(
+        result.artifacts["test_npg ly_artifact"].content, np.array([1, 2, 3, 4, 5])
+    )
 
     assert "test_csv_artifact" in result.artifacts
     assert "test_csv_artifact_on_data_breast_cancer_dataset.csv" in artifacts

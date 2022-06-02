@@ -9,7 +9,6 @@ from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.pipelines.utils.tracking import get_pipeline_tracking_config
-from mlflow.utils.file_utils import read_yaml
 
 _logger = logging.getLogger(__name__)
 
@@ -60,17 +59,13 @@ class TransformStep(BaseStep):
 
         train_transformed = transform_dataset(train_df)
         validation_transformed = transform_dataset(validation_df)
-        """
-        desired features are implied in the way the transformer is written. We give the train step a transformed
-        dataset, so it also only sees desired columns. Thus desired columns don't need to be explicitly specified
-        in pipeline.yaml.
-        This means we would need to output the schema from dataset BEFORE transformation
-        """
 
         with open(os.path.join(output_directory, "transformer.pkl"), "wb") as f:
             cloudpickle.dump(transformer, f)
 
-        train_transformed.to_parquet(os.path.join(output_directory, "transformed_training_data.parquet"))
+        train_transformed.to_parquet(
+            os.path.join(output_directory, "transformed_training_data.parquet")
+        )
         validation_transformed.to_parquet(
             os.path.join(output_directory, "transformed_validation_data.parquet")
         )
