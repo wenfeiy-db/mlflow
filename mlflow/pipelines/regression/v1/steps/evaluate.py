@@ -289,7 +289,7 @@ class EvaluateStep(BaseStep):
                 "EXECUTION_DURATION": execution_duration_text,
                 "RUN_END_TIMESTAMP": f"**Last run completed at:** "
                 f"`{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`",
-                "RUN_STATUS": f"**RUN status:** `{self.status}`",
+                "RUN_STATUS": f"**RUN status:** `{self.get_status(output_directory)}`",
                 "VALIDATION_STATUS": f"**Validation status:** `{self.model_validation_status}`",
             },
         )

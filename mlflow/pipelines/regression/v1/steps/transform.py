@@ -48,7 +48,7 @@ class TransformStep(BaseStep):
         transformed = pd.DataFrame(data={"features": list(features), "target": y})
         transformed.to_parquet(os.path.join(output_directory, "train_transformed.parquet"))
 
-        return TransformCard()
+        return TransformCard(self.pipeline_name, self.name)
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):

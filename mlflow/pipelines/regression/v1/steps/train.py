@@ -6,7 +6,7 @@ import sys
 import cloudpickle
 
 import mlflow
-from mlflow.pipelines.regression.v1.cards.train import TrainCard 
+from mlflow.pipelines.regression.v1.cards.train import TrainCard
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.pipelines.utils.tracking import (
@@ -85,7 +85,7 @@ class TrainStep(BaseStep):
             # Do step-specific code to execute the train step
             _logger.info("train run code %s", output_directory)
 
-        return TrainCard()
+        return TrainCard(self.pipeline_name, self.name)
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
