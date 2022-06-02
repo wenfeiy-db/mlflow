@@ -212,7 +212,7 @@ class BaseCard:
 
 
 class FailureCard(BaseCard):
-    def __init__(self, pipeline_name: str, step_name: str, exception: Exception):
+    def __init__(self, pipeline_name: str, step_name: str, failure_traceback: str):
         super().__init__(
             template_root=os.path.join(os.path.dirname(__file__), "templates"),
             template_name="failure.html",
@@ -220,4 +220,4 @@ class FailureCard(BaseCard):
             step_name=step_name,
         )
         self.add_markdown("STEP_STATUS", "**Step status**: Failed")
-        self.add_markdown("STACKTRACE", f"```\n{str(exception)}\n```")
+        self.add_markdown("STACKTRACE", f"```\n{failure_traceback}\n```")

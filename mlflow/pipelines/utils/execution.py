@@ -40,6 +40,12 @@ def run_pipeline_step(
         pipeline_root_path, pipeline_name, pipeline_steps
     )
 
+    def get_output_directory(step):
+        return _get_step_output_directory_path(
+            execution_directory_path=execution_dir_path,
+            step_name=step.name,
+        )
+
     # Check the previous execution state of the target step and all of its
     # dependencies. If any of these steps previously failed, clear its execution
     # state to ensure that the step is run again during the upcoming execution
@@ -48,13 +54,7 @@ def run_pipeline_step(
         pipeline_steps=[
             step
             for step in pipeline_steps[: target_step_index + 1]
-            if step.get_execution_state(
-                output_directory=_get_step_output_directory_path(
-                    execution_directory_path=execution_dir_path,
-                    step_name=step.name,
-                )
-            ).status
-            != StepStatus.SUCCEEDED
+            if step.get_execution_state(get_output_directory(step)).status != StepStatus.SUCCEEDED
         ],
     )
 
@@ -75,46 +75,30 @@ def run_pipeline_step(
         extra_env=make_env,
     )
 
-    # Check the previous execution state of all pipeline steps after the target step.
-    # If any of these steps was last executed before the target step, this indicates that
-    # the target step was just run again (as opposed to being fetched from the cache) and that the
-    # downstream step is now out of date. Accordingly, we clear the execution state of the
-    # downstream step
-    target_step_execution_state = target_step.get_execution_state(
-        output_directory=_get_step_output_directory_path(
-            execution_directory_path=execution_dir_path,
-            step_name=target_step.name,
-        )
-    )
+    # Identify the last step that was executed, excluding steps that are downstream of the
+    # specified target step
+    last_executed_step = pipeline_steps[0]
+    last_executed_step_state = last_executed_step.get_execution_state(get_output_directory(step))
+    for step in pipeline_steps[:target_step_index + 1]:
+        step_state = step.get_execution_state(get_output_directory(step))
+        if step_state.last_updated_timestamp >= last_executed_step_state.last_updated_timestamp:
+            last_executed_step = step
+            last_executed_step_state = step_state
+
+    # Check the previous execution state of all pipeline steps downstream of the last executed step.
+    # If any of these steps was last executed before the target step or another step upstream of the
+    # target step, this indicates that downstream steps are out of date and need to be cleared
     clean_execution_state(
         pipeline_name=pipeline_name,
         pipeline_steps=[
             step
-            for step in pipeline_steps[target_step_index:]
-            if step.get_execution_state(
-                output_directory=_get_step_output_directory_path(
-                    execution_directory_path=execution_dir_path,
-                    step_name=step.name,
-                )
-            ).last_updated_timestamp
-            < target_step_execution_state.last_updated_timestamp
+            for step in pipeline_steps[pipeline_steps.index(last_executed_step):]
+            if step.get_execution_state(get_output_directory(step)).last_updated_timestamp
+            < last_executed_step_state.last_updated_timestamp
         ],
     )
 
-    # Identify and return the last step that successfully completed, excluding steps
-    # that are downstream of the target step
-    for step in reversed(pipeline_steps[: target_step_index + 1]):
-        if step.get_execution_state(
-            output_directory=_get_step_output_directory_path(
-                execution_directory_path=execution_dir_path,
-                step_name=step.name,
-            )
-        ).status in [StepStatus.SUCCEEDED, StepStatus.FAILED]:
-            return step
-    else:
-        # If for whatever reason no step reached a terminal state, return the first step
-        # in the pipeline
-        return pipeline_steps[0]
+    return last_executed_step
 
 
 def clean_execution_state(pipeline_name: str, pipeline_steps: List[BaseStep]) -> None:

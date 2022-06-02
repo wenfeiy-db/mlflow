@@ -5,6 +5,7 @@ import os
 import shutil
 import subprocess
 import time
+import traceback
 import yaml
 from enum import Enum
 from typing import TypeVar, Dict, Any, Optional
@@ -83,9 +84,9 @@ class BaseStep(metaclass=abc.ABCMeta):
             self._update_status(status=StepStatus.RUNNING, output_directory=output_directory)
             step_card = self._run(output_directory=output_directory)
             self._update_status(status=StepStatus.SUCCEEDED, output_directory=output_directory)
-        except Exception as e:
+        except Exception:
             self._update_status(status=StepStatus.FAILED, output_directory=output_directory)
-            step_card = FailureCard(self.pipeline_name, self.name, e)
+            step_card = FailureCard(pipeline_name=self.pipeline_name, step_name=self.name, failure_traceback=traceback.format_exc())
             raise
         finally:
             step_card.save(path=output_directory)
@@ -127,16 +128,6 @@ class BaseStep(metaclass=abc.ABCMeta):
 
     def clean(self) -> None:
         pass
-
-    def get_execution_state(self, output_directory: str) -> StepExecutionState:
-        execution_state_file_path = os.path.join(
-            output_directory, BaseStep._EXECUTION_STATE_FILE_NAME
-        )
-        if os.path.exists(execution_state_file_path):
-            with open(execution_state_file_path, "r") as f:
-                return StepExecutionState.from_dict(json.load(f))
-        else:
-            return StepExecutionState(StepStatus.UNKNOWN, 0)
 
     @classmethod
     @abc.abstractmethod
@@ -185,6 +176,16 @@ class BaseStep(metaclass=abc.ABCMeta):
         step is executed.
         """
         return {}
+
+    def get_execution_state(self, output_directory: str) -> StepExecutionState:
+        execution_state_file_path = os.path.join(
+            output_directory, BaseStep._EXECUTION_STATE_FILE_NAME
+        )
+        if os.path.exists(execution_state_file_path):
+            with open(execution_state_file_path, "r") as f:
+                return StepExecutionState.from_dict(json.load(f))
+        else:
+            return StepExecutionState(StepStatus.UNKNOWN, 0)
 
     def _update_status(self, status: StepStatus, output_directory: str) -> None:
         execution_state = StepExecutionState(status=status, last_updated_timestamp=time.time())
