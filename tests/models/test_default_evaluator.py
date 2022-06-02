@@ -29,8 +29,8 @@ from mlflow.models.evaluation.default_evaluator import (
     _CustomMetric,
 )
 import mlflow
-from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.datasets import load_iris
 
 from tempfile import TemporaryDirectory
 from os.path import join as path_join
