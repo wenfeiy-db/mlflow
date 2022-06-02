@@ -29,7 +29,8 @@ from mlflow.models.evaluation.default_evaluator import (
     _CustomMetric,
 )
 import mlflow
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.datasets import load_iris
 
 from tempfile import TemporaryDirectory
 from os.path import join as path_join
@@ -959,9 +960,7 @@ def test_custom_metric_logs_artifacts_from_objects(
     assert "test_npy_artifact" in result.artifacts
     assert "test_npy_artifact_on_data_breast_cancer_dataset.npy" in artifacts
     assert isinstance(result.artifacts["test_npy_artifact"], NumpyEvaluationArtifact)
-    assert np.array_equal(
-        result.artifacts["test_npg ly_artifact"].content, np.array([1, 2, 3, 4, 5])
-    )
+    assert np.array_equal(result.artifacts["test_npy_artifact"].content, np.array([1, 2, 3, 4, 5]))
 
     assert "test_csv_artifact" in result.artifacts
     assert "test_csv_artifact_on_data_breast_cancer_dataset.csv" in artifacts
@@ -977,3 +976,34 @@ def test_custom_metric_logs_artifacts_from_objects(
     assert "test_pickled_artifact_on_data_breast_cancer_dataset.pickle" in artifacts
     assert isinstance(result.artifacts["test_pickled_artifact"], PickleEvaluationArtifact)
     assert result.artifacts["test_pickled_artifact"].content == _ExampleToBePickledObject()
+
+
+@pytest.mark.parametrize(
+    "model",
+    [LogisticRegression(), LinearRegression()],
+)
+def test_autologging_is_disabled_during_evaluate(model):
+    mlflow.sklearn.autolog()
+    try:
+        X, y = load_iris(as_frame=True, return_X_y=True)
+        with mlflow.start_run() as run:
+            model.fit(X, y)
+            model_info = mlflow.sklearn.log_model(model, "model")
+            result = evaluate(
+                model_info.model_uri,
+                X.assign(target=y),
+                model_type="classifier" if isinstance(model, LogisticRegression) else "regressor",
+                targets="target",
+                dataset_name="iris",
+                evaluators="default",
+            )
+
+        run_data = get_run_data(run.info.run_id)
+        duplicate_metrics = []
+        for evaluate_metric_key in result.metrics.keys():
+            matched_keys = [k for k in run_data.metrics.keys() if k.startswith(evaluate_metric_key)]
+            if len(matched_keys) > 1:
+                duplicate_metrics += matched_keys
+        assert duplicate_metrics == []
+    finally:
+        mlflow.sklearn.autolog(disable=True)
