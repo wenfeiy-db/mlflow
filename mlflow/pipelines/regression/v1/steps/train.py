@@ -85,7 +85,12 @@ class TrainStep(BaseStep):
             # Do step-specific code to execute the train step
             _logger.info("train run code %s", output_directory)
 
-        return TrainCard(self.pipeline_name, self.name)
+        card = TrainCard(self.pipeline_name, self.name)
+        card.save_as_html(output_directory)
+        for step_name in ("ingest", "split", "transform", "train"):
+            self._log_step_card(run.info.run_id, step_name)
+
+        return card
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):

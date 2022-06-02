@@ -112,13 +112,15 @@ class _BasePipeline:
         # TODO Record performance here.
         # Always resolve the steps to load latest step modules before execution.
         self._steps = self._resolve_pipeline_steps()
+        # Run the last step of the pipeline if no step is specified
+        target_step = self._get_step(step) if step else self._steps[-1]
         run_pipeline_step(
             self._pipeline_root_path,
             self.name,
             self._steps,
-            # Runs the last step of the pipeline if no step is specified.
-            self._get_step(step) if step else self._steps[-1],
+            target_step,
         )
+        self.inspect(target_step.name)
 
     def inspect(self, step: str = None) -> None:
         """

@@ -1,7 +1,6 @@
 import abc
 import logging
 import os
-import shutil
 import subprocess
 import yaml
 from enum import Enum
@@ -9,6 +8,7 @@ from typing import TypeVar, Dict, Any
 
 from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME, FailureCard, CARD_HTML_NAME
 from mlflow.pipelines.utils import get_pipeline_name
+from mlflow.tracking import MlflowClient
 from mlflow.utils.databricks_utils import (
     is_in_databricks_runtime,
     is_running_in_ipython_environment,
@@ -63,7 +63,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         finally:
             step_card.save(path=output_directory)
             step_card.save_as_html(path=output_directory)
-            self.inspect(output_directory=output_directory)
 
     def inspect(self, output_directory: str):
         """
@@ -198,3 +197,21 @@ class BaseStep(metaclass=abc.ABCMeta):
                         " creation hooks. Exception: %s",
                         e,
                     )
+
+    def _log_step_card(self, run_id: str, step_name: str) -> None:
+        """
+        Logs a step card as an artifact (destination: <step_name>/card.html) in a specified run.
+        If the step card does not exist, logging is skipped.
+
+        :param run_id: Run ID to which the step card is logged.
+        :param step_name: Step name.
+        """
+        from mlflow.pipelines.utils.execution import get_step_output_path
+
+        local_card_path = get_step_output_path(
+            pipeline_name=self.pipeline_name,
+            step_name=step_name,
+            relative_path=CARD_HTML_NAME,
+        )
+        if os.path.exists(local_card_path):
+            MlflowClient().log_artifact(run_id, local_card_path, artifact_path=step_name)
