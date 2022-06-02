@@ -40,10 +40,12 @@ def run_pipeline_step(
         pipeline_root_path, pipeline_name, pipeline_steps
     )
 
-    def get_output_directory(step):
-        return _get_step_output_directory_path(
-            execution_directory_path=execution_dir_path,
-            step_name=step.name,
+    def get_execution_state(step):
+        return step.get_execution_state(
+            output_directory=_get_step_output_directory_path(
+                execution_directory_path=execution_dir_path,
+                step_name=step.name,
+            )
         )
 
     # Check the previous execution state of the target step and all of its
@@ -54,7 +56,7 @@ def run_pipeline_step(
         pipeline_steps=[
             step
             for step in pipeline_steps[: target_step_index + 1]
-            if step.get_execution_state(get_output_directory(step)).status != StepStatus.SUCCEEDED
+            if get_execution_state(step).status != StepStatus.SUCCEEDED
         ],
     )
 
@@ -69,6 +71,7 @@ def run_pipeline_step(
     make_env = {}
     for step in pipeline_steps:
         make_env.update(step.environment)
+    # Use Make to run the target step and all of its dependencies
     _run_make(
         execution_directory_path=execution_dir_path,
         rule_name=target_step.name,
@@ -78,9 +81,9 @@ def run_pipeline_step(
     # Identify the last step that was executed, excluding steps that are downstream of the
     # specified target step
     last_executed_step = pipeline_steps[0]
-    last_executed_step_state = last_executed_step.get_execution_state(get_output_directory(step))
-    for step in pipeline_steps[: target_step_index + 1]:
-        step_state = step.get_execution_state(get_output_directory(step))
+    last_executed_step_state = get_execution_state(last_executed_step)
+    for step in pipeline_steps[1 : target_step_index + 1]:
+        step_state = get_execution_state(step)
         if step_state.last_updated_timestamp >= last_executed_step_state.last_updated_timestamp:
             last_executed_step = step
             last_executed_step_state = step_state
@@ -93,7 +96,7 @@ def run_pipeline_step(
         pipeline_steps=[
             step
             for step in pipeline_steps[pipeline_steps.index(last_executed_step) :]
-            if step.get_execution_state(get_output_directory(step)).last_updated_timestamp
+            if get_execution_state(step).last_updated_timestamp
             < last_executed_step_state.last_updated_timestamp
         ],
     )
