@@ -114,8 +114,8 @@ class _BasePipeline:
             # Runs the last step of the pipeline if no step is specified.
             self._get_step(step) if step else self._steps[-1],
         )
-        if step is not None:
-            self.inspect(step)
+        # Shows the step card via inspect. If no step is specified, the last step card is shown.
+        self.inspect(step if step else self._steps[-1].name)
 
     def inspect(self, step: str = None) -> None:
         """
