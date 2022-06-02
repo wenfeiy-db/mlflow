@@ -116,19 +116,19 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment_with_expected_r
 
 @pytest.mark.usefixtures("enter_pipeline_example_directory")
 def test_test_step_logs_step_cards_as_artifacts():
-    p = Pipeline()
-    p.run("ingest")
-    p.run("split")
-    p.run("transform")
-    p.run("train")
+    pipeline = Pipeline()
+    pipeline.run("ingest")
+    pipeline.run("split")
+    pipeline.run("transform")
+    pipeline.run("train")
 
+    tracking_uri = pipeline._get_step("train").tracking_config.tracking_uri
     local_run_id_path = get_step_output_path(
-        pipeline_name=p.name,
+        pipeline_name=pipeline.name,
         step_name="train",
         relative_path="run_id",
     )
     run_id = pathlib.Path(local_run_id_path).read_text()
-    tracking_uri = p._get_step("train").step_config.get("mlflow_tracking_uri")
     artifacts = set(list_all_artifacts(tracking_uri, run_id))
     assert artifacts.issuperset(
         {
