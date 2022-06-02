@@ -74,6 +74,7 @@ class TrainStep(BaseStep):
 
             pipeline = make_pipeline(transformer, model)
             mlflow.sklearn.log_model(pipeline, "model")
+
             with open(os.path.join(output_directory, "run_id"), "w") as f:
                 f.write(run.info.run_id)
 
