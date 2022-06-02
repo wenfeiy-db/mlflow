@@ -5,8 +5,10 @@ import sys
 
 import cloudpickle
 
+from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
+from mlflow.pipelines.utils.tracking import get_pipeline_tracking_config
 from mlflow.utils.file_utils import read_yaml
 
 _logger = logging.getLogger(__name__)
@@ -15,9 +17,9 @@ _logger = logging.getLogger(__name__)
 class TransformStep(BaseStep):
     def __init__(self, step_config, pipeline_root):
         super().__init__(step_config, pipeline_root)
-        self.target_col = self.pipeline_config.get("target_col")
+        self.target_col = self.step_config.get("target_col")
         (self.transformer_module_name, self.transformer_method_name,) = self.step_config[
-            "transformer_method"
+            "transform_method"
         ].rsplit(".", 1)
 
     def _run(self, output_directory):
@@ -80,7 +82,17 @@ class TransformStep(BaseStep):
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
-        step_config = read_yaml(os.path.join(pipeline_root, "steps"), "transformer_config.yaml")
+        try:
+            step_config = pipeline_config["steps"]["transform"]
+            step_config.update(
+                get_pipeline_tracking_config(
+                    pipeline_root_path=pipeline_root,
+                    pipeline_config=pipeline_config,
+                ).to_dict()
+            )
+        except KeyError:
+            step_config = {}
+        step_config["target_col"] = pipeline_config.get("target_col")
         return cls(step_config, pipeline_root)
 
     @property
