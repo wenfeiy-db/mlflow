@@ -284,12 +284,11 @@ class EvaluateStep(BaseStep):
         execution_duration_text = f"**Execution duration (s):** `{self.execution_duration:.6g}`"
         card._add_tab(
             "Step run summary",
-            "{EXECUTION_DURATION}<br>{RUN_END_TIMESTAMP}<br>{RUN_STATUS}<br>{VALIDATION_STATUS}",
+            "{EXECUTION_DURATION}<br>{RUN_END_TIMESTAMP}<br>{VALIDATION_STATUS}",
             markdown_variables={
                 "EXECUTION_DURATION": execution_duration_text,
                 "RUN_END_TIMESTAMP": f"**Last run completed at:** "
                 f"`{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`",
-                "RUN_STATUS": f"**RUN status:** `{self.get_status(output_directory)}`",
                 "VALIDATION_STATUS": f"**Validation status:** `{self.model_validation_status}`",
             },
         )

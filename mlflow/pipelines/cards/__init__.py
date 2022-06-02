@@ -219,3 +219,5 @@ class FailureCard(BaseCard):
             pipeline_name=pipeline_name,
             step_name=step_name,
         )
+        self.add_markdown("STEP_STATUS", "**Step status**: Failed")
+        self.add_markdown("STACKTRACE", f"```\n{str(exception)}\n```")

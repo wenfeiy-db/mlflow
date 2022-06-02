@@ -114,13 +114,13 @@ class _BasePipeline:
         self._steps = self._resolve_pipeline_steps()
         # Run the last step of the pipeline if no step is specified
         target_step = self._get_step(step) if step else self._steps[-1]
-        run_pipeline_step(
+        last_executed_step = run_pipeline_step(
             self._pipeline_root_path,
             self.name,
             self._steps,
             target_step,
         )
-        self.inspect(target_step.name)
+        self.inspect(last_executed_step.name)
 
     def inspect(self, step: str = None) -> None:
         """
@@ -144,7 +144,7 @@ class _BasePipeline:
                 _logger.info(f"MLflow regression v1 pipeline snapshot DAG: '{file_uri}'")
         else:
             output_directory = get_step_output_path(self.name, step, "")
-            return self._get_step(step).inspect(output_directory)
+            self._get_step(step).inspect(output_directory)
 
     def clean(self, step: str = None) -> None:
         """

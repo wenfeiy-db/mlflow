@@ -132,7 +132,6 @@ class SplitStep(BaseStep):
         card.add_markdown(
             "EXECUTION_DURATION", f"**Execution duration (s):** `{self.execution_duration:.2f}`"
         )
-        card.add_markdown("RUN_STATUS", f"**Run status:** `{self.get_status(output_directory)}`")
         card.add_markdown(
             "NUM_DROPPED_ROWS", f"**Number of dropped rows:** `{self.num_dropped_rows}`"
         )

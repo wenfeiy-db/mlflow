@@ -1,14 +1,18 @@
 import abc
+import json
 import logging
 import os
 import shutil
 import subprocess
+import time
 import yaml
 from enum import Enum
-from typing import TypeVar, Dict, Any
+from typing import TypeVar, Dict, Any, Optional
 
+from mlflow.exceptions import MlflowException
 from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME, FailureCard, CARD_HTML_NAME
 from mlflow.pipelines.utils import get_pipeline_name
+from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 from mlflow.tracking import MlflowClient
 from mlflow.utils.databricks_utils import (
     is_in_databricks_runtime,
@@ -26,11 +30,33 @@ class StepStatus(Enum):
     FAILED = "FAILED"
 
 
+class StepExecutionState:
+    _KEY_STATUS = "pipeline_step_execution_status"
+    _KEY_LAST_UPDATED_TIMESTAMP = "pipeline_step_execution_last_updated_timestamp"
+
+    def __init__(self, status: StepStatus, last_updated_timestamp: int):
+        self.status = status
+        self.last_updated_timestamp = last_updated_timestamp
+
+    def to_dict(self):
+        return {
+            StepExecutionState._KEY_STATUS: self.status.value,
+            StepExecutionState._KEY_LAST_UPDATED_TIMESTAMP: self.last_updated_timestamp,
+        }
+
+    @classmethod
+    def from_dict(cls, status_dict):
+        return cls(
+            status=StepStatus[status_dict[StepExecutionState._KEY_STATUS]],
+            last_updated_timestamp=status_dict[StepExecutionState._KEY_LAST_UPDATED_TIMESTAMP],
+        )
+
+
 StepType = TypeVar("StepType", bound="BaseStep")
 
 
 class BaseStep(metaclass=abc.ABCMeta):
-    _STATUS_FILE_NAME = "status.txt"
+    _EXECUTION_STATE_FILE_NAME = "execution_state.txt"
 
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         """
@@ -72,7 +98,7 @@ class BaseStep(metaclass=abc.ABCMeta):
 
         :param output_directory: String file path where to the directory where step
                                  outputs are located.
-        :return: Results from the last execution of the corresponding step.
+        :return: None
         """
         card_path = os.path.join(output_directory, CARD_PICKLE_NAME)
         if not os.path.exists(card_path):
@@ -85,8 +111,6 @@ class BaseStep(metaclass=abc.ABCMeta):
             card_html_path = os.path.join(output_directory, CARD_HTML_NAME)
             if os.path.exists(card_html_path) and shutil.which("open") is not None:
                 subprocess.run(["open", card_html_path], check=True)
-
-        return card
 
     @abc.abstractmethod
     def _run(self, output_directory: str):
@@ -104,13 +128,13 @@ class BaseStep(metaclass=abc.ABCMeta):
     def clean(self) -> None:
         pass
 
-    def get_status(self, output_directory: str) -> StepStatus:
-        status_file_path = os.path.join(output_directory, BaseStep._STATUS_FILE_NAME)
-        if os.path.exists(status_file_path):
-            with open(status_file_path, "r") as f:
-                return StepStatus[f.read()]
+    def get_execution_state(self, output_directory: str) -> StepExecutionState:
+        execution_state_file_path = os.path.join(output_directory, BaseStep._EXECUTION_STATE_FILE_NAME)
+        if os.path.exists(execution_state_file_path):
+            with open(execution_state_file_path, "r") as f:
+                return StepExecutionState.from_dict(json.load(f))
         else:
-            return StepStatus.UNKNOWN
+            return StepExecutionState(StepStatus.UNKNOWN, 0)
 
     @classmethod
     @abc.abstractmethod
@@ -161,8 +185,9 @@ class BaseStep(metaclass=abc.ABCMeta):
         return {}
 
     def _update_status(self, status: StepStatus, output_directory: str) -> None:
-        with open(os.path.join(output_directory, BaseStep._STATUS_FILE_NAME), "w") as f:
-            f.write(status.value)
+        execution_state = StepExecutionState(status=status, last_updated_timestamp=time.time())
+        with open(os.path.join(output_directory, BaseStep._EXECUTION_STATE_FILE_NAME), "w") as f:
+            json.dump(execution_state.to_dict(), f)
 
     def _initialize_databricks_spark_connection_and_hooks_if_applicable(self) -> None:
         """
