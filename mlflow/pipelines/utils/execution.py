@@ -79,7 +79,7 @@ def run_pipeline_step(
     # specified target step
     last_executed_step = pipeline_steps[0]
     last_executed_step_state = last_executed_step.get_execution_state(get_output_directory(step))
-    for step in pipeline_steps[:target_step_index + 1]:
+    for step in pipeline_steps[: target_step_index + 1]:
         step_state = step.get_execution_state(get_output_directory(step))
         if step_state.last_updated_timestamp >= last_executed_step_state.last_updated_timestamp:
             last_executed_step = step
@@ -92,7 +92,7 @@ def run_pipeline_step(
         pipeline_name=pipeline_name,
         pipeline_steps=[
             step
-            for step in pipeline_steps[pipeline_steps.index(last_executed_step):]
+            for step in pipeline_steps[pipeline_steps.index(last_executed_step) :]
             if step.get_execution_state(get_output_directory(step)).last_updated_timestamp
             < last_executed_step_state.last_updated_timestamp
         ],

@@ -86,7 +86,11 @@ class BaseStep(metaclass=abc.ABCMeta):
             self._update_status(status=StepStatus.SUCCEEDED, output_directory=output_directory)
         except Exception:
             self._update_status(status=StepStatus.FAILED, output_directory=output_directory)
-            step_card = FailureCard(pipeline_name=self.pipeline_name, step_name=self.name, failure_traceback=traceback.format_exc())
+            step_card = FailureCard(
+                pipeline_name=self.pipeline_name,
+                step_name=self.name,
+                failure_traceback=traceback.format_exc(),
+            )
             raise
         finally:
             step_card.save(path=output_directory)
