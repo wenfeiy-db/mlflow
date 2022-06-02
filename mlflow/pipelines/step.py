@@ -56,12 +56,13 @@ class BaseStep(metaclass=abc.ABCMeta):
         try:
             self._update_status(status=StepStatus.RUNNING, output_directory=output_directory)
             step_card = self._run(output_directory=output_directory)
-            step_card.save(path=output_directory)
-            step_card.save_as_html(path=output_directory)
             self._update_status(status=StepStatus.SUCCEEDED, output_directory=output_directory)
         except Exception:
             self._update_status(status=StepStatus.FAILED, output_directory=output_directory)
             raise
+        finally:
+            step_card.save(path=output_directory)
+            step_card.save_as_html(path=output_directory)
 
         return self.inspect(output_directory=output_directory)
 
