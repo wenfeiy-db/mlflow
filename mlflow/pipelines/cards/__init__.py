@@ -219,5 +219,5 @@ class FailureCard(BaseCard):
             pipeline_name=pipeline_name,
             step_name=step_name,
         )
-        self.add_markdown("STEP_STATUS", "**Step status**: Failed")
-        self.add_markdown("STACKTRACE", f"```\n{failure_traceback}\n```")
+        self.add_html("STEP_STATUS", "<p><strong>Step status: <span style=\"color:red\">Failed</span></strong></p>")
+        self.add_html("STACKTRACE", f"<p style=\"margin-top:0px\"><code>{failure_traceback}</p></code>")

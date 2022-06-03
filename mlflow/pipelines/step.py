@@ -8,12 +8,10 @@ import time
 import traceback
 import yaml
 from enum import Enum
-from typing import TypeVar, Dict, Any, Optional
+from typing import TypeVar, Dict, Any
 
-from mlflow.exceptions import MlflowException
 from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME, FailureCard, CARD_HTML_NAME
 from mlflow.pipelines.utils import get_pipeline_name
-from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 from mlflow.tracking import MlflowClient
 from mlflow.utils.databricks_utils import (
     is_in_databricks_runtime,
