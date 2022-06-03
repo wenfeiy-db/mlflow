@@ -107,13 +107,25 @@ class _BasePipeline:
         # TODO Record performance here.
         # Always resolve the steps to load latest step modules before execution.
         self._steps = self._resolve_pipeline_steps()
-        run_pipeline_step(
-            self._pipeline_root_path,
-            self.name,
-            self._steps,
-            # Runs the last step of the pipeline if no step is specified.
-            self._get_step(step) if step else self._steps[-1],
-        )
+        if is_running_in_ipython_environment():
+            from IPython.utils.io import capture_output
+
+            with capture_output():
+                run_pipeline_step(
+                    self._pipeline_root_path,
+                    self.name,
+                    self._steps,
+                    # Runs the last step of the pipeline if no step is specified.
+                    self._get_step(step) if step else self._steps[-1],
+                )
+        else:
+            run_pipeline_step(
+                self._pipeline_root_path,
+                self.name,
+                self._steps,
+                # Runs the last step of the pipeline if no step is specified.
+                self._get_step(step) if step else self._steps[-1],
+            )
         # Shows the step card via inspect. If no step is specified, the last step card is shown.
         self.inspect(step if step else self._steps[-1].name)
 
