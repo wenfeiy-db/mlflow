@@ -16,11 +16,6 @@ from mlflow.pipelines.utils.execution import (
 )
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, INTERNAL_ERROR, BAD_REQUEST
 from mlflow.utils.class_utils import _get_class_from_string
-from mlflow.utils.file_utils import path_to_local_file_uri
-from mlflow.utils.databricks_utils import (
-    is_in_databricks_runtime,
-    is_running_in_ipython_environment,
-)
 from mlflow.utils.databricks_utils import is_running_in_ipython_environment
 from typing import List
 
@@ -112,16 +107,30 @@ class _BasePipeline:
         # TODO Record performance here.
         # Always resolve the steps to load latest step modules before execution.
         self._steps = self._resolve_pipeline_steps()
-        # Run the last step of the pipeline if no step is specified
-        target_step = self._get_step(step) if step else self._steps[-1]
-        last_executed_step = run_pipeline_step(
-            self._pipeline_root_path,
-            self.name,
-            self._steps,
-            target_step,
-        )
-        self.inspect(last_executed_step.name)
 
+        if is_running_in_ipython_environment():
+            from IPython.utils.io import capture_output
+
+            with capture_output():
+                last_executed_step = run_pipeline_step(
+                    self._pipeline_root_path,
+                    self.name,
+                    self._steps,
+                    # Runs the last step of the pipeline if no step is specified.
+                    self._get_step(step) if step else self._steps[-1],
+                )
+        else:
+            last_executed_step = run_pipeline_step(
+                self._pipeline_root_path,
+                self.name,
+                self._steps,
+                # Runs the last step of the pipeline if no step is specified.
+                self._get_step(step) if step else self._steps[-1],
+            )
+        # Shows the step card via inspect. If no step is specified, the last step card is shown.
+        self.inspect(step if step else self._steps[-1].name)
+
+        # Verify that the step execution succeeded and throw if it didn't.
         last_executed_step_output_directory = get_step_output_path(
             self.name, last_executed_step.name, ""
         )
