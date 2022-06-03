@@ -1,6 +1,9 @@
 import html
 import os
-from mlflow.pipelines.cards import BaseCard
+import pytest
+
+from mlflow.exceptions import MlflowException
+from mlflow.pipelines.cards import BaseCard, CardTab
 
 
 class ProfileReport:
@@ -45,9 +48,28 @@ def test_verify_card_information():
         assert key in ingest_card._context
         assert ingest_card._context[key] == value
 
-    assert ingest_card._tab_list == [
+    assert ingest_card._tabs == [
         ("Profile 1", profile_iframe(profile1)),
         ("Profile 2", profile_iframe(profile2)),
     ]
     assert ingest_card._string_builder.getvalue() == "1,2,3."
     assert ingest_card.to_text() == "1,2,3."
+
+
+def test_card_tab_works():
+    tab = (
+        CardTab("tab", "{{MARKDOWN_1}}{{HTML_1}}{{PROFILE_1}}")
+        .add_html("HTML_1", "<span style='color:blue'>blue</span>")
+        .add_markdown("MARKDOWN_1", "#### Hello, world!")
+        .add_pandas_profile("PROFILE_1", ProfileReport())
+    )
+    assert (
+        tab.to_html()
+        == "<h4>Hello, world!</h4><span style='color:blue'>blue</span>"
+        + "<iframe srcdoc='pandas-profiling' width='100%' height='500' frameborder='0'></iframe>"
+    )
+
+
+def test_card_tab_fails_with_invalid_variable():
+    with pytest.raises(MlflowException, match=r"(not a valid template variable)"):
+        CardTab("tab", "{{MARKDOWN_1}}").add_html("HTML_1", "<span style='color:blue'>blue</span>")
