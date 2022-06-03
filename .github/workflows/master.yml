@@ -30,6 +30,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./.github/actions/setup-python
       with:
         python-version: "3.7"
@@ -57,6 +59,8 @@ jobs:
         working-directory: mlflow/R/mlflow
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: actions/setup-java@v3
       with:
         java-version: 11
@@ -106,6 +110,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./.github/actions/setup-python
       with:
         python-version: "3.7"
@@ -123,6 +129,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./.github/actions/setup-python
       with:
         python-version: "3.7"
@@ -139,6 +147,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - name: Increase available disk space
       run: |
         # Increase available disk space by removing unnecessary tool chains:
@@ -175,6 +185,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - name: Build
       run: |
         ./tests/db/compose.sh pull -q postgresql mysql mssql
@@ -195,6 +207,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./.github/actions/setup-python
       with:
         python-version: "3.7"
@@ -220,6 +234,8 @@ jobs:
         working-directory: mlflow/server/js
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - name: Set up Node
       uses: actions/setup-node@v1
       with:
@@ -242,6 +258,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - name: Test building Docker image
       working-directory: dev
       env:
@@ -261,6 +279,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Increase available disk space
         run: |
           # Increase available disk space by removing unnecessary tool chains:
@@ -295,6 +315,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - uses: ./.github/actions/setup-python
         with:
           python-version: "3.7"
@@ -322,6 +344,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       # - name: Set up mlflow-pipelines-example-private submodule deploy key
       #   env:
       #     SSH_AUTH_SOCK: /tmp/ssh_agent.sock
@@ -354,6 +378,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - uses: actions/setup-python@v3
         with:
           python-version: "3.7"
@@ -391,6 +417,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - uses: ./.github/actions/setup-python
         with:
           python-version: "3.7"
@@ -414,6 +442,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - uses: actions/setup-python@v3
         with:
           python-version: "3.7"
