@@ -220,7 +220,7 @@ def test_run_pipeline_step_sets_environment_as_expected(tmp_path):
 
 
 def run_test_pipeline_step(pipeline_steps, target_step):
-    run_pipeline_step(
+    return run_pipeline_step(
         pipeline_root_path=os.getcwd(),
         pipeline_name=os.path.basename(os.getcwd()),
         pipeline_steps=pipeline_steps,
@@ -277,7 +277,86 @@ def test_run_pipeline_step_maintains_execution_status_correctly(pandas_df, tmp_p
     )
 
 
-def test_run_pipeline_ingest_step_clears_downstream_step_state(test_pipeline):
+def test_run_pipeline_step_returns_expected_result(test_pipeline):
+    ingest_step, split_step, _ = test_pipeline
+
+    assert run_test_pipeline_step(test_pipeline, ingest_step) == ingest_step
+    assert run_test_pipeline_step(test_pipeline, split_step) == split_step
+    assert run_test_pipeline_step(test_pipeline, ingest_step) == ingest_step
+
+    ingest_step_bad = IngestStep.from_pipeline_config(
+        pipeline_config={
+            "data": {
+                "format": "parquet",
+                "location": "badlocation",
+            }
+        },
+        pipeline_root=os.getcwd(),
+    )
+
+    assert run_test_pipeline_step([ingest_step_bad, split_step], ingest_step_bad) == ingest_step_bad
+    assert run_test_pipeline_step([ingest_step_bad, split_step], split_step) == ingest_step_bad
+
+
+def test_run_pipeline_with_ingest_step_as_target_never_caches(test_pipeline):
+    ingest_step, _, _ = test_pipeline
+
+    def get_step_outputs_with_timestamps(step):
+        output_directory = get_test_pipeline_step_output_directory(step)
+        return {
+            path: os.path.getmtime(os.path.join(output_directory, path))
+            for path in os.listdir(output_directory)
+        }
+
+    curr_time = time.time()
+    run_test_pipeline_step(test_pipeline, ingest_step)
+    step_outputs_with_timestamps_1 = get_step_outputs_with_timestamps(ingest_step)
+    assert step_outputs_with_timestamps_1
+    assert get_test_pipeline_step_execution_state(ingest_step).last_updated_timestamp >= curr_time
+
+    curr_time = time.time()
+    run_test_pipeline_step(test_pipeline, ingest_step)
+    step_outputs_with_timestamps_2 = get_step_outputs_with_timestamps(ingest_step)
+    assert step_outputs_with_timestamps_2
+    assert get_test_pipeline_step_execution_state(ingest_step).last_updated_timestamp >= curr_time
+
+    assert step_outputs_with_timestamps_2 != step_outputs_with_timestamps_1
+
+
+@pytest.mark.parametrize("target_step", ["split", "transform"])
+def test_run_pipeline_step_caches(test_pipeline, target_step):
+    _, split_step, transform_step = test_pipeline
+    target_step = split_step if target_step == "split" else transform_step
+
+    def get_step_outputs_with_timestamps(step):
+        output_directory = get_test_pipeline_step_output_directory(step)
+        return {
+            path: os.path.getmtime(os.path.join(output_directory, path))
+            for path in os.listdir(output_directory)
+        }
+
+    curr_time = time.time()
+    run_test_pipeline_step(test_pipeline, target_step)
+    step_outputs_with_timestamps_1 = get_step_outputs_with_timestamps(target_step)
+    assert step_outputs_with_timestamps_1
+    step_execution_state_1 = get_test_pipeline_step_execution_state(target_step)
+    assert step_execution_state_1.status == StepStatus.SUCCEEDED
+    assert step_execution_state_1.last_updated_timestamp >= curr_time
+
+    curr_time = time.time()
+    run_test_pipeline_step(test_pipeline, target_step)
+    step_outputs_with_timestamps_2 = get_step_outputs_with_timestamps(target_step)
+    assert step_outputs_with_timestamps_2
+    step_execution_state_2 = get_test_pipeline_step_execution_state(target_step)
+    assert (
+        step_execution_state_2.last_updated_timestamp
+        == step_execution_state_1.last_updated_timestamp
+    )
+
+    assert step_outputs_with_timestamps_2 == step_outputs_with_timestamps_1
+
+
+def test_run_pipeline_with_ingest_step_as_target_clears_downstream_step_state(test_pipeline):
     ingest_step, split_step, transform_step = test_pipeline
 
     curr_time = time.time()
