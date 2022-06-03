@@ -430,3 +430,32 @@ def test_run_pipeline_step_without_change_preserves_state_of_all_pipeline_steps(
             step_execution_state.last_updated_timestamp
             == prev_execution_state.last_updated_timestamp
         )
+
+
+def test_run_pipeline_step_failure_clears_downstream_step_state(test_pipeline):
+    ingest_step, split_step, _ = test_pipeline
+
+    curr_time = time.time()
+    run_test_pipeline_step(test_pipeline, split_step)
+    for step in [ingest_step, split_step]:
+        assert get_test_pipeline_step_execution_state(step).status == StepStatus.SUCCEEDED
+        assert get_test_pipeline_step_execution_state(step).last_updated_timestamp >= curr_time
+        assert os.listdir(get_test_pipeline_step_output_directory(step))
+
+    ingest_step_bad = IngestStep.from_pipeline_config(
+        pipeline_config={
+            "data": {
+                "format": "parquet",
+                "location": "badlocation",
+            }
+        },
+        pipeline_root=os.getcwd(),
+    )
+
+    curr_time = time.time()
+    run_test_pipeline_step([ingest_step_bad, split_step], ingest_step_bad)
+    assert get_test_pipeline_step_execution_state(ingest_step_bad).status == StepStatus.FAILED
+    assert get_test_pipeline_step_execution_state(ingest_step_bad).last_updated_timestamp >= curr_time
+    assert get_test_pipeline_step_execution_state(split_step).status == StepStatus.UNKNOWN
+    assert get_test_pipeline_step_execution_state(split_step).last_updated_timestamp == 0
+    assert not os.listdir(get_test_pipeline_step_output_directory(split_step))
