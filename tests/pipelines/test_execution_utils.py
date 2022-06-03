@@ -9,10 +9,14 @@ import pytest
 
 from mlflow.pipelines import Pipeline
 from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
-from mlflow.pipelines.regression.v1.steps.split import SplitStep 
-from mlflow.pipelines.regression.v1.steps.transform import TransformStep 
-from mlflow.pipelines.step import StepStatus 
-from mlflow.pipelines.utils.execution import _get_or_create_execution_directory, run_pipeline_step, get_step_output_path
+from mlflow.pipelines.regression.v1.steps.split import SplitStep
+from mlflow.pipelines.regression.v1.steps.transform import TransformStep
+from mlflow.pipelines.step import StepStatus
+from mlflow.pipelines.utils.execution import (
+    _get_or_create_execution_directory,
+    run_pipeline_step,
+    get_step_output_path,
+)
 
 from tests.pipelines.helper_functions import (
     BaseStepImplemented,
@@ -35,7 +39,9 @@ def pandas_df():
 
 
 @pytest.fixture
-def test_pipeline(enter_test_pipeline_directory, pandas_df, tmp_path):  # pylint: disable=unused-argument
+def test_pipeline(
+    enter_test_pipeline_directory, pandas_df, tmp_path
+):  # pylint: disable=unused-argument
     dataset_path = tmp_path / "df.parquet"
     pandas_df.to_parquet(dataset_path)
     ingest_step = IngestStep.from_pipeline_config(
@@ -57,17 +63,21 @@ def test_pipeline(enter_test_pipeline_directory, pandas_df, tmp_path):  # pylint
         pipeline_root=os.getcwd(),
     )
     with open(pathlib.Path().cwd() / "steps" / "transform.py", "w") as f:
-        f.write("\n".join([
-            "from sklearn.pipeline import Pipeline",
-            "from sklearn.preprocessing import FunctionTransformer",
-            "",
-            "def add_column(df):",
-            "    df['useless'] = 'useless'",
-            "    return df",
-            "",
-            "def transform_fn():",
-            "    return Pipeline(steps=[('add_column', FunctionTransformer(add_column))])",
-        ]))
+        f.write(
+            "\n".join(
+                [
+                    "from sklearn.pipeline import Pipeline",
+                    "from sklearn.preprocessing import FunctionTransformer",
+                    "",
+                    "def add_column(df):",
+                    "    df['useless'] = 'useless'",
+                    "    return df",
+                    "",
+                    "def transform_fn():",
+                    "    return Pipeline(steps=[('add_column', FunctionTransformer(add_column))])",
+                ]
+            )
+        )
     transform_step = TransformStep.from_pipeline_config(
         pipeline_config={
             "target_col": "C",
@@ -210,7 +220,12 @@ def test_run_pipeline_step_sets_environment_as_expected(tmp_path):
 
 
 def run_test_pipeline_step(pipeline_steps, target_step):
-    run_pipeline_step(pipeline_root_path=os.getcwd(), pipeline_name=os.path.basename(os.getcwd()), pipeline_steps=pipeline_steps, target_step=target_step)
+    run_pipeline_step(
+        pipeline_root_path=os.getcwd(),
+        pipeline_name=os.path.basename(os.getcwd()),
+        pipeline_steps=pipeline_steps,
+        target_step=target_step,
+    )
 
 
 def get_test_pipeline_step_output_directory(step):
@@ -225,7 +240,7 @@ def get_test_pipeline_step_execution_state(step):
 def test_run_pipeline_step_maintains_execution_status_correctly(pandas_df, tmp_path):
     dataset_path = tmp_path / "df.parquet"
     pandas_df.to_parquet(dataset_path)
-    
+
     ingest_step_good = IngestStep.from_pipeline_config(
         pipeline_config={
             "data": {
@@ -236,12 +251,14 @@ def test_run_pipeline_step_maintains_execution_status_correctly(pandas_df, tmp_p
         pipeline_root=os.getcwd(),
     )
 
-    assert get_test_pipeline_step_execution_state(ingest_step_good).status == StepStatus.UNKNOWN 
-    assert get_test_pipeline_step_execution_state(ingest_step_good).last_updated_timestamp == 0 
+    assert get_test_pipeline_step_execution_state(ingest_step_good).status == StepStatus.UNKNOWN
+    assert get_test_pipeline_step_execution_state(ingest_step_good).last_updated_timestamp == 0
     curr_time = time.time()
     run_test_pipeline_step([ingest_step_good], ingest_step_good)
-    assert get_test_pipeline_step_execution_state(ingest_step_good).status == StepStatus.SUCCEEDED 
-    assert get_test_pipeline_step_execution_state(ingest_step_good).last_updated_timestamp >= curr_time 
+    assert get_test_pipeline_step_execution_state(ingest_step_good).status == StepStatus.SUCCEEDED
+    assert (
+        get_test_pipeline_step_execution_state(ingest_step_good).last_updated_timestamp >= curr_time
+    )
 
     ingest_step_bad = IngestStep.from_pipeline_config(
         pipeline_config={
@@ -255,7 +272,9 @@ def test_run_pipeline_step_maintains_execution_status_correctly(pandas_df, tmp_p
     curr_time = time.time()
     run_test_pipeline_step([ingest_step_bad], ingest_step_bad)
     assert get_test_pipeline_step_execution_state(ingest_step_bad).status == StepStatus.FAILED
-    assert get_test_pipeline_step_execution_state(ingest_step_bad).last_updated_timestamp >= curr_time 
+    assert (
+        get_test_pipeline_step_execution_state(ingest_step_bad).last_updated_timestamp >= curr_time
+    )
 
 
 def test_run_pipeline_ingest_step_clears_downstream_step_state(test_pipeline):
@@ -264,17 +283,17 @@ def test_run_pipeline_ingest_step_clears_downstream_step_state(test_pipeline):
     curr_time = time.time()
     run_test_pipeline_step(test_pipeline, transform_step)
     for step in test_pipeline:
-        assert get_test_pipeline_step_execution_state(step).status == StepStatus.SUCCEEDED 
+        assert get_test_pipeline_step_execution_state(step).status == StepStatus.SUCCEEDED
         assert get_test_pipeline_step_execution_state(step).last_updated_timestamp >= curr_time
         assert os.listdir(get_test_pipeline_step_output_directory(step))
 
     curr_time = time.time()
     run_test_pipeline_step(test_pipeline, ingest_step)
-    assert get_test_pipeline_step_execution_state(ingest_step).status == StepStatus.SUCCEEDED 
+    assert get_test_pipeline_step_execution_state(ingest_step).status == StepStatus.SUCCEEDED
     assert get_test_pipeline_step_execution_state(ingest_step).last_updated_timestamp >= curr_time
     assert os.listdir(get_test_pipeline_step_output_directory(ingest_step))
     for step in [split_step, transform_step]:
-        assert get_test_pipeline_step_execution_state(step).status == StepStatus.UNKNOWN 
+        assert get_test_pipeline_step_execution_state(step).status == StepStatus.UNKNOWN
         assert get_test_pipeline_step_execution_state(step).last_updated_timestamp == 0
         assert not os.listdir(get_test_pipeline_step_output_directory(step))
 
@@ -285,8 +304,8 @@ def test_run_pipeline_step_after_change_clears_downstream_step_state(test_pipeli
 
     run_test_pipeline_step(test_pipeline, transform_step)
     for step in test_pipeline:
-        assert get_test_pipeline_step_execution_state(step).status == StepStatus.SUCCEEDED 
-        assert get_test_pipeline_step_execution_state(step).last_updated_timestamp >= curr_time 
+        assert get_test_pipeline_step_execution_state(step).status == StepStatus.SUCCEEDED
+        assert get_test_pipeline_step_execution_state(step).last_updated_timestamp >= curr_time
         assert os.listdir(get_test_pipeline_step_output_directory(step))
 
     updated_split_step = SplitStep.from_pipeline_config(
@@ -302,11 +321,11 @@ def test_run_pipeline_step_after_change_clears_downstream_step_state(test_pipeli
     )
     run_test_pipeline_step([ingest_step, updated_split_step, transform_step], updated_split_step)
     for step in [ingest_step, updated_split_step]:
-        assert get_test_pipeline_step_execution_state(step).status == StepStatus.SUCCEEDED 
+        assert get_test_pipeline_step_execution_state(step).status == StepStatus.SUCCEEDED
         assert get_test_pipeline_step_execution_state(step).last_updated_timestamp >= curr_time
         assert os.listdir(get_test_pipeline_step_output_directory(step))
-    
-    assert get_test_pipeline_step_execution_state(transform_step).status == StepStatus.UNKNOWN 
+
+    assert get_test_pipeline_step_execution_state(transform_step).status == StepStatus.UNKNOWN
     assert get_test_pipeline_step_execution_state(transform_step).last_updated_timestamp == 0
     assert not os.listdir(get_test_pipeline_step_output_directory(transform_step))
 
@@ -319,8 +338,8 @@ def test_run_pipeline_step_without_change_preserves_state_of_all_pipeline_steps(
     step_to_execution_state = {}
     for step in test_pipeline:
         step_execution_state = get_test_pipeline_step_execution_state(step)
-        step_to_execution_state[step] = step_execution_state 
-        assert step_execution_state.status == StepStatus.SUCCEEDED 
+        step_to_execution_state[step] = step_execution_state
+        assert step_execution_state.status == StepStatus.SUCCEEDED
         assert step_execution_state.last_updated_timestamp >= curr_time
 
     run_test_pipeline_step(test_pipeline, split_step)
@@ -328,4 +347,7 @@ def test_run_pipeline_step_without_change_preserves_state_of_all_pipeline_steps(
         step_execution_state = get_test_pipeline_step_execution_state(step)
         prev_execution_state = step_to_execution_state[step]
         assert step_execution_state.status == prev_execution_state.status
-        assert step_execution_state.last_updated_timestamp == prev_execution_state.last_updated_timestamp
+        assert (
+            step_execution_state.last_updated_timestamp
+            == prev_execution_state.last_updated_timestamp
+        )
