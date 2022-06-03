@@ -225,7 +225,7 @@ class EvaluateStep(BaseStep):
                 criteria_summary_df.style.apply(criteria_table_row_format, axis=1)
                 .hide_index()
                 .format({"value": "{:.6g}", "threshold": "{:.6g}"})
-                .to_html()
+                .render()
             )
             card.add_html("METRIC_VALIDATION_RESULTS", criteria_html)
 
@@ -248,14 +248,14 @@ class EvaluateStep(BaseStep):
             else "Unavailable"
         )
 
-        card._add_tab(
-            "Feature importance with raw features",
-            '<h3 class="section-title">Shap bar plot</h3>{SHAP_BAR_PLOT}'
-            '<h3 class="section-title">Shap beeswarm plot</h3>{SHAP_BEESWARM_PLOT}',
-            html_variables={
-                "SHAP_BAR_PLOT": shap_bar_plot_img,
-                "SHAP_BEESWARM_PLOT": shap_beeswarm_plot_img,
-            },
+        (
+            card.add_tab(
+                "Feature importance with raw features",
+                '<h3 class="section-title">Shap bar plot</h3>{{SHAP_BAR_PLOT}}'
+                + '<h3 class="section-title">Shap beeswarm plot</h3>{{SHAP_BEESWARM_PLOT}}',
+            )
+            .add_html("SHAP_BAR_PLOT", shap_bar_plot_img)
+            .add_html("SHAP_BEESWARM_PLOT", shap_beeswarm_plot_img)
         )
 
         # Constructs data profiles of predictions and errors
@@ -280,15 +280,20 @@ class EvaluateStep(BaseStep):
         )
 
         execution_duration_text = f"**Execution duration (s):** `{self.execution_duration:.6g}`"
-        card._add_tab(
-            "Step run summary",
-            "{EXECUTION_DURATION}<br>{RUN_END_TIMESTAMP}<br>{VALIDATION_STATUS}",
-            markdown_variables={
-                "EXECUTION_DURATION": execution_duration_text,
-                "RUN_END_TIMESTAMP": f"**Last run completed at:** "
-                f"`{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`",
-                "VALIDATION_STATUS": f"**Validation status:** `{self.model_validation_status}`",
-            },
+        (
+            card.add_tab(
+                "Step run summary",
+                "{{EXECUTION_DURATION}}<br>{{RUN_END_TIMESTAMP}}<br>"
+                + "{{RUN_STATUS}}<br>{{VALIDATION_STATUS}}",
+            )
+            .add_markdown("EXECUTION_DURATION", execution_duration_text)
+            .add_markdown(
+                "RUN_END_TIMESTAMP",
+                f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`",
+            )
+            .add_markdown(
+                "VALIDATION_STATUS", f"**Validation status:** `{self.model_validation_status}`"
+            )
         )
 
         return card

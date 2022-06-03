@@ -5,12 +5,86 @@ import os
 import shutil
 from io import StringIO
 
+from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 
 CARD_PICKLE_NAME = "card.pkl"
 CARD_HTML_NAME = "card.html"
 
 # TODO: Make card save / load including card_resources directory
 _CARD_RESOURCE_DIR_NAME = f"{CARD_HTML_NAME}.resources"
+
+
+class CardTab:
+    def __init__(self, name: str, template: str) -> None:
+        """
+        Construct a step card tab with supported HTML template.
+
+        :param name: a string representing the name of the tab.
+        :param template: a string representing the HTML template for the card content.
+        """
+        import jinja2
+        from jinja2 import meta as jinja2_meta
+
+        self.name = name
+        self.template = template
+
+        j2_env = jinja2.Environment()
+        self._variables = jinja2_meta.find_undeclared_variables(j2_env.parse(template))
+        self._context = {}
+
+    def add_html(self, name: str, html_content: str) -> CardTab:
+        """
+        Adds html to the CardTab.
+
+        :param name: String, name of the variable in the Jinja2 template
+        :param html_content: String, the html to replace the named template variable
+        :return: the updated card instance
+        """
+        if name not in self._variables:
+            raise MlflowException(
+                f"{name} is not a valid template variable defined in template: '{self.template}'",
+                error_code=INVALID_PARAMETER_VALUE,
+            )
+        self._context[name] = html_content
+        return self
+
+    def add_markdown(self, name: str, markdown: str) -> CardTab:
+        """
+        Adds markdown to the card replacing the variable name in the CardTab template.
+
+        :param name: name of the variable in the CardTab Jinja2 template
+        :param markdown: the markdown content
+        :return: the updated card tab instance
+        """
+        from markdown import markdown as md_to_html
+
+        self.add_html(name, md_to_html(markdown))
+        return self
+
+    def add_pandas_profile(self, name: str, profile) -> CardTab:
+        """
+        Add a new tab representing the provided pandas profile to the card.
+
+        :param name: name of the variable in the Jinja2 template
+        :param profile: the pandas profile object
+        :return: the updated card instance
+        """
+        profile_iframe = (
+            "<iframe srcdoc='{src}' width='100%' height='500' frameborder='0'></iframe>"
+        ).format(src=html.escape(profile.to_html()))
+        self.add_html(name, profile_iframe)
+        return self
+
+    def to_html(self) -> str:
+        """
+        Returns a rendered HTML representing the content of the tab.
+
+        :return: a HTML string
+        """
+        import jinja2
+
+        j2_env = jinja2.Environment(loader=jinja2.BaseLoader()).from_string(self.template)
+        return j2_env.render({**self._context})
 
 
 class BaseCard:
@@ -38,7 +112,7 @@ class BaseCard:
 
         self._context = {}
         self._string_builder = StringIO()
-        self._tab_list = []
+        self._tabs = []
         self._resource_files = {}
 
         self.add_html(
@@ -62,8 +136,9 @@ class BaseCard:
         from markdown import markdown as md_to_html
 
         if name not in self._variables:
-            raise ValueError(
-                f"{name} is not a valid markdown variable found in template '{self.template_name}'"
+            raise MlflowException(
+                f"{name} is not a valid markdown variable found in template '{self.template_name}'",
+                error_code=INVALID_PARAMETER_VALUE,
             )
         self._context[name] = md_to_html(markdown)
         return self
@@ -81,33 +156,19 @@ class BaseCard:
             + html.escape(profile.to_html())
             + "' width='100%' height='500' frameborder='0'></iframe>"
         )
-        self._tab_list.append((name, profile_iframe))
+        self._tabs.append((name, profile_iframe))
         return self
 
-    def _add_tab(
-        self,
-        name,
-        html_templates,
-        *,
-        html_variables=None,
-        markdown_variables=None,
-    ):
+    def add_tab(self, name, html_template) -> CardTab:
         """
         Add a new tab with arbitrary content.
-        This is a temporary API and it might change in future.
-        :param name: tab name
-        :param html_templates: HTML template for the content.
-        :param html_variables: a dict for html variables in the template.
-        :param markdown_variables: a dict for markdown_variables in the template.
-        """
-        from markdown import markdown as md_to_html
 
-        html_variables = html_variables or {}
-        markdown_variables = markdown_variables or {}
-        converted_html_variables = {k: md_to_html(v) for k, v in markdown_variables.items()}
-        html_content = html_templates.format(**html_variables, **converted_html_variables)
-        self._tab_list.append((name, html_content))
-        return self
+        :param name: a string representing the name of the tab.
+        :param html_template: a string representing the HTML template for the card content.
+        """
+        tab = CardTab(name, html_template)
+        self._tabs.append((name, tab))
+        return tab
 
     def add_html(self, name: str, html: str) -> BaseCard:
         """
@@ -146,8 +207,11 @@ class BaseCard:
         j2_env = jinja2.Environment(
             loader=jinja2.FileSystemLoader([self.template_root, baseTemplatePath])
         )
+        tab_list = [
+            (name, tab.to_html() if isinstance(tab, CardTab) else tab) for name, tab in self._tabs
+        ]
         return j2_env.get_template(self.template_name).render(
-            {**self._context, "tab_list": self._tab_list}
+            {**self._context, "tab_list": tab_list}
         )
 
     def to_text(self) -> str:
@@ -182,7 +246,7 @@ class BaseCard:
     def save_as_html(self, path) -> None:
         if os.path.isdir(path):
             path = os.path.join(path, CARD_HTML_NAME)
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(self.to_html())
 
         if len(self._resource_files) > 0:
