@@ -24,7 +24,6 @@ _logger = logging.getLogger(__name__)
 
 class StepStatus(Enum):
     UNKNOWN = "UNKNOWN"
-    RUNNING = "RUNNING"
     SUCCEEDED = "SUCCEEDED"
     FAILED = "FAILED"
 
@@ -79,7 +78,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         self._initialize_databricks_spark_connection_and_hooks_if_applicable()
         try:
-            self._update_status(status=StepStatus.RUNNING, output_directory=output_directory)
             step_card = self._run(output_directory=output_directory)
             self._update_status(status=StepStatus.SUCCEEDED, output_directory=output_directory)
         except Exception:
