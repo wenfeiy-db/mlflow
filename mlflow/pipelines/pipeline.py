@@ -121,9 +121,13 @@ class _BasePipeline:
             target_step,
         )
         self.inspect(last_executed_step.name)
-        
-        last_executed_step_output_directory = get_step_output_path(self.name, last_executed_step.name, "")
-        last_executed_step_status = last_executed_step.get_execution_state(last_executed_step_output_directory).status
+
+        last_executed_step_output_directory = get_step_output_path(
+            self.name, last_executed_step.name, ""
+        )
+        last_executed_step_status = last_executed_step.get_execution_state(
+            last_executed_step_output_directory
+        ).status
         if last_executed_step_status != StepStatus.SUCCEEDED:
             if step is not None:
                 raise MlflowException(
