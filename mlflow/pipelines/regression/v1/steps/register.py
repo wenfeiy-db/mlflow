@@ -101,7 +101,6 @@ class RegisterStep(BaseStep):
             f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`"
         )
         final_markdown.append(f"**Execution duration (s):** `{self.execution_duration:.2f}`")
-        final_markdown.append(f"**Run status:** `{self.get_status(output_directory)}`")
         card.add_markdown("REGISTER_SUMMARY", "<br>\n".join(final_markdown))
         return card
 
