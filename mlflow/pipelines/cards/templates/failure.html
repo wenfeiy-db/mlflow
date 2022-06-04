@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block HEADER_TITLE %}{{ HEADER_TITLE }}{% endblock %}
+{% block PAGE_TITLE %}{{ PAGE_TITLE }}{% endblock %}
+
+{% block CSS %}
+h3.section-title {
+    color: #57a8de;
+}
+.stacktrace-container {
+    max-height: 300px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column-reverse; 
+    white-space: pre-wrap;
+}
+{% endblock %}
+{% block BODY %}
+<h3 class="section-title">Status</h3>
+{{ STEP_STATUS }}
+<h3 class="section-title">Stacktrace</h3>
+<div class="stacktrace-container">
+{{ STACKTRACE }}
+</div>
+{% endblock %}
