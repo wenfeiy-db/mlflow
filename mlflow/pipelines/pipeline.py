@@ -127,7 +127,7 @@ class _BasePipeline:
                 self._get_step(step) if step else self._steps[-1],
             )
 
-        self.inspect(last_executed_step)
+        self.inspect(last_executed_step.name)
 
         # Verify that the step execution succeeded and throw if it didn't.
         last_executed_step_output_directory = get_step_output_path(
