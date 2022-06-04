@@ -78,6 +78,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         :return: Results from executing the corresponding step.
         """
         self._initialize_databricks_spark_connection_and_hooks_if_applicable()
+        step_card = None
         try:
             self._update_status(status=StepStatus.RUNNING, output_directory=output_directory)
             step_card = self._run(output_directory=output_directory)
