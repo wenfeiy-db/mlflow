@@ -115,7 +115,7 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment_with_expected_r
 
 
 @pytest.mark.usefixtures("enter_test_pipeline_directory")
-def test_pipelines_run_throws_exception_when_step_fails():
+def test_pipelines_run_throws_exception_and_produces_failure_card_when_step_fails():
     profile_path = pathlib.Path.cwd() / "profiles" / "local.yaml"
     with open(profile_path, "r") as f:
         profile_contents = yaml.safe_load(f)
@@ -131,6 +131,18 @@ def test_pipelines_run_throws_exception_when_step_fails():
         pipeline.run()
     with pytest.raises(MlflowException, match="Failed to run.*split.*test_pipeline.*ingest"):
         pipeline.run(step="split")
+
+    step_card_path = get_step_output_path(
+        pipeline_name=pipeline.name,
+        step_name="ingest",
+        relative_path="card.html",
+    )
+    with open(step_card_path, "r") as f:
+        card_content = f.read()
+
+    assert "Ingest" in card_content
+    assert "Failed" in card_content
+    assert "Stacktrace" in card_content
 
 
 @pytest.mark.usefixtures("enter_pipeline_example_directory")
