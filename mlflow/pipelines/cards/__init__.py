@@ -276,6 +276,13 @@ class BaseCard:
 
 
 class FailureCard(BaseCard):
+    """
+    Step card providing information about a failed step execution, including a stacktrace.
+
+    TODO: Migrate the failure card to a tab-based card, removing this class and its associated
+          HTML template in the process.
+    """
+
     def __init__(self, pipeline_name: str, step_name: str, failure_traceback: str):
         super().__init__(
             template_root=os.path.join(os.path.dirname(__file__), "templates"),

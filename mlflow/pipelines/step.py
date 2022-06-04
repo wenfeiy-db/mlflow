@@ -23,31 +23,59 @@ _logger = logging.getLogger(__name__)
 
 
 class StepStatus(Enum):
+    """
+    Represents the execution status of a step.
+    """
+
+    # Indicates that no execution status information is available for the step,
+    # which may occur if the step has never been run or its outputs have been cleared
     UNKNOWN = "UNKNOWN"
+    # Indicates that the step is currently running
     RUNNING = "RUNNING"
+    # Indicates that the step completed successfully
     SUCCEEDED = "SUCCEEDED"
+    # Indicates that the step completed with one or more failures
     FAILED = "FAILED"
 
 
+StepExecutionStateType = TypeVar("StepExecutionStateType", bound="StepExecutionState")
+
+
 class StepExecutionState:
+    """
+    Represents execution state for a step, including the current status and
+    the time of the last status update.
+    """
+
     _KEY_STATUS = "pipeline_step_execution_status"
     _KEY_LAST_UPDATED_TIMESTAMP = "pipeline_step_execution_last_updated_timestamp"
 
     def __init__(self, status: StepStatus, last_updated_timestamp: int):
+        """
+        :param status: The execution status of the step.
+        :param last_updated_timestamp: The timestamp of the last execution status update, measured
+                                       in seconds since the UNIX epoch.
+        """
         self.status = status
         self.last_updated_timestamp = last_updated_timestamp
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Creates a dictionary representation of the step execution state.
+        """
         return {
             StepExecutionState._KEY_STATUS: self.status.value,
             StepExecutionState._KEY_LAST_UPDATED_TIMESTAMP: self.last_updated_timestamp,
         }
 
     @classmethod
-    def from_dict(cls, status_dict):
+    def from_dict(cls, state_dict) -> StepExecutionStateType:
+        """
+        Creates a ``StepExecutionState`` instance from the specified execution state dictionary.
+        """
         return cls(
-            status=StepStatus[status_dict[StepExecutionState._KEY_STATUS]],
-            last_updated_timestamp=status_dict[StepExecutionState._KEY_LAST_UPDATED_TIMESTAMP],
+            status=StepStatus[state_dict[StepExecutionState._KEY_STATUS]],
+            last_updated_timestamp=state_dict[StepExecutionState._KEY_LAST_UPDATED_TIMESTAMP],
         )
 
 
@@ -75,7 +103,7 @@ class BaseStep(metaclass=abc.ABCMeta):
 
         :param output_directory: String file path to the directory where step
                                  outputs should be stored.
-        :return: Results from executing the corresponding step.
+        :return: None
         """
         self._initialize_databricks_spark_connection_and_hooks_if_applicable()
         try:
