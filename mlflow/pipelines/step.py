@@ -55,7 +55,7 @@ StepType = TypeVar("StepType", bound="BaseStep")
 
 
 class BaseStep(metaclass=abc.ABCMeta):
-    _EXECUTION_STATE_FILE_NAME = "execution_state.txt"
+    _EXECUTION_STATE_FILE_NAME = "execution_state.json"
 
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         """

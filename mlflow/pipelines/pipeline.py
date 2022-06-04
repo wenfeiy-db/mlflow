@@ -107,7 +107,6 @@ class _BasePipeline:
         # TODO Record performance here.
         # Always resolve the steps to load latest step modules before execution.
         self._steps = self._resolve_pipeline_steps()
-
         if is_running_in_ipython_environment():
             from IPython.utils.io import capture_output
 

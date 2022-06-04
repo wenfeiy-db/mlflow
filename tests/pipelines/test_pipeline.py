@@ -114,6 +114,25 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment_with_expected_r
     assert resolve_tags().items() <= run_tags.items()
 
 
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
+def test_pipelines_run_throws_exception_when_step_fails():
+    profile_path = pathlib.Path.cwd() / "profiles" / "local.yaml"
+    with open(profile_path, "r") as f:
+        profile_contents = yaml.safe_load(f)
+
+    profile_contents["INGEST_DATA_LOCATION"] = "a bad location"
+
+    with open(profile_path, "w") as f:
+        yaml.safe_dump(profile_contents, f)
+
+    pipeline = Pipeline(profile="local")
+    pipeline.clean()
+    with pytest.raises(MlflowException, match="Failed to run.*test_pipeline.*ingest"):
+        pipeline.run()
+    with pytest.raises(MlflowException, match="Failed to run.*split.*test_pipeline.*ingest"):
+        pipeline.run(step="split")
+
+
 @pytest.mark.usefixtures("enter_pipeline_example_directory")
 def test_test_step_logs_step_cards_as_artifacts():
     pipeline = Pipeline()
