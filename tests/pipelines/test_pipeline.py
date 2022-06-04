@@ -76,7 +76,7 @@ def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_d
     p.clean()
     for step_name in _STEP_NAMES:
         step_outputs_path = expected_execution_directory_location / "steps" / step_name / "outputs"
-        assert not step_outputs_path.exists()
+        assert not list(step_outputs_path.iterdir())
 
 
 @pytest.mark.usefixtures("enter_test_pipeline_directory")
