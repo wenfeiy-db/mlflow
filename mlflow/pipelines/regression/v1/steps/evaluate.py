@@ -27,7 +27,6 @@ _logger = logging.getLogger(__name__)
 
 
 _FEATURE_IMPORTANCE_PLOT_FILE = "feature_importance.png"
-_OUTPUT_CARD_FILE_NAME = "card.html"
 
 
 _BUILTIN_METRIC_TO_GREATER_IS_BETTER = {
@@ -49,11 +48,9 @@ class EvaluateStep(BaseStep):
         super().__init__(step_config, pipeline_root)
         self.tracking_config = TrackingConfig.from_dict(step_config)
         self.target_col = self.step_config.get("target_col")
-        self.status = "UNKNOWN"
         self.run_end_time = None
         self.execution_duration = None
         self.model_validation_status = "UNKNOWN"
-        self.OUTPUT_CARD_FILE_NAME = _OUTPUT_CARD_FILE_NAME
 
     def _get_custom_metrics(self):
         return (self.step_config.get("metrics") or {}).get("custom")
@@ -134,79 +131,62 @@ class EvaluateStep(BaseStep):
         return summary
 
     def _run(self, output_directory):
-        try:
-            run_start_time = time.time()
-            self._validate_validation_criteria()
+        run_start_time = time.time()
+        self._validate_validation_criteria()
 
-            test_data_path = get_step_output_path(
-                pipeline_name=self.pipeline_name,
-                step_name="split",
-                relative_path="test.parquet",
+        test_data_path = get_step_output_path(
+            pipeline_name=self.pipeline_name,
+            step_name="split",
+            relative_path="test.parquet",
+        )
+        test_data = pd.read_parquet(test_data_path)
+
+        run_id_path = get_step_output_path(
+            pipeline_name=self.pipeline_name,
+            step_name="train",
+            relative_path="run_id",
+        )
+        with open(run_id_path, "r") as f:
+            run_id = f.read()
+
+        apply_pipeline_tracking_config(self.tracking_config)
+
+        with mlflow.start_run(run_id=run_id):
+            model_uri = mlflow.get_artifact_uri("model")
+            eval_result = mlflow.evaluate(
+                model_uri,
+                test_data,
+                targets=self.target_col,
+                model_type="regressor",
+                evaluators="default",
+                dataset_name="test",
+                custom_metrics=self._load_custom_metric_functions(),
+                evaluator_config={
+                    "explainability_algorithm": "kernel",
+                    "explainability_nsamples": 100,
+                },
             )
-            test_data = pd.read_parquet(test_data_path)
+            eval_result.save(output_directory)
 
-            run_id_path = get_step_output_path(
-                pipeline_name=self.pipeline_name,
-                step_name="train",
-                relative_path="run_id",
+        validation_criteria = self.step_config.get("validation_criteria")
+        if validation_criteria:
+            criteria_summary = self._check_validation_criteria(
+                eval_result.metrics, validation_criteria
             )
-            with open(run_id_path, "r") as f:
-                run_id = f.read()
-
-            apply_pipeline_tracking_config(self.tracking_config)
-
-            with mlflow.start_run(run_id=run_id):
-                model_uri = mlflow.get_artifact_uri("model")
-                eval_result = mlflow.evaluate(
-                    model_uri,
-                    test_data,
-                    targets=self.target_col,
-                    model_type="regressor",
-                    evaluators="default",
-                    dataset_name="test",
-                    custom_metrics=self._load_custom_metric_functions(),
-                    evaluator_config={
-                        "explainability_algorithm": "kernel",
-                        "explainability_nsamples": 100,
-                    },
-                )
-                eval_result.save(output_directory)
-
-            validation_criteria = self.step_config.get("validation_criteria")
-            if validation_criteria:
-                criteria_summary = self._check_validation_criteria(
-                    eval_result.metrics, validation_criteria
-                )
-                self.model_validation_status = (
-                    "VALIDATED" if all(cr.validated for cr in criteria_summary) else "REJECTED"
-                )
-            else:
-                self.model_validation_status = "UNKNOWN"
-                criteria_summary = None
-
-            Path(output_directory, "model_validation_status").write_text(
-                self.model_validation_status
+            self.model_validation_status = (
+                "VALIDATED" if all(cr.validated for cr in criteria_summary) else "REJECTED"
             )
+        else:
+            self.model_validation_status = "UNKNOWN"
+            criteria_summary = None
 
-            self.status = "SUCCEEDED"
-        except Exception:
-            self.status = "FAILED"
-            raise
-        finally:
-            self.run_end_time = time.time()
-            self.execution_duration = self.run_end_time - run_start_time
-            try:
-                self._build_profiles_and_card(
-                    model_uri, test_data, eval_result, criteria_summary, output_directory
-                )
-            except Exception as e:
-                # swallow exception raised during building profiles and card.
-                _logger.warning(
-                    f"Build profiles and card failed: {repr(e)}, Set logging level to "
-                    "DEBUG to see the full traceback."
-                )
-                # When log level is DEBUG, also log the error stack trace.
-                _logger.debug("", exc_info=True)
+        Path(output_directory, "model_validation_status").write_text(self.model_validation_status)
+
+        self.run_end_time = time.time()
+        self.execution_duration = self.run_end_time - run_start_time
+        return self._build_profiles_and_card(
+            model_uri, test_data, eval_result, criteria_summary, output_directory
+        )
 
     def _build_profiles_and_card(
         self, model_uri, test_data, eval_result, criteria_summary, output_directory
@@ -311,18 +291,12 @@ class EvaluateStep(BaseStep):
                 "RUN_END_TIMESTAMP",
                 f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`",
             )
-            .add_markdown("RUN_STATUS", f"**RUN status:** `{self.status}`")
             .add_markdown(
                 "VALIDATION_STATUS", f"**Validation status:** `{self.model_validation_status}`"
             )
         )
 
-        card.save_as_html(os.path.join(output_directory, _OUTPUT_CARD_FILE_NAME))
-
-    def _inspect(self, output_directory):
-        # Do step-specific code to inspect/materialize the output of the step
-        _logger.info("evaluate inspect code %s", output_directory)
-        pass
+        return card
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):

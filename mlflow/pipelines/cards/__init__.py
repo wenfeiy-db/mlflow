@@ -7,11 +7,11 @@ from io import StringIO
 
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 
-_CARD_PICKLE_NAME = "card.pkl"
-_CARD_HTML_NAME = "card.html"
+CARD_PICKLE_NAME = "card.pkl"
+CARD_HTML_NAME = "card.html"
 
 # TODO: Make card save / load including card_resources directory
-_CARD_RESOURCE_DIR_NAME = f"{_CARD_HTML_NAME}.resources"
+_CARD_RESOURCE_DIR_NAME = f"{CARD_HTML_NAME}.resources"
 
 
 class CardTab:
@@ -245,7 +245,7 @@ class BaseCard:
 
     def save_as_html(self, path) -> None:
         if os.path.isdir(path):
-            path = os.path.join(path, _CARD_HTML_NAME)
+            path = os.path.join(path, CARD_HTML_NAME)
         with open(path, "w", encoding="utf-8") as f:
             f.write(self.to_html())
 
@@ -259,7 +259,7 @@ class BaseCard:
 
     def save(self, path: str) -> None:
         if os.path.isdir(path):
-            path = os.path.join(path, _CARD_PICKLE_NAME)
+            path = os.path.join(path, CARD_PICKLE_NAME)
         with open(path, "wb") as out:
             import pickle
 
@@ -268,8 +268,32 @@ class BaseCard:
     @staticmethod
     def load(path):
         if os.path.isdir(path):
-            path = os.path.join(path, _CARD_PICKLE_NAME)
+            path = os.path.join(path, CARD_PICKLE_NAME)
         with open(path, "rb") as f:
             import pickle
 
             return pickle.load(f)
+
+
+class FailureCard(BaseCard):
+    """
+    Step card providing information about a failed step execution, including a stacktrace.
+
+    TODO: Migrate the failure card to a tab-based card, removing this class and its associated
+          HTML template in the process.
+    """
+
+    def __init__(self, pipeline_name: str, step_name: str, failure_traceback: str):
+        super().__init__(
+            template_root=os.path.join(os.path.dirname(__file__), "templates"),
+            template_name="failure.html",
+            pipeline_name=pipeline_name,
+            step_name=step_name,
+        )
+        self.add_html(
+            "STEP_STATUS",
+            '<p><strong>Step status: <span style="color:red">Failed</span></strong></p>',
+        )
+        self.add_html(
+            "STACKTRACE", f'<p style="margin-top:0px"><code>{failure_traceback}</p></code>'
+        )

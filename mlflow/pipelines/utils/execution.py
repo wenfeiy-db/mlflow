@@ -3,7 +3,7 @@ import pathlib
 import shutil
 from typing import List, Dict
 
-from mlflow.pipelines.step import BaseStep
+from mlflow.pipelines.step import BaseStep, StepStatus
 from mlflow.utils.file_utils import read_yaml, write_yaml
 from mlflow.utils.process import _exec_cmd
 
@@ -19,48 +19,98 @@ def run_pipeline_step(
     pipeline_name: str,
     pipeline_steps: List[BaseStep],
     target_step: BaseStep,
-) -> str:
+) -> BaseStep:
     """
     Runs the specified step in the specified pipeline, as well as all dependent steps.
 
     :param pipeline_root_path: The absolute path of the pipeline root directory on the local
                                filesystem.
     :param pipeline_name: The name of the pipeline.
-    :param pipeline_steps: A list of all the steps contained in the specified pipeline.
+    :param pipeline_steps: A list of all the steps contained in the specified pipeline. Pipeline
+                           steps must be provided in the order that they are intended to be
+                           executed.
     :param target_step: The step to run.
-    :return: The absolute path of the step's execution outputs on the local filesystem.
+    :return: The last step that successfully completed during the pipeline execution. If execution
+             was successful, this always corresponds to the supplied target step. If execution was
+             unsuccessful, this corresponds to the step that failed.
     """
+    target_step_index = pipeline_steps.index(target_step)
     execution_dir_path = _get_or_create_execution_directory(
         pipeline_root_path, pipeline_name, pipeline_steps
     )
+
+    def get_execution_state(step):
+        return step.get_execution_state(
+            output_directory=_get_step_output_directory_path(
+                execution_directory_path=execution_dir_path,
+                step_name=step.name,
+            )
+        )
+
+    # Check the previous execution state of the target step and all of its
+    # dependencies. If any of these steps previously failed, clear its execution
+    # state to ensure that the step is run again during the upcoming execution
+    clean_execution_state(
+        pipeline_name=pipeline_name,
+        pipeline_steps=[
+            step
+            for step in pipeline_steps[: target_step_index + 1]
+            if get_execution_state(step).status != StepStatus.SUCCEEDED
+        ],
+    )
+
     _write_updated_step_confs(
         pipeline_steps=pipeline_steps,
         execution_directory_path=execution_dir_path,
     )
-    step_output_directory_path = _get_step_output_directory_path(
-        execution_directory_path=execution_dir_path, step_name=target_step.name
-    )
+
     # Aggregate step-specific environment variables into a single environment dictionary
     # that is passed to the Make subprocess. In the future, steps with different environments
     # should be isolated in different subprocesses
     make_env = {}
     for step in pipeline_steps:
         make_env.update(step.environment)
+    # Use Make to run the target step and all of its dependencies
     _run_make(
         execution_directory_path=execution_dir_path,
         rule_name=target_step.name,
         extra_env=make_env,
     )
-    return step_output_directory_path
+
+    # Identify the last step that was executed, excluding steps that are downstream of the
+    # specified target step
+    last_executed_step = pipeline_steps[0]
+    last_executed_step_state = get_execution_state(last_executed_step)
+    for step in pipeline_steps[1 : target_step_index + 1]:
+        step_state = get_execution_state(step)
+        if step_state.last_updated_timestamp >= last_executed_step_state.last_updated_timestamp:
+            last_executed_step = step
+            last_executed_step_state = step_state
+
+    # Check the previous execution state of all pipeline steps downstream of the last executed step.
+    # If any of these steps was last executed before the target step or another step upstream of the
+    # target step, this indicates that downstream steps are out of date and need to be cleared
+    clean_execution_state(
+        pipeline_name=pipeline_name,
+        pipeline_steps=[
+            step
+            for step in pipeline_steps[pipeline_steps.index(last_executed_step) :]
+            if get_execution_state(step).last_updated_timestamp
+            < last_executed_step_state.last_updated_timestamp
+        ],
+    )
+
+    return last_executed_step
 
 
 def clean_execution_state(pipeline_name: str, pipeline_steps: List[BaseStep]) -> None:
     """
-    Removes all execution state for the specified pipeline from the associated execution directory
-    on the local filesystem. This method does *not* remove other execution results, such as content
-    logged to MLflow Tracking.
+    Removes all execution state for the specified pipeline steps from the associated execution
+    directory on the local filesystem. This method does *not* remove other execution results, such
+    as content logged to MLflow Tracking.
 
     :param pipeline_name: The name of the pipeline.
+    :param pipeline_steps: The pipeline steps for which to remove execution state.
     """
     execution_dir_path = get_execution_directory_path(pipeline_name=pipeline_name)
     for step in pipeline_steps:
@@ -70,6 +120,7 @@ def clean_execution_state(pipeline_name: str, pipeline_steps: List[BaseStep]) ->
         )
         if os.path.exists(step_outputs_path):
             shutil.rmtree(step_outputs_path)
+        os.makedirs(step_outputs_path)
 
 
 def get_step_output_path(pipeline_name: str, step_name: str, relative_path: str) -> str:
@@ -205,6 +256,7 @@ def _run_make(execution_directory_path, rule_name: str, extra_env: Dict[str, str
         capture_output=False,
         stream_output=True,
         synchronous=True,
+        throw_on_error=False,
         cwd=execution_directory_path,
         extra_env=extra_env,
     )
@@ -326,19 +378,19 @@ ingest:
 steps/ingest/outputs/dataset.parquet: steps/ingest/conf.yaml
 	$(MAKE) ingest
 
-split_objects = steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/split/outputs/summary.html
+split_objects = steps/split/outputs/train.parquet steps/split/outputs/validation.parquet steps/split/outputs/test.parquet
 
 split: $(split_objects)
 
-steps/%/outputs/train.parquet steps/%/outputs/test.parquet steps/%/outputs/summary.html: steps/ingest/outputs/dataset.parquet steps/split/conf.yaml
+steps/%/outputs/train.parquet steps/%/outputs/validation.parquet steps/%/outputs/test.parquet: steps/ingest/outputs/dataset.parquet steps/split/conf.yaml
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.split import SplitStep; SplitStep.from_step_config_path(step_config_path='{path:exe/steps/split/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/split/outputs}')"
 
-transform_objects = steps/transform/outputs/transformer.pkl steps/transform/outputs/train_transformed.parquet
+transform_objects = steps/transform/outputs/transformer.pkl steps/transform/outputs/transformed_training_data.parquet steps/transform/outputs/transformed_validation_data.parquet
 
 transform: $(transform_objects)
 
-steps/%/outputs/transformer.pkl steps/%/outputs/train_transformed.parquet: {path:prp/steps/transform.py} {path:prp/steps/transformer_config.yaml} steps/split/outputs/train.parquet steps/transform/conf.yaml
+steps/%/outputs/transformer.pkl steps/%/outputs/transformed_training_data.parquet steps/%/outputs/transformed_validation_data.parquet: {path:prp/steps/transform.py} {path:prp/steps/transformer_config.yaml} steps/split/outputs/train.parquet steps/transform/conf.yaml
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.transform import TransformStep; TransformStep.from_step_config_path(step_config_path='{path:exe/steps/transform/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/transform/outputs}')"
 
@@ -346,23 +398,23 @@ train_objects = steps/train/outputs/pipeline.pkl steps/train/outputs/run_id
 
 train: $(train_objects)
 
-steps/%/outputs/pipeline.pkl steps/%/outputs/run_id: {path:prp/steps/train.py} {path:prp/steps/train_config.yaml} steps/transform/outputs/train_transformed.parquet steps/transform/outputs/transformer.pkl steps/train/conf.yaml
+steps/%/outputs/pipeline.pkl steps/%/outputs/run_id: {path:prp/steps/train.py} {path:prp/steps/train_config.yaml} steps/transform/outputs/transformed_training_data.parquet steps/transform/outputs/transformed_validation_data.parquet steps/transform/outputs/transformer.pkl steps/train/conf.yaml
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.train import TrainStep; TrainStep.from_step_config_path(step_config_path='{path:exe/steps/train/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/train/outputs}')"
 
-evaluate_objects = steps/evaluate/outputs/worst_training_examples.parquet steps/evaluate/outputs/metrics.json steps/evaluate/outputs/explanations.html steps/evaluate/outputs/model_validation_status
+evaluate_objects = steps/evaluate/outputs/metrics.json steps/evaluate/outputs/artifacts steps/evaluate/outputs/artifacts_metadata.json steps/evaluate/outputs/model_validation_status
 
 evaluate: $(evaluate_objects)
 
-steps/%/outputs/worst_training_examples.parquet steps/%/outputs/metrics.json steps/%/outputs/explanations.html steps/%/outputs/model_validation_status: steps/train/outputs/pipeline.pkl steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/train/outputs/run_id steps/evaluate/conf.yaml
+steps/%/outputs/metrics.json steps/%/outputs/artifacts steps/%/outputs/artifacts_metadata.json steps/%/outputs/model_validation_status: steps/train/outputs/pipeline.pkl steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/train/outputs/run_id steps/evaluate/conf.yaml
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep; EvaluateStep.from_step_config_path(step_config_path='{path:exe/steps/evaluate/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/evaluate/outputs}')"
 
-register_objects = steps/register/outputs/register_card.html
+register_objects = steps/register/outputs/card.html
 
 register: $(register_objects)
 
-steps/register/outputs/register_card.html: steps/train/outputs/run_id steps/register/conf.yaml steps/evaluate/outputs/model_validation_status
+steps/register/outputs/card.html: steps/train/outputs/run_id steps/register/conf.yaml steps/evaluate/outputs/model_validation_status
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.register import RegisterStep; RegisterStep.from_step_config_path(step_config_path='{path:exe/steps/register/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/register/outputs}')"
 

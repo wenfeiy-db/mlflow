@@ -1,14 +1,18 @@
 import abc
+import json
 import logging
 import os
+import shutil
 import subprocess
+import time
+import traceback
 import yaml
+from enum import Enum
 from typing import TypeVar, Dict, Any
 
-from mlflow.tracking import MlflowClient
-from mlflow.pipelines.cards import _CARD_HTML_NAME
+from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME, FailureCard, CARD_HTML_NAME
 from mlflow.pipelines.utils import get_pipeline_name
-from mlflow.utils.file_utils import path_to_local_file_uri
+from mlflow.tracking import MlflowClient
 from mlflow.utils.databricks_utils import (
     is_in_databricks_runtime,
     is_running_in_ipython_environment,
@@ -17,10 +21,70 @@ from mlflow.utils.databricks_utils import (
 
 _logger = logging.getLogger(__name__)
 
+
+class StepStatus(Enum):
+    """
+    Represents the execution status of a step.
+    """
+
+    # Indicates that no execution status information is available for the step,
+    # which may occur if the step has never been run or its outputs have been cleared
+    UNKNOWN = "UNKNOWN"
+    # Indicates that the step is currently running
+    RUNNING = "RUNNING"
+    # Indicates that the step completed successfully
+    SUCCEEDED = "SUCCEEDED"
+    # Indicates that the step completed with one or more failures
+    FAILED = "FAILED"
+
+
+StepExecutionStateType = TypeVar("StepExecutionStateType", bound="StepExecutionState")
+
+
+class StepExecutionState:
+    """
+    Represents execution state for a step, including the current status and
+    the time of the last status update.
+    """
+
+    _KEY_STATUS = "pipeline_step_execution_status"
+    _KEY_LAST_UPDATED_TIMESTAMP = "pipeline_step_execution_last_updated_timestamp"
+
+    def __init__(self, status: StepStatus, last_updated_timestamp: int):
+        """
+        :param status: The execution status of the step.
+        :param last_updated_timestamp: The timestamp of the last execution status update, measured
+                                       in seconds since the UNIX epoch.
+        """
+        self.status = status
+        self.last_updated_timestamp = last_updated_timestamp
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Creates a dictionary representation of the step execution state.
+        """
+        return {
+            StepExecutionState._KEY_STATUS: self.status.value,
+            StepExecutionState._KEY_LAST_UPDATED_TIMESTAMP: self.last_updated_timestamp,
+        }
+
+    @classmethod
+    def from_dict(cls, state_dict) -> StepExecutionStateType:
+        """
+        Creates a ``StepExecutionState`` instance from the specified execution state dictionary.
+        """
+        return cls(
+            status=StepStatus[state_dict[StepExecutionState._KEY_STATUS]],
+            last_updated_timestamp=state_dict[StepExecutionState._KEY_LAST_UPDATED_TIMESTAMP],
+        )
+
+
 StepType = TypeVar("StepType", bound="BaseStep")
 
 
 class BaseStep(metaclass=abc.ABCMeta):
+    _EXECUTION_STATE_FILE_NAME = "execution_state.json"
+
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         """
         :param step_config: dictionary of the config needed to
@@ -31,7 +95,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         self.step_config = step_config
         self.pipeline_root = pipeline_root
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
-        self.OUTPUT_CARD_FILE_NAME = None
 
     def run(self, output_directory: str):
         """
@@ -40,10 +103,24 @@ class BaseStep(metaclass=abc.ABCMeta):
 
         :param output_directory: String file path to the directory where step
                                  outputs should be stored.
-        :return: Results from executing the corresponding step.
+        :return: None
         """
         self._initialize_databricks_spark_connection_and_hooks_if_applicable()
-        self._run(output_directory)
+        try:
+            self._update_status(status=StepStatus.RUNNING, output_directory=output_directory)
+            step_card = self._run(output_directory=output_directory)
+            self._update_status(status=StepStatus.SUCCEEDED, output_directory=output_directory)
+        except Exception:
+            self._update_status(status=StepStatus.FAILED, output_directory=output_directory)
+            step_card = FailureCard(
+                pipeline_name=self.pipeline_name,
+                step_name=self.name,
+                failure_traceback=traceback.format_exc(),
+            )
+            raise
+        finally:
+            step_card.save(path=output_directory)
+            step_card.save_as_html(path=output_directory)
 
     def inspect(self, output_directory: str):
         """
@@ -52,24 +129,19 @@ class BaseStep(metaclass=abc.ABCMeta):
 
         :param output_directory: String file path where to the directory where step
                                  outputs are located.
-        :return: Results from the last execution of the corresponding step.
+        :return: None
         """
-        # Open the step card here
+        card_path = os.path.join(output_directory, CARD_PICKLE_NAME)
+        if not os.path.exists(card_path):
+            return None
 
-        if self.OUTPUT_CARD_FILE_NAME is not None:
-            file_path = os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME)
-            abs_path = os.path.abspath(file_path) if not os.path.isabs(file_path) else file_path
-            if is_running_in_ipython_environment():
-                from IPython.display import display, HTML
-
-                display(HTML(filename=abs_path))
-            else:
-                import shutil
-
-                if shutil.which("open") is not None:
-                    subprocess.run(["open", path_to_local_file_uri(abs_path)], check=True)
-
-        return self._inspect(output_directory)
+        card = BaseCard.load(card_path)
+        if is_running_in_ipython_environment():
+            card.display()
+        else:
+            card_html_path = os.path.join(output_directory, CARD_HTML_NAME)
+            if os.path.exists(card_html_path) and shutil.which("open") is not None:
+                subprocess.run(["open", card_html_path], check=True)
 
     @abc.abstractmethod
     def _run(self, output_directory: str):
@@ -81,19 +153,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         :param output_directory: String file path to the directory where step outputs
                                  should be stored.
         :return: Results from executing the corresponding step.
-        """
-        pass
-
-    @abc.abstractmethod
-    def _inspect(self, output_directory: str):
-        """
-        Inspect the step output state that was stored as part of the last execution.
-        Each individual step needs to implement this function to return a materialized
-        output to display to the end user.
-
-        :param output_directory: String file path where to the directory where step
-                                 outputs are located.
-        :return: Results from the last execution of the corresponding step.
         """
         pass
 
@@ -148,6 +207,21 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         return {}
 
+    def get_execution_state(self, output_directory: str) -> StepExecutionState:
+        execution_state_file_path = os.path.join(
+            output_directory, BaseStep._EXECUTION_STATE_FILE_NAME
+        )
+        if os.path.exists(execution_state_file_path):
+            with open(execution_state_file_path, "r") as f:
+                return StepExecutionState.from_dict(json.load(f))
+        else:
+            return StepExecutionState(StepStatus.UNKNOWN, 0)
+
+    def _update_status(self, status: StepStatus, output_directory: str) -> None:
+        execution_state = StepExecutionState(status=status, last_updated_timestamp=time.time())
+        with open(os.path.join(output_directory, BaseStep._EXECUTION_STATE_FILE_NAME), "w") as f:
+            json.dump(execution_state.to_dict(), f)
+
     def _initialize_databricks_spark_connection_and_hooks_if_applicable(self) -> None:
         """
         Initializes a connection to the Databricks Spark Gateway and sets up associated hooks
@@ -196,7 +270,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         local_card_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
             step_name=step_name,
-            relative_path=_CARD_HTML_NAME,
+            relative_path=CARD_HTML_NAME,
         )
         if os.path.exists(local_card_path):
             MlflowClient().log_artifact(run_id, local_card_path, artifact_path=step_name)

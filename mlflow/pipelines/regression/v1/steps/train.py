@@ -7,6 +7,7 @@ import cloudpickle
 
 import mlflow
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
+from mlflow.pipelines.regression.v1.cards.train import TrainCard
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.pipelines.utils.tracking import (
@@ -102,13 +103,12 @@ class TrainStep(BaseStep):
             # Do step-specific code to execute the train step
             _logger.info("train run code %s", output_directory)
 
+        card = TrainCard(self.pipeline_name, self.name)
+        card.save_as_html(output_directory)
         for step_name in ("ingest", "split", "transform", "train"):
             self._log_step_card(run.info.run_id, step_name)
 
-    def _inspect(self, output_directory):
-        # Do step-specific code to inspect/materialize the output of the step
-        _logger.info("train inspect code %s", output_directory)
-        pass
+        return card
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):

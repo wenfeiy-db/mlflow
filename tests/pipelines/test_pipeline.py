@@ -76,7 +76,7 @@ def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_d
     p.clean()
     for step_name in _STEP_NAMES:
         step_outputs_path = expected_execution_directory_location / "steps" / step_name / "outputs"
-        assert not step_outputs_path.exists()
+        assert not list(step_outputs_path.iterdir())
 
 
 @pytest.mark.usefixtures("enter_test_pipeline_directory")
@@ -112,6 +112,37 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment_with_expected_r
     assert "model" in [artifact.path for artifact in artifacts]
     run_tags = MlflowClient(tracking_uri).get_run(run_id=logged_run.info.run_id).data.tags
     assert resolve_tags().items() <= run_tags.items()
+
+
+@pytest.mark.usefixtures("enter_test_pipeline_directory")
+def test_pipelines_run_throws_exception_and_produces_failure_card_when_step_fails():
+    profile_path = pathlib.Path.cwd() / "profiles" / "local.yaml"
+    with open(profile_path, "r") as f:
+        profile_contents = yaml.safe_load(f)
+
+    profile_contents["INGEST_DATA_LOCATION"] = "a bad location"
+
+    with open(profile_path, "w") as f:
+        yaml.safe_dump(profile_contents, f)
+
+    pipeline = Pipeline(profile="local")
+    pipeline.clean()
+    with pytest.raises(MlflowException, match="Failed to run.*test_pipeline.*ingest"):
+        pipeline.run()
+    with pytest.raises(MlflowException, match="Failed to run.*split.*test_pipeline.*ingest"):
+        pipeline.run(step="split")
+
+    step_card_path = get_step_output_path(
+        pipeline_name=pipeline.name,
+        step_name="ingest",
+        relative_path="card.html",
+    )
+    with open(step_card_path, "r") as f:
+        card_content = f.read()
+
+    assert "Ingest" in card_content
+    assert "Failed" in card_content
+    assert "Stacktrace" in card_content
 
 
 @pytest.mark.usefixtures("enter_pipeline_example_directory")

@@ -478,30 +478,6 @@ def test_ingest_produces_expected_step_card(pandas_df, tmp_path):
 
 
 @pytest.mark.usefixtures("enter_test_pipeline_directory")
-def test_ingest_inspect_return_expected_step_card(pandas_df, tmp_path):
-    dataset_path = tmp_path / "df.parquet"
-    pandas_df.to_parquet(dataset_path)
-
-    ingest_step = IngestStep.from_pipeline_config(
-        pipeline_config={
-            "data": {
-                "format": "parquet",
-                "location": str(dataset_path),
-            }
-        },
-        pipeline_root=os.getcwd(),
-    )
-    ingest_step.run(output_directory=tmp_path)
-    step_card_output_path = os.path.join(tmp_path, "card.html")
-    with open(step_card_output_path, "r") as f:
-        step_card_html_content = f.read()
-
-    inspect_output = ingest_step.inspect(output_directory=tmp_path)
-    assert isinstance(inspect_output, IngestCard)
-    assert inspect_output.to_html() == step_card_html_content
-
-
-@pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingest_throws_when_spark_unavailable_for_spark_based_dataset(spark_df, tmp_path):
     dataset_path = tmp_path / "test.delta"
     spark_df.write.format("delta").save(str(dataset_path))

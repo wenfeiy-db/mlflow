@@ -6,6 +6,7 @@ import sys
 import cloudpickle
 
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
+from mlflow.pipelines.regression.v1.cards.transform import TransformCard
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.pipelines.utils.tracking import get_pipeline_tracking_config
@@ -70,10 +71,7 @@ class TransformStep(BaseStep):
             os.path.join(output_directory, "transformed_validation_data.parquet")
         )
 
-    def _inspect(self, output_directory):
-        # Do step-specific code to inspect/materialize the output of the step
-        _logger.info("transform inspect code %s", output_directory)
-        pass
+        return TransformCard(self.pipeline_name, self.name)
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):

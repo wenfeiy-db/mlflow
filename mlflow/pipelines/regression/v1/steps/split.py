@@ -87,11 +87,9 @@ class SplitStep(BaseStep):
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         super(SplitStep, self).__init__(step_config, pipeline_root)
 
-        self.status = "Unknown"
         self.run_end_time = None
         self.execution_duration = None
         self.num_dropped_rows = None
-        self.OUTPUT_CARD_FILE_NAME = "card.html"
 
         if "target_col" not in self.step_config:
             raise MlflowException(
@@ -112,7 +110,7 @@ class SplitStep(BaseStep):
 
         self.split_ratios = split_ratios
 
-    def _build_profiles_and_card(self, train_df, validation_df, test_df, output_directory):
+    def _build_profiles_and_card(self, train_df, validation_df, test_df):
         from pandas_profiling import ProfileReport
         from mlflow.pipelines.regression.v1.cards.split import SplitCard
 
@@ -134,7 +132,6 @@ class SplitStep(BaseStep):
         card.add_markdown(
             "EXECUTION_DURATION", f"**Execution duration (s):** `{self.execution_duration:.2f}`"
         )
-        card.add_markdown("RUN_STATUS", f"**Run status:** `{self.status}`")
         card.add_markdown(
             "NUM_DROPPED_ROWS", f"**Number of dropped rows:** `{self.num_dropped_rows}`"
         )
@@ -151,68 +148,47 @@ class SplitStep(BaseStep):
         card.add_pandas_profile("Profile of Train Dataset", train_profile)
         card.add_pandas_profile("Profile of Validation Dataset", validation_profile)
         card.add_pandas_profile("Profile of Test Dataset", test_profile)
-
-        with open(os.path.join(output_directory, self.OUTPUT_CARD_FILE_NAME), "w") as f:
-            f.write(card.to_html())
+        return card
 
     def _run(self, output_directory):
         import pandas as pd
 
-        try:
-            run_start_time = time.time()
+        run_start_time = time.time()
 
-            # read ingested dataset
-            ingested_data_path = get_step_output_path(
-                pipeline_name=self.pipeline_name,
-                step_name="ingest",
-                relative_path=_INPUT_FILE_NAME,
+        # read ingested dataset
+        ingested_data_path = get_step_output_path(
+            pipeline_name=self.pipeline_name,
+            step_name="ingest",
+            relative_path=_INPUT_FILE_NAME,
+        )
+        input_df = pd.read_parquet(ingested_data_path)
+
+        # drop rows which target value is missing
+        raw_input_num_rows = len(input_df)
+        input_df = input_df.dropna(how="any", subset=[self.target_col])
+        self.num_dropped_rows = raw_input_num_rows - len(input_df)
+
+        # split dataset
+        hash_buckets = _create_hash_buckets(input_df)
+        train_df, validation_df, test_df = _get_split_df(input_df, hash_buckets, self.split_ratios)
+        # Import from user function module to process dataframes
+        post_split_config = self.step_config.get("post_split_method", None)
+        if post_split_config is not None:
+            (post_split_module_name, post_split_fn_name) = post_split_config.rsplit(".", 1)
+            sys.path.append(self.pipeline_root)
+            post_split = getattr(
+                importlib.import_module(post_split_module_name), post_split_fn_name
             )
-            input_df = pd.read_parquet(ingested_data_path)
+            (train_df, validation_df, test_df) = post_split(train_df, validation_df, test_df)
 
-            # drop rows which target value is missing
-            raw_input_num_rows = len(input_df)
-            input_df = input_df.dropna(how="any", subset=[self.target_col])
-            self.num_dropped_rows = raw_input_num_rows - len(input_df)
+        # Output train / validation / test splits
+        train_df.to_parquet(os.path.join(output_directory, _OUTPUT_TRAIN_FILE_NAME))
+        validation_df.to_parquet(os.path.join(output_directory, _OUTPUT_VALIDATION_FILE_NAME))
+        test_df.to_parquet(os.path.join(output_directory, _OUTPUT_TEST_FILE_NAME))
 
-            # split dataset
-            hash_buckets = _create_hash_buckets(input_df)
-            train_df, validation_df, test_df = _get_split_df(
-                input_df, hash_buckets, self.split_ratios
-            )
-            # Import from user function module to process dataframes
-            post_split_config = self.step_config.get("post_split_method", None)
-            if post_split_config is not None:
-                (post_split_module_name, post_split_fn_name) = post_split_config.rsplit(".", 1)
-                sys.path.append(self.pipeline_root)
-                post_split = getattr(
-                    importlib.import_module(post_split_module_name), post_split_fn_name
-                )
-                (train_df, validation_df, test_df) = post_split(train_df, validation_df, test_df)
-
-            # Output train / validation / test splits
-            train_df.to_parquet(os.path.join(output_directory, _OUTPUT_TRAIN_FILE_NAME))
-            validation_df.to_parquet(os.path.join(output_directory, _OUTPUT_VALIDATION_FILE_NAME))
-            test_df.to_parquet(os.path.join(output_directory, _OUTPUT_TEST_FILE_NAME))
-
-            self.status = "DONE"
-        except Exception:
-            self.status = "FAILED"
-            raise
-        finally:
-            self.run_end_time = time.time()
-            self.execution_duration = self.run_end_time - run_start_time
-            try:
-                self._build_profiles_and_card(train_df, validation_df, test_df, output_directory)
-            except Exception as e:
-                # swallow exception raised during building profiles and card.
-                _logger.warning(f"Build profiles and card failed: {repr(e)}")
-                # When log level is DEBUG, also log the error stack trace.
-                _logger.debug("", exc_info=True)
-
-    def _inspect(self, output_directory):
-        # Do step-specific code to inspect/materialize the output of the step
-        _logger.info("split inspect code %s", output_directory)
-        pass
+        self.run_end_time = time.time()
+        self.execution_duration = self.run_end_time - run_start_time
+        return self._build_profiles_and_card(train_df, validation_df, test_df)
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):

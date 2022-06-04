@@ -2,7 +2,7 @@ import abc
 import logging
 
 from mlflow.exceptions import MlflowException
-from mlflow.pipelines.step import BaseStep
+from mlflow.pipelines.step import BaseStep, StepStatus
 from mlflow.pipelines.utils import (
     get_pipeline_config,
     get_pipeline_name,
@@ -14,7 +14,7 @@ from mlflow.pipelines.utils.execution import (
     run_pipeline_step,
     get_step_output_path,
 )
-from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, INTERNAL_ERROR
+from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, INTERNAL_ERROR, BAD_REQUEST
 from mlflow.utils.class_utils import _get_class_from_string
 from mlflow.utils.databricks_utils import is_running_in_ipython_environment
 from typing import List
@@ -111,7 +111,7 @@ class _BasePipeline:
             from IPython.utils.io import capture_output
 
             with capture_output():
-                run_pipeline_step(
+                last_executed_step = run_pipeline_step(
                     self._pipeline_root_path,
                     self.name,
                     self._steps,
@@ -119,7 +119,7 @@ class _BasePipeline:
                     self._get_step(step) if step else self._steps[-1],
                 )
         else:
-            run_pipeline_step(
+            last_executed_step = run_pipeline_step(
                 self._pipeline_root_path,
                 self.name,
                 self._steps,
@@ -128,6 +128,27 @@ class _BasePipeline:
             )
         # Shows the step card via inspect. If no step is specified, the last step card is shown.
         self.inspect(step if step else self._steps[-1].name)
+
+        # Verify that the step execution succeeded and throw if it didn't.
+        last_executed_step_output_directory = get_step_output_path(
+            self.name, last_executed_step.name, ""
+        )
+        last_executed_step_status = last_executed_step.get_execution_state(
+            last_executed_step_output_directory
+        ).status
+        if last_executed_step_status != StepStatus.SUCCEEDED:
+            if step is not None:
+                raise MlflowException(
+                    f"Failed to run step '{step}' of pipeline '{self.name}'."
+                    f" An error was encountered while running step '{last_executed_step.name}'.",
+                    error_code=BAD_REQUEST,
+                )
+            else:
+                raise MlflowException(
+                    f"Failed to run pipeline '{self.name}'."
+                    f" An error was encountered while running step '{last_executed_step.name}'.",
+                    error_code=BAD_REQUEST,
+                )
 
     def inspect(self, step: str = None) -> None:
         """
