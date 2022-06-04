@@ -18,6 +18,7 @@ from mlflow.pipelines.utils.execution import (
     get_step_output_path,
 )
 
+# pylint: disable=unused-import
 from tests.pipelines.helper_functions import (
     BaseStepImplemented,
     enter_pipeline_example_directory,
@@ -378,7 +379,7 @@ def test_run_pipeline_with_ingest_step_as_target_clears_downstream_step_state(te
 
 
 def test_run_pipeline_step_after_change_clears_downstream_step_state(test_pipeline):
-    ingest_step, split_step, transform_step = test_pipeline
+    ingest_step, _, transform_step = test_pipeline
     curr_time = time.time()
 
     run_test_pipeline_step(test_pipeline, transform_step)

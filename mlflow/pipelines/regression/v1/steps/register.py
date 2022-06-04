@@ -79,9 +79,9 @@ class RegisterStep(BaseStep):
 
         self.run_end_time = time.time()
         self.execution_duration = self.run_end_time - run_start_time
-        return self._build_card(output_directory)
+        return self._build_card()
 
-    def _build_card(self, output_directory: str) -> None:
+    def _build_card(self) -> None:
         from mlflow.pipelines.regression.v1.cards.register import RegisterCard
 
         # Build card

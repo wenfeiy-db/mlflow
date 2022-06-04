@@ -1,7 +1,6 @@
 import os
 import pathlib
 import shutil
-import time
 from typing import List, Dict
 
 from mlflow.pipelines.step import BaseStep, StepStatus

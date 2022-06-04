@@ -110,7 +110,7 @@ class SplitStep(BaseStep):
 
         self.split_ratios = split_ratios
 
-    def _build_profiles_and_card(self, train_df, validation_df, test_df, output_directory):
+    def _build_profiles_and_card(self, train_df, validation_df, test_df):
         from pandas_profiling import ProfileReport
         from mlflow.pipelines.regression.v1.cards.split import SplitCard
 
@@ -188,7 +188,7 @@ class SplitStep(BaseStep):
 
         self.run_end_time = time.time()
         self.execution_duration = self.run_end_time - run_start_time
-        return self._build_profiles_and_card(train_df, validation_df, test_df, output_directory)
+        return self._build_profiles_and_card(train_df, validation_df, test_df)
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):
