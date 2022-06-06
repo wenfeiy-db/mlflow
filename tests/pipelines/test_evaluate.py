@@ -45,7 +45,7 @@ def train_and_log_model():
     with mlflow.start_run() as run:
         X, y = load_diabetes(as_frame=True, return_X_y=True)
         model = LinearRegression().fit(X, y)
-        mlflow.sklearn.log_model(model, artifact_path="model")
+        mlflow.sklearn.log_model(model, artifact_path="train/model")
     return run.info.run_id
 
 

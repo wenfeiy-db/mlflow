@@ -108,8 +108,16 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment_with_expected_r
         str((pathlib.Path(artifact_location) / logged_run.info.run_id / "artifacts").resolve())
     )
     assert "r2_score_on_data_test" in logged_run.data.metrics
-    artifacts = MlflowClient(tracking_uri).list_artifacts(run_id=logged_run.info.run_id)
-    assert "model" in [artifact.path for artifact in artifacts]
+    artifacts = MlflowClient(tracking_uri).list_artifacts(
+        run_id=logged_run.info.run_id, path="train"
+    )
+    assert set([artifact.path for artifact in artifacts]) == set(
+        [
+            "train/card.html",
+            "train/estimator",
+            "train/model",
+        ]
+    )
     run_tags = MlflowClient(tracking_uri).get_run(run_id=logged_run.info.run_id).data.tags
     assert resolve_tags().items() <= run_tags.items()
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import os
+import logging
 import random
 import shutil
 import string
@@ -14,6 +15,8 @@ CARD_HTML_NAME = "card.html"
 
 # TODO: Make card save / load including card_resources directory
 _CARD_RESOURCE_DIR_NAME = f"{CARD_HTML_NAME}.resources"
+
+_logger = logging.getLogger(__name__)
 
 
 class CardTab:
@@ -180,7 +183,7 @@ class BaseCard:
 
         TODO: Make pickling / unpickling support resource files.
         """
-        res_name = f"r{len(self._resource_files) + 1}_{os.path.basename(path)}"
+        res_name = f"r{len(self._resource_files) + 1:04}_{os.path.basename(path)}"
         rel_path = os.path.join(_CARD_RESOURCE_DIR_NAME, res_name)
         self._resource_files[path] = rel_path
         return rel_path
@@ -196,6 +199,9 @@ class BaseCard:
             resource_dir = os.path.join(dir_path, _CARD_RESOURCE_DIR_NAME)
             os.makedirs(resource_dir, exist_ok=True)
             for original_path, rel_path in self._resource_files.items():
+                if not os.path.exists(original_path):
+                    _logger.warning(f"Unable to find artifact at location: {original_path}")
+                    continue
                 dest_path = os.path.join(resource_dir, os.path.basename(rel_path))
                 shutil.copy(original_path, dest_path)
 

@@ -7,6 +7,7 @@ import cloudpickle
 
 import mlflow
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
+from mlflow.models.signature import infer_signature
 from mlflow.pipelines.cards import BaseCard
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
@@ -76,8 +77,11 @@ class TrainStep(BaseStep):
                 transformer = cloudpickle.load(f)
 
             # TODO: log this as a pyfunc model
-            logged_estimator = mlflow.sklearn.log_model(estimator, "estimator")
-            mlflow.sklearn.log_model(transformer, "transformer")
+            signature = infer_signature(X_train, estimator.predict(X_train))
+            logged_estimator = mlflow.sklearn.log_model(
+                estimator, f"{self.name}/estimator", signature=signature
+            )
+            mlflow.sklearn.log_model(transformer, "transform/transformer")
 
             eval_result = mlflow.evaluate(
                 model=logged_estimator.model_uri,
@@ -92,7 +96,7 @@ class TrainStep(BaseStep):
             eval_result.save(output_directory)
 
             pipeline = make_pipeline(transformer, estimator)
-            mlflow.sklearn.log_model(pipeline, "model")
+            mlflow.sklearn.log_model(pipeline, f"{self.name}/model")
 
             with open(os.path.join(output_directory, "run_id"), "w") as f:
                 f.write(run.info.run_id)
@@ -104,6 +108,10 @@ class TrainStep(BaseStep):
             _logger.info("train run code %s", output_directory)
 
         card = BaseCard(self.pipeline_name, self.name)
+        card.add_tab("Model Architecture", "{{MODEL_ARCH}}").add_html("MODEL_ARCH", repr(pipeline))
+        card.add_tab("Estimator Schema", "{{MODEL_SIGNATURE}}").add_html(
+            "MODEL_SIGNATURE", signature.to_dict()
+        )
         card.save_as_html(output_directory)
         for step_name in ("ingest", "split", "transform", "train"):
             self._log_step_card(run.info.run_id, step_name)

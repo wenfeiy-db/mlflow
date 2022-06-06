@@ -152,7 +152,7 @@ class EvaluateStep(BaseStep):
         apply_pipeline_tracking_config(self.tracking_config)
 
         with mlflow.start_run(run_id=run_id):
-            model_uri = mlflow.get_artifact_uri("model")
+            model_uri = mlflow.get_artifact_uri("train/model")
             eval_result = mlflow.evaluate(
                 model_uri,
                 test_data,
