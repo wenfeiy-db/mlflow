@@ -1,5 +1,3 @@
-import html
-import os
 import pytest
 
 from mlflow.exceptions import MlflowException
@@ -11,49 +9,35 @@ class ProfileReport:
         return "pandas-profiling"
 
 
-class FakeCard(BaseCard):
-    def __init__(self):
-        super().__init__(
-            template_root=os.path.join(os.path.dirname(__file__)),
-            template_name="fake.html",
-            pipeline_name="fake pipeline",
-            step_name="fake step",
-        )
-
-
 def test_verify_card_information():
-    from markdown import markdown as md_to_html
-
-    profile1 = ProfileReport()
-    profile2 = ProfileReport()
-
-    ingest_card = (
-        FakeCard()
+    card = BaseCard(
+        pipeline_name="fake pipeline",
+        step_name="fake step",
+    )
+    (
+        card.add_tab(
+            "First tab",
+            """
+        <h3 class="section-title">Markdown:</h3>
+        {{ MARKDOWN_1 }}<hr>
+        <h3 class="section-title">Other:</h3>
+        {{ HTML_1 }}""",
+        )
         .add_markdown("MARKDOWN_1", "#### Hello, world!")
         .add_html("HTML_1", "<span style='color:blue'>blue</span>")
-        .add_pandas_profile("Profile 1", profile1)
-        .add_pandas_profile("Profile 2", profile2)
-        .add_text("1,2,3.")
     )
+    card.add_tab("Profile 1", "{{PROFILE}}").add_pandas_profile("PROFILE", ProfileReport())
+    card.add_tab("Profile 2", "{{PROFILE}}").add_pandas_profile("PROFILE", ProfileReport())
+    card.add_text("1,2,3.")
 
-    profile_iframe = lambda profile: (
-        "<iframe srcdoc='"
-        + html.escape(profile.to_html())
-        + "' width='100%' height='500' frameborder='0'></iframe>"
-    )
-    for key, value in {
-        "MARKDOWN_1": md_to_html("#### Hello, world!"),
-        "HTML_1": "<span style='color:blue'>blue</span>",
-    }.items():
-        assert key in ingest_card._context
-        assert ingest_card._context[key] == value
-
-    assert ingest_card._tabs == [
-        ("Profile 1", profile_iframe(profile1)),
-        ("Profile 2", profile_iframe(profile2)),
-    ]
-    assert ingest_card._string_builder.getvalue() == "1,2,3."
-    assert ingest_card.to_text() == "1,2,3."
+    expected_html = """
+        <h3 class="section-title">Markdown:</h3>
+        <h4>Hello, world!</h4><hr>
+        <h3 class="section-title">Other:</h3>
+        <span style='color:blue'>blue</span></div>
+    """
+    assert expected_html in card.to_html()
+    assert card.to_text() == "1,2,3."
 
 
 def test_card_tab_works():

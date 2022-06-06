@@ -2,10 +2,10 @@ import logging
 import os
 
 from mlflow.exceptions import MlflowException
+from mlflow.pipelines.cards import BaseCard
 from mlflow.pipelines.step import BaseStep
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 from mlflow.utils.file_utils import read_parquet_as_pandas_df
-from mlflow.pipelines.regression.v1.cards.ingest import IngestCard
 from mlflow.pipelines.regression.v1.steps.ingest.datasets import (
     ParquetDataset,
     DeltaTableDataset,
@@ -60,7 +60,7 @@ class IngestStep(BaseStep):
                 error_code=INVALID_PARAMETER_VALUE,
             )
 
-    def _run(self, output_directory: str):
+    def _run(self, output_directory: str) -> BaseCard:
         from pandas_profiling import ProfileReport
 
         dataset_dst_path = os.path.abspath(
@@ -94,7 +94,7 @@ class IngestStep(BaseStep):
         ingested_dataset_path: str,
         dataset_src_location: str = None,
         dataset_sql: str = None,
-    ) -> IngestCard:
+    ) -> BaseCard:
         """
         Constructs a step card instance corresponding to the current ingest step state.
 
@@ -108,7 +108,7 @@ class IngestStep(BaseStep):
                             (e.g. 'SELECT * FROM my_spark_table'), if the dataset is a Spark SQL
                             dataset. Either ``dataset_src_location`` or ``dataset_sql`` must be
                             specified.
-        :return: An IngestCard instance corresponding to the current ingest step state.
+        :return: An BaseCard instance corresponding to the current ingest step state.
         """
         if dataset_src_location is None and dataset_sql is None:
             raise MlflowException(
@@ -119,20 +119,32 @@ class IngestStep(BaseStep):
                 error_code=INVALID_PARAMETER_VALUE,
             )
 
-        card = IngestCard(self.pipeline_name, self.name)
-        card.add_markdown(
-            name="DATASET_SOURCE",
-            markdown=(
-                f"**Dataset source location:** `{dataset_src_location}`"
-                if dataset_src_location is not None
-                else f"**Dataset SQL:** `{dataset_sql}`"
-            ),
+        card = BaseCard(self.pipeline_name, self.name)
+        (  # Tab #1 -- Ingested dataset profile.
+            card.add_tab("Data Profile", "{{PROFILE}}").add_pandas_profile(
+                "PROFILE", ingested_dataset_profile
+            )
         )
-        card.add_markdown(
-            name="RESOLVED_DATASET_LOCATION",
-            markdown=f"**Ingested dataset path:** `{ingested_dataset_path}`",
+        (  # Tab #2 -- Step run summary.
+            card.add_tab(
+                f"Run Summary ({self.name.capitalize()})",
+                '<h3 class="section-title">Dataset Info</h3>'
+                + "{{ DATASET_SOURCE }}"
+                + "{{ RESOLVED_DATASET_LOCATION }}",
+            )
+            .add_markdown(
+                name="DATASET_SOURCE",
+                markdown=(
+                    f"**Dataset source location:** `{dataset_src_location}`"
+                    if dataset_src_location is not None
+                    else f"**Dataset SQL:** `{dataset_sql}`"
+                ),
+            )
+            .add_markdown(
+                name="RESOLVED_DATASET_LOCATION",
+                markdown=f"**Ingested dataset path:** `{ingested_dataset_path}`",
+            )
         )
-        card.add_pandas_profile("Profile of Ingested Dataset", ingested_dataset_profile)
         return card
 
     @classmethod

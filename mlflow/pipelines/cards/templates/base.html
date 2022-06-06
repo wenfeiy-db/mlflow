@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>{% block HEADER_TITLE %}{% endblock %}</title>
+        <title>{{HEADER_TITLE}}</title>
         <style>
             h1.title {
             color: #4287f5;
@@ -47,49 +47,54 @@
             .content-active {
                 display: block;
             }
-            {% block CSS %} {% endblock %}
+            h3.section-title {
+                color: #57a8de;
+            }
+            .dataset-container {
+                width: max;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
         </style>
     </head>
    <body>
-        <header>
-            <h2 class="title">{% block PAGE_TITLE %}{% endblock %}</h2>
-        </header>
         <div class="tab">
-            <div class="button-container">
-                <button id="0" class="tablinks active">
-                    Summary
-                </button>
+            <div class="{{BUTTON_CONTAINER}}">
                 {% for tab in tab_list %}
-                    <button id={{loop.index}} class="tablinks">
+                    <button id={{loop.index - 1}} class="{{TABLINK}}">
                         {{tab.0}}
                     </button>
                 {% endfor %}
             </div>
         </div>
         <div class="tabcontent">
-            <div class="content content-active">{% block BODY %}{% endblock %}</div>
             {% for tab in tab_list %}
-                <div class="content content-hide">{{ tab.1 }}</div>
+                <div class="{{CONTENT}} content-hide">{{ tab.1 }}</div>
             {% endfor %}
         </div>
         <script>
             function onclickTab(event) {
-                 const tablinks = document.getElementsByClassName("tablinks");
+                 const tablinks = document.getElementsByClassName("{{TABLINK}}");
                 for (i = 0; i < tablinks.length; i++) {
                     tablinks[i].className = tablinks[i].className.replace("active", "");
                 }
                 event.target.classList.add("active");
 
                 const tabId = event.target.id;
-                const tabContents = document.getElementsByClassName("content");
+                const tabContents = document.getElementsByClassName("{{CONTENT}}");
                 for (i = 0; i < tabContents.length; i++) {
                     tabContents[i].className = tabContents[i].className.replace("content-active", "content-hide");
                 }
                 tabContents[tabId].classList.add("content-active");
             }
             (function() {
-                const buttonsContainer = document.getElementsByClassName("button-container")[0]
+                const buttonsContainer = document.getElementsByClassName("{{BUTTON_CONTAINER}}")[0]
                 buttonsContainer.addEventListener("click", onclickTab);
+
+                const tablinks = document.getElementsByClassName("{{TABLINK}}");
+                tablinks[0].classList.add("active");
+                const tabContents = document.getElementsByClassName("{{CONTENT}}");
+                tabContents[0].classList.add("content-active");
             })()
         </script>
    </body>

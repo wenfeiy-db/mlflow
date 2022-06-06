@@ -8,7 +8,6 @@ import pytest
 from pyspark.sql import SparkSession
 
 from mlflow.exceptions import MlflowException
-from mlflow.pipelines.regression.v1.cards.ingest import IngestCard
 from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 from mlflow.store.artifact.s3_artifact_repo import S3ArtifactRepository
 
@@ -276,7 +275,7 @@ def test_ingests_remote_http_datasets_successfully(tmp_path):
 
 @pytest.mark.usefixtures("enter_test_pipeline_directory")
 def test_ingests_spark_sql_successfully(spark_df, tmp_path):
-    spark_df.write.saveAsTable("test_table")
+    spark_df.write.mode("overwrite").saveAsTable("test_table")
 
     IngestStep.from_pipeline_config(
         pipeline_config={

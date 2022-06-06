@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import html
 import os
+import random
 import shutil
+import string
 from io import StringIO
 
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
@@ -69,9 +71,12 @@ class CardTab:
         :param profile: the pandas profile object
         :return: the updated card instance
         """
-        profile_iframe = (
-            "<iframe srcdoc='{src}' width='100%' height='500' frameborder='0'></iframe>"
-        ).format(src=html.escape(profile.to_html()))
+        try:
+            profile_iframe = (
+                "<iframe srcdoc='{src}' width='100%' height='500' frameborder='0'></iframe>"
+            ).format(src=html.escape(profile.to_html()))
+        except Exception as e:
+            profile_iframe = f"Unable to create data profile. Error found:\n{e}"
         self.add_html(name, profile_iframe)
         return self
 
@@ -88,76 +93,20 @@ class CardTab:
 
 
 class BaseCard:
-    def __init__(
-        self, template_root: str, template_name: str, pipeline_name: str, step_name: str
-    ) -> None:
+    def __init__(self, pipeline_name: str, step_name: str) -> None:
         """
         BaseCard Constructor
 
-        :param template_root: a string representing the root directory of the template
-        :param template_name: a string representing the file name
+        :param pipeline_name: a string representing name of the pipeline.
+        :param step_name: a string representing the name of the step.
         """
-        import jinja2
-        from jinja2 import meta as jinja2_meta
+        self._pipeline_name = pipeline_name
+        self._step_name = step_name
+        self._template_name = "base.html"
 
-        self.template_root = template_root
-        self.template_name = template_name
-        self.pipeline_name = pipeline_name
-        self.step_name = step_name
-
-        j2_env = jinja2.Environment()
-        with open(os.path.join(template_root, template_name)) as f:
-            template = j2_env.parse(f.read())
-        self._variables = jinja2_meta.find_undeclared_variables(template)
-
-        self._context = {}
         self._string_builder = StringIO()
         self._tabs = []
         self._resource_files = {}
-
-        self.add_html(
-            name="HEADER_TITLE",
-            html=f"{self.step_name.capitalize()}@{self.pipeline_name}",
-        )
-        self.add_html(
-            name="PAGE_TITLE",
-            html=f"MLflow Pipeline {self.step_name.capitalize()}@{self.pipeline_name}",
-        )
-
-    def add_markdown(self, name: str, markdown: str) -> BaseCard:
-        """
-        This function first converts the given markdown into HTML then fills it into the variable
-        declared in the template.
-
-        :param name: name of the variable in the Jinja2 template
-        :param markdown: the markdown content
-        :return: the updated card instance
-        """
-        from markdown import markdown as md_to_html
-
-        if name not in self._variables:
-            raise MlflowException(
-                f"{name} is not a valid markdown variable found in template '{self.template_name}'",
-                error_code=INVALID_PARAMETER_VALUE,
-            )
-        self._context[name] = md_to_html(markdown)
-        return self
-
-    def add_pandas_profile(self, name: str, profile) -> BaseCard:
-        """
-        Add a new tab representing the provided pandas profile to the card.
-
-        :param name: name of the variable in the Jinja2 template
-        :param profile: the pandas profile object
-        :return: the updated card instance
-        """
-        profile_iframe = (
-            "<iframe srcdoc='"
-            + html.escape(profile.to_html())
-            + "' width='100%' height='500' frameborder='0'></iframe>"
-        )
-        self._tabs.append((name, profile_iframe))
-        return self
 
     def add_tab(self, name, html_template) -> CardTab:
         """
@@ -169,21 +118,6 @@ class BaseCard:
         tab = CardTab(name, html_template)
         self._tabs.append((name, tab))
         return tab
-
-    def add_html(self, name: str, html: str) -> BaseCard:
-        """
-        Adds html to the card.
-
-        :param name: name of the variable in the Jinja2 template
-        :param html: the html with which to replace the specified template variable
-        :return: the updated card instance
-        """
-        if name not in self._variables:
-            raise ValueError(
-                f"{name} is not a valid artifact variable found in template '{self.template_name}'"
-            )
-        self._context[name] = html
-        return self
 
     def add_text(self, text: str) -> BaseCard:
         """
@@ -203,15 +137,23 @@ class BaseCard:
         """
         import jinja2
 
-        baseTemplatePath = os.path.join(os.path.dirname(__file__), "templates")
-        j2_env = jinja2.Environment(
-            loader=jinja2.FileSystemLoader([self.template_root, baseTemplatePath])
-        )
-        tab_list = [
-            (name, tab.to_html() if isinstance(tab, CardTab) else tab) for name, tab in self._tabs
-        ]
-        return j2_env.get_template(self.template_name).render(
-            {**self._context, "tab_list": tab_list}
+        def get_random_id(length=6):
+            return "".join(
+                random.choice(string.ascii_lowercase + string.digits) for _ in range(length)
+            )
+
+        base_template_path = os.path.join(os.path.dirname(__file__), "templates")
+        j2_env = jinja2.Environment(loader=jinja2.FileSystemLoader(base_template_path))
+        tab_list = [(name, tab.to_html()) for name, tab in self._tabs]
+        page_id = get_random_id()
+        return j2_env.get_template(self._template_name).render(
+            {
+                "HEADER_TITLE": f"{self._step_name.capitalize()}@{self._pipeline_name}",
+                "TABLINK": f"tablink-{page_id}",
+                "CONTENT": f"content-{page_id}",
+                "BUTTON_CONTAINER": f"button-container-{page_id}",
+                "tab_list": tab_list,
+            }
         )
 
     def to_text(self) -> str:
@@ -285,15 +227,13 @@ class FailureCard(BaseCard):
 
     def __init__(self, pipeline_name: str, step_name: str, failure_traceback: str):
         super().__init__(
-            template_root=os.path.join(os.path.dirname(__file__), "templates"),
-            template_name="failure.html",
             pipeline_name=pipeline_name,
             step_name=step_name,
         )
-        self.add_html(
+        self.add_tab("Step Status", "{{ STEP_STATUS }}").add_html(
             "STEP_STATUS",
             '<p><strong>Step status: <span style="color:red">Failed</span></strong></p>',
         )
-        self.add_html(
+        self.add_tab("Stacktrace", "{{STACKTRACE}}").add_html(
             "STACKTRACE", f'<p style="margin-top:0px"><code>{failure_traceback}</p></code>'
         )

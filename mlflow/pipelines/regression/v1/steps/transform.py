@@ -6,7 +6,7 @@ import sys
 import cloudpickle
 
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
-from mlflow.pipelines.regression.v1.cards.transform import TransformCard
+from mlflow.pipelines.cards import BaseCard
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.pipelines.utils.tracking import get_pipeline_tracking_config
@@ -53,7 +53,7 @@ class TransformStep(BaseStep):
             num_features = transformed_feature_array.shape[1]
             # TODO: get the correct feature names from the transformer
             df = pd.DataFrame(
-                transformed_feature_array, columns=[f"feature_{i}" for i in range(num_features)]
+                transformed_feature_array, columns=[f"f_{i:03}" for i in range(num_features)]
             )
             df[self.target_col] = labels.values
             return df
@@ -71,7 +71,7 @@ class TransformStep(BaseStep):
             os.path.join(output_directory, "transformed_validation_data.parquet")
         )
 
-        return TransformCard(self.pipeline_name, self.name)
+        return BaseCard(self.pipeline_name, self.name)
 
     @classmethod
     def from_pipeline_config(cls, pipeline_config, pipeline_root):

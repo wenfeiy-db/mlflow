@@ -201,16 +201,18 @@ class EvaluateStep(BaseStep):
         :param criteria_summary: a list of `MetricValidationResult` instances
         :param output_directory: output directory used by the evaluate step.
         """
-        from mlflow.pipelines.regression.v1.cards.evaluate import EvaluateCard
+        from mlflow.pipelines.cards import BaseCard
         from pandas_profiling import ProfileReport
 
         # Build card
-        card = EvaluateCard(self.pipeline_name, self.name)
+        card = BaseCard(self.pipeline_name, self.name)
 
         run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
 
         metric_lines = [f"* **{k}**: {v:.6g}" for k, v in eval_result.metrics.items()]
-        card.add_markdown("METRICS", "\n".join(metric_lines))
+        summary_tab = card.add_tab(
+            "Model performance summary metrics", "{{ METRICS }}{{ METRIC_VALIDATION_RESULTS }}"
+        ).add_markdown("METRICS", "\n".join(metric_lines))
 
         if criteria_summary is not None:
             criteria_summary_df = pd.DataFrame(criteria_summary)
@@ -227,7 +229,7 @@ class EvaluateStep(BaseStep):
                 .format({"value": "{:.6g}", "threshold": "{:.6g}"})
                 .render()
             )
-            card.add_html("METRIC_VALIDATION_RESULTS", criteria_html)
+            summary_tab.add_html("METRIC_VALIDATION_RESULTS", criteria_html)
 
         shap_bar_plot_path = os.path.join(
             output_directory, "artifacts", "shap_feature_importance_plot_on_data_test.png"
@@ -272,8 +274,8 @@ class EvaluateStep(BaseStep):
         pred_and_error_df_profile = ProfileReport(
             pred_and_error_df, title="Profile of Prediction and Error Dataset", minimal=True
         )
-        card.add_pandas_profile(
-            "Profile of Prediction and Error Dataset", pred_and_error_df_profile
+        card.add_tab("Profile of Prediction and Error Dataset", "{{PROFILE}}").add_pandas_profile(
+            "PROFILE", pred_and_error_df_profile
         )
         pred_and_error_df_profile.to_file(
             output_file=os.path.join(output_directory, "pred_and_error_profile.html")

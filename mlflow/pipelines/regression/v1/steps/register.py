@@ -5,6 +5,7 @@ from typing import Dict, Any
 
 import mlflow
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
+from mlflow.pipelines.cards import BaseCard
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.pipelines.utils.tracking import (
@@ -81,11 +82,8 @@ class RegisterStep(BaseStep):
         self.execution_duration = self.run_end_time - run_start_time
         return self._build_card()
 
-    def _build_card(self) -> None:
-        from mlflow.pipelines.regression.v1.cards.register import RegisterCard
-
+    def _build_card(self) -> BaseCard:
         # Build card
-        card = RegisterCard(self.pipeline_name, self.name)
 
         run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
         final_markdown = []
@@ -101,7 +99,10 @@ class RegisterStep(BaseStep):
             f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`"
         )
         final_markdown.append(f"**Execution duration (s):** `{self.execution_duration:.2f}`")
-        card.add_markdown("REGISTER_SUMMARY", "<br>\n".join(final_markdown))
+        card = BaseCard(self.pipeline_name, self.name)
+        card.add_tab(f"Run Summary ({self.name.capitalize()})", "{{SUMMARY}}").add_markdown(
+            "SUMMARY", "<br>\n".join(final_markdown)
+        )
         return card
 
     @classmethod

@@ -95,6 +95,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         self.step_config = step_config
         self.pipeline_root = pipeline_root
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
+        self.step_card = None
 
     def run(self, output_directory: str):
         """
@@ -108,19 +109,19 @@ class BaseStep(metaclass=abc.ABCMeta):
         self._initialize_databricks_spark_connection_and_hooks_if_applicable()
         try:
             self._update_status(status=StepStatus.RUNNING, output_directory=output_directory)
-            step_card = self._run(output_directory=output_directory)
+            self.step_card = self._run(output_directory=output_directory)
             self._update_status(status=StepStatus.SUCCEEDED, output_directory=output_directory)
         except Exception:
             self._update_status(status=StepStatus.FAILED, output_directory=output_directory)
-            step_card = FailureCard(
+            self.step_card = FailureCard(
                 pipeline_name=self.pipeline_name,
                 step_name=self.name,
                 failure_traceback=traceback.format_exc(),
             )
             raise
         finally:
-            step_card.save(path=output_directory)
-            step_card.save_as_html(path=output_directory)
+            self.step_card.save(path=output_directory)
+            self.step_card.save_as_html(path=output_directory)
 
     def inspect(self, output_directory: str):
         """
@@ -144,7 +145,7 @@ class BaseStep(metaclass=abc.ABCMeta):
                 subprocess.run(["open", card_html_path], check=True)
 
     @abc.abstractmethod
-    def _run(self, output_directory: str):
+    def _run(self, output_directory: str) -> BaseCard:
         """
         This function is responsible for executing the step, writing outputs
         to the specified directory, and returning results to the user. It
@@ -152,7 +153,7 @@ class BaseStep(metaclass=abc.ABCMeta):
 
         :param output_directory: String file path to the directory where step outputs
                                  should be stored.
-        :return: Results from executing the corresponding step.
+        :return: A BaseCard containing step execution information.
         """
         pass
 

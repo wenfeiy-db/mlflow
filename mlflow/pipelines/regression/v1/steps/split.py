@@ -6,6 +6,7 @@ import importlib
 import sys
 from typing import Dict, Any
 
+from mlflow.pipelines.cards import BaseCard
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
@@ -110,9 +111,8 @@ class SplitStep(BaseStep):
 
         self.split_ratios = split_ratios
 
-    def _build_profiles_and_card(self, train_df, validation_df, test_df):
+    def _build_profiles_and_card(self, train_df, validation_df, test_df) -> BaseCard:
         from pandas_profiling import ProfileReport
-        from mlflow.pipelines.regression.v1.cards.split import SplitCard
 
         # Build profiles for input dataset, and train / validation / test splits
         train_profile = ProfileReport(train_df, title="Profile of Train Dataset", minimal=True)
@@ -122,32 +122,53 @@ class SplitStep(BaseStep):
         test_profile = ProfileReport(test_df, title="Profile of Test Dataset", minimal=True)
 
         # Build card
-        card = SplitCard(self.pipeline_name, self.name)
+        card = BaseCard(self.pipeline_name, self.name)
 
         run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
-        card.add_markdown(
-            "RUN_END_TIMESTAMP",
-            f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`",
+        (
+            card.add_tab(
+                f"Run Summary ({self.name.capitalize()})",
+                """
+                {{ SCHEMA_LOCATION }}
+                {{ TRAIN_SPLIT_NUM_ROWS }}
+                {{ VALIDATION_SPLIT_NUM_ROWS }}
+                {{ TEST_SPLIT_NUM_ROWS }}
+                {{ NUM_DROPPED_ROWS }}
+                {{ EXECUTION_DURATION}}
+                {{ RUN_END_TIMESTAMP }}
+                {{ RUN_STATUS }}
+                """,
+            )
+            .add_markdown(
+                "RUN_END_TIMESTAMP",
+                f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`",
+            )
+            .add_markdown(
+                "EXECUTION_DURATION", f"**Execution duration (s):** `{self.execution_duration:.2f}`"
+            )
+            .add_markdown(
+                "NUM_DROPPED_ROWS", f"**Number of dropped rows:** `{self.num_dropped_rows}`"
+            )
+            .add_markdown(
+                "TRAIN_SPLIT_NUM_ROWS", f"**Number of train dataset rows:** `{len(train_df)}`"
+            )
+            .add_markdown(
+                "VALIDATION_SPLIT_NUM_ROWS",
+                f"**Number of validation dataset rows:** `{len(validation_df)}`",
+            )
+            .add_markdown(
+                "TEST_SPLIT_NUM_ROWS", f"**Number of test dataset rows:** `{len(test_df)}`"
+            )
         )
-        card.add_markdown(
-            "EXECUTION_DURATION", f"**Execution duration (s):** `{self.execution_duration:.2f}`"
+        card.add_tab("Data Profile (Train)", "{{PROFILE}}").add_pandas_profile(
+            "PROFILE", train_profile
         )
-        card.add_markdown(
-            "NUM_DROPPED_ROWS", f"**Number of dropped rows:** `{self.num_dropped_rows}`"
+        card.add_tab("Data Profile (Validation)", "{{PROFILE}}").add_pandas_profile(
+            "PROFILE", validation_profile
         )
-        card.add_markdown(
-            "TRAIN_SPLIT_NUM_ROWS", f"**Number of train dataset rows:** `{len(train_df)}`"
+        card.add_tab("Data Profile (Test)", "{{PROFILE}}").add_pandas_profile(
+            "PROFILE", test_profile
         )
-        card.add_markdown(
-            "VALIDATION_SPLIT_NUM_ROWS",
-            f"**Number of validation dataset rows:** `{len(validation_df)}`",
-        )
-        card.add_markdown(
-            "TEST_SPLIT_NUM_ROWS", f"**Number of test dataset rows:** `{len(test_df)}`"
-        )
-        card.add_pandas_profile("Profile of Train Dataset", train_profile)
-        card.add_pandas_profile("Profile of Validation Dataset", validation_profile)
-        card.add_pandas_profile("Profile of Test Dataset", test_profile)
         return card
 
     def _run(self, output_directory):
