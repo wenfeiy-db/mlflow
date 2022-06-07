@@ -171,8 +171,7 @@ def test_test_step_logs_step_cards_as_artifacts():
         {
             "ingest/card.html",
             "split/card.html",
-            # TODO: Uncomment once we update transform and train steps to log a step card.
-            # "transform/card.html",
-            # "train/card.html",
+            "transform/card.html",
+            "train/card.html",
         }
     )
