@@ -8,6 +8,7 @@ from mlflow.pipelines.utils import (
     get_pipeline_name,
     get_pipeline_root_path,
     get_default_profile,
+    display_html,
 )
 from mlflow.pipelines.utils.execution import (
     clean_execution_state,
@@ -159,17 +160,7 @@ class _BasePipeline:
         :return: None
         """
         if not step:
-            from IPython.display import display, HTML
-
-            pipeline_dag_file = self._get_pipeline_dag_file()
-            if is_running_in_ipython_environment():
-                display(HTML(filename=pipeline_dag_file))
-            else:
-                import webbrowser
-
-                file_uri = f"file://{pipeline_dag_file}"
-                webbrowser.open_new(file_uri)
-                _logger.info(f"MLflow regression v1 pipeline snapshot DAG: '{file_uri}'")
+            display_html(html_file_path=self._get_pipeline_dag_file())
         else:
             output_directory = get_step_output_path(self.name, step, "")
             self._get_step(step).inspect(output_directory)

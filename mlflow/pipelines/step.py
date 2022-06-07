@@ -2,8 +2,6 @@ import abc
 import json
 import logging
 import os
-import shutil
-import subprocess
 import time
 import traceback
 import yaml
@@ -11,12 +9,9 @@ from enum import Enum
 from typing import TypeVar, Dict, Any
 
 from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME, FailureCard, CARD_HTML_NAME
-from mlflow.pipelines.utils import get_pipeline_name
+from mlflow.pipelines.utils import get_pipeline_name, display_html
 from mlflow.tracking import MlflowClient
-from mlflow.utils.databricks_utils import (
-    is_in_databricks_runtime,
-    is_running_in_ipython_environment,
-)
+from mlflow.utils.databricks_utils import is_in_databricks_runtime
 
 
 _logger = logging.getLogger(__name__)
@@ -137,12 +132,8 @@ class BaseStep(metaclass=abc.ABCMeta):
             return None
 
         card = BaseCard.load(card_path)
-        if is_running_in_ipython_environment():
-            card.display()
-        else:
-            card_html_path = os.path.join(output_directory, CARD_HTML_NAME)
-            if os.path.exists(card_html_path) and shutil.which("open") is not None:
-                subprocess.run(["open", card_html_path], check=True)
+        card_html_path = os.path.join(output_directory, CARD_HTML_NAME)
+        display_html(html_data=card.to_html(), html_file_path=card_html_path)
 
     @abc.abstractmethod
     def _run(self, output_directory: str) -> BaseCard:

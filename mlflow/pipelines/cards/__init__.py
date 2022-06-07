@@ -165,14 +165,6 @@ class BaseCard:
         """
         return self._string_builder.getvalue()
 
-    def display(self) -> None:
-        """
-        Display the rendered card as a ipywidget
-        """
-        from IPython.display import display, HTML
-
-        display(HTML(self.to_html()))
-
     def _add_resource_file(self, path):
         """
         Add a resource file. Return a relative path pointing to the file.
