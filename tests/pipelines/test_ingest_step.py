@@ -472,7 +472,7 @@ def test_ingest_produces_expected_step_card(pandas_df, tmp_path):
         step_card_html_content = f.read()
 
     assert "Dataset source location" in step_card_html_content
-    assert "Ingested dataset path" in step_card_html_content
+    assert "Number of rows ingested" in step_card_html_content
     assert "Profile of Ingested Dataset" in step_card_html_content
 
 

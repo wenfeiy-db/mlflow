@@ -61,6 +61,7 @@ class IngestStep(BaseStep):
             )
 
     def _run(self, output_directory: str) -> BaseCard:
+        import pandas as pd
         from pandas_profiling import ProfileReport
 
         dataset_dst_path = os.path.abspath(
@@ -74,6 +75,7 @@ class IngestStep(BaseStep):
         ingested_dataset_profile = ProfileReport(
             ingested_df, title="Profile of Ingested Dataset", minimal=True
         )
+        schema = pd.io.json.build_table_schema(ingested_df, index=False)
         dataset_profile_path = os.path.join(
             output_directory, IngestStep._DATASET_PROFILE_OUTPUT_NAME
         )
@@ -82,7 +84,8 @@ class IngestStep(BaseStep):
 
         step_card = self._build_step_card(
             ingested_dataset_profile=ingested_dataset_profile,
-            ingested_dataset_path=dataset_dst_path,
+            ingested_rows=ingested_df.size,
+            schema=schema,
             dataset_src_location=getattr(self.dataset, "location", None),
             dataset_sql=getattr(self.dataset, "sql", None),
         )
@@ -91,7 +94,8 @@ class IngestStep(BaseStep):
     def _build_step_card(
         self,
         ingested_dataset_profile: str,
-        ingested_dataset_path: str,
+        ingested_rows: int,
+        schema: Dict,
         dataset_src_location: str = None,
         dataset_sql: str = None,
     ) -> BaseCard:
@@ -125,24 +129,31 @@ class IngestStep(BaseStep):
                 "PROFILE", ingested_dataset_profile
             )
         )
-        (  # Tab #2 -- Step run summary.
+        # Tab #2 -- Ingested dataset schema.
+        schema_html = (
+            "<table border=2>\n"
+            + "\n".join(
+                [f"<td>{col['name']}</td><td>{col['type']}</td><tr>" for col in schema["fields"]]
+            )
+            + "</table>"
+        )
+        card.add_tab("Data Schema", "{{SCHEMA}}").add_html("SCHEMA", schema_html)
+        (  # Tab #3 -- Step run summary.
             card.add_tab(
                 f"Run Summary ({self.name.capitalize()})",
-                '<h3 class="section-title">Dataset Info</h3>'
-                + "{{ DATASET_SOURCE }}"
-                + "{{ RESOLVED_DATASET_LOCATION }}",
+                "{{ INGESTED_ROWS }}" + "{{ DATA_SOURCE }}",
             )
             .add_markdown(
-                name="DATASET_SOURCE",
+                name="INGESTED_ROWS",
+                markdown=f"**Number of rows ingested:** `{ingested_rows}`",
+            )
+            .add_markdown(
+                name="DATA_SOURCE",
                 markdown=(
                     f"**Dataset source location:** `{dataset_src_location}`"
                     if dataset_src_location is not None
                     else f"**Dataset SQL:** `{dataset_sql}`"
                 ),
-            )
-            .add_markdown(
-                name="RESOLVED_DATASET_LOCATION",
-                markdown=f"**Ingested dataset path:** `{ingested_dataset_path}`",
             )
         )
         return card

@@ -123,7 +123,17 @@ class SplitStep(BaseStep):
 
         # Build card
         card = BaseCard(self.pipeline_name, self.name)
-
+        # Tab #1 - #3: data profiles for train/validation and test.
+        card.add_tab("Data Profile (Train)", "{{PROFILE}}").add_pandas_profile(
+            "PROFILE", train_profile
+        )
+        card.add_tab("Data Profile (Validation)", "{{PROFILE}}").add_pandas_profile(
+            "PROFILE", validation_profile
+        )
+        card.add_tab("Data Profile (Test)", "{{PROFILE}}").add_pandas_profile(
+            "PROFILE", test_profile
+        )
+        # Tab #4: run summary.
         run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
         (
             card.add_tab(
@@ -160,15 +170,7 @@ class SplitStep(BaseStep):
                 "TEST_SPLIT_NUM_ROWS", f"**Number of test dataset rows:** `{len(test_df)}`"
             )
         )
-        card.add_tab("Data Profile (Train)", "{{PROFILE}}").add_pandas_profile(
-            "PROFILE", train_profile
-        )
-        card.add_tab("Data Profile (Validation)", "{{PROFILE}}").add_pandas_profile(
-            "PROFILE", validation_profile
-        )
-        card.add_tab("Data Profile (Test)", "{{PROFILE}}").add_pandas_profile(
-            "PROFILE", test_profile
-        )
+
         return card
 
     def _run(self, output_directory):

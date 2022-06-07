@@ -111,13 +111,11 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment_with_expected_r
     artifacts = MlflowClient(tracking_uri).list_artifacts(
         run_id=logged_run.info.run_id, path="train"
     )
-    assert set([artifact.path for artifact in artifacts]) == set(
-        [
-            "train/card.html",
-            "train/estimator",
-            "train/model",
-        ]
-    )
+    assert set([artifact.path for artifact in artifacts]) == {
+        "train/card.html",
+        "train/estimator",
+        "train/model",
+    }
     run_tags = MlflowClient(tracking_uri).get_run(run_id=logged_run.info.run_id).data.tags
     assert resolve_tags().items() <= run_tags.items()
 
