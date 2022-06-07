@@ -209,10 +209,32 @@ class EvaluateStep(BaseStep):
 
         run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
 
-        metric_lines = [f"* **{k}**: {v:.6g}" for k, v in eval_result.metrics.items()]
+        metric_df = pd.DataFrame.from_records(
+            list(eval_result.metrics.items()), columns=["metric", "value"]
+        )
+        metric_table_html = (
+            metric_df.style.set_table_attributes('style="border-collapse:collapse"')
+            .set_table_styles(
+                [
+                    {
+                        "selector": "table, th, td",
+                        "props": [
+                            ("border", "1px solid grey"),
+                        ],
+                    },
+                ]
+            )
+            .hide_index()
+            .format({"value": "{:.6g}"})
+            .render()
+        )
+
         summary_tab = card.add_tab(
-            "Model performance summary metrics", "{{ METRICS }}{{ METRIC_VALIDATION_RESULTS }}"
-        ).add_markdown("METRICS", "\n".join(metric_lines))
+            "Model Performance Summary Metrics",
+            "<h3 class='section-title'>Summary Metrics</h3> {{ METRICS }} "
+            "{{ METRIC_VALIDATION_RESULTS }}",
+        )
+        summary_tab.add_markdown("METRICS", metric_table_html)
 
         if criteria_summary is not None:
             criteria_summary_df = pd.DataFrame(criteria_summary)
@@ -225,11 +247,25 @@ class EvaluateStep(BaseStep):
 
             criteria_html = (
                 criteria_summary_df.style.apply(criteria_table_row_format, axis=1)
+                .set_table_attributes('style="border-collapse:collapse"')
+                .set_table_styles(
+                    [
+                        {
+                            "selector": "table, th, td",
+                            "props": [
+                                ("border", "1px solid grey"),
+                            ],
+                        },
+                    ]
+                )
                 .hide_index()
                 .format({"value": "{:.6g}", "threshold": "{:.6g}"})
                 .render()
             )
-            summary_tab.add_html("METRIC_VALIDATION_RESULTS", criteria_html)
+            summary_tab.add_html(
+                "METRIC_VALIDATION_RESULTS",
+                "<h3 class='section-title'>Model Validation Results</h3> " + criteria_html,
+            )
 
         shap_bar_plot_path = os.path.join(
             output_directory, "artifacts", "shap_feature_importance_plot_on_data_test.png"
