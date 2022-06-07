@@ -50,7 +50,7 @@ class TransformStep(BaseStep):
             importlib.import_module(self.transformer_module_name), self.transformer_method_name
         )
         transformer = transformer_fn()
-        transformer.fit(train_df)
+        transformer.fit(train_df.drop(columns=[self.target_col]))
 
         def transform_dataset(dataset):
             features = dataset.drop(columns=[self.target_col])
