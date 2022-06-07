@@ -86,7 +86,7 @@ def _create_hash_buckets(input_df):
 
 class SplitStep(BaseStep):
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
-        super(SplitStep, self).__init__(step_config, pipeline_root)
+        super().__init__(step_config, pipeline_root)
 
         self.run_end_time = None
         self.execution_duration = None
