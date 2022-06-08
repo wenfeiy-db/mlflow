@@ -90,7 +90,7 @@ class TransformStep(BaseStep):
         # Build card
         card = BaseCard(self.pipeline_name, self.name)
 
-        # Build profiles for train_transformed, validation_transformed
+        # Tab 1 and 2: build profiles for train_transformed, validation_transformed
         from pandas_profiling import ProfileReport
 
         train_transformed_profile = ProfileReport(
@@ -106,13 +106,30 @@ class TransformStep(BaseStep):
             "PROFILE", validation_transformed_profile
         )
 
+        # Tab 3: transformer diagram
         from sklearn.utils import estimator_html_repr
         from sklearn import set_config
 
         set_config(display="diagram")
-        html = estimator_html_repr(transformer)
-        card.add_tab("Pipeline", "{{PIPELINE}}").add_html("PIPELINE", html)
+        transformer_repr = estimator_html_repr(transformer)
+        card.add_tab("Transformer", "{{TRANSFORMER}}").add_html("TRANSFORMER", transformer_repr)
 
+        # Tab 4: transformer output schema
+        from sklearn.pipeline import make_pipeline
+
+        # Construct a fake pipeline containing the transformer and a passthrough estimator.
+        try:
+            p = make_pipeline([transformer, "passthrough"])
+            output_schema = list(p[:-1].get_feature_names_out(train_df.columns))
+            card.add_tab("Output Schema", "{{OUTPUT_SCHEMA}}").add_html(
+                "OUTPUT_SCHEMA", output_schema
+            )
+        except Exception as e:
+            card.add_tab("Output Schema", "{{OUTPUT_SCHEMA}}").add_html(
+                "OUTPUT_SCHEMA", f"Failed to extract transformer schema. Error: {e}"
+            )
+
+        # Tab 5: run summary
         run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
         (
             card.add_tab(

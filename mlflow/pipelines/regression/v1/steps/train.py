@@ -52,6 +52,21 @@ class TrainStep(BaseStep):
         )
         validation_df = pd.read_parquet(transformed_validation_data_path)
 
+        raw_training_data_path = get_step_output_path(
+            pipeline_name=self.pipeline_name,
+            step_name="split",
+            relative_path="train.parquet",
+        )
+        raw_train_df = pd.read_parquet(raw_training_data_path)
+        raw_X_train = raw_train_df.drop(columns=[self.target_col])
+
+        raw_validation_data_path = get_step_output_path(
+            pipeline_name=self.pipeline_name,
+            step_name="split",
+            relative_path="validation.parquet",
+        )
+        raw_validation_df = pd.read_parquet(raw_validation_data_path)
+
         transformer_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
             step_name="transform",
@@ -77,9 +92,9 @@ class TrainStep(BaseStep):
                 transformer = cloudpickle.load(f)
 
             # TODO: log this as a pyfunc model
-            signature = infer_signature(X_train, estimator.predict(X_train))
+            estimator_schema = infer_signature(X_train, estimator.predict(X_train.copy()))
             logged_estimator = mlflow.sklearn.log_model(
-                estimator, f"{self.name}/estimator", signature=signature
+                estimator, f"{self.name}/estimator", signature=estimator_schema
             )
             mlflow.sklearn.log_model(transformer, "transform/transformer")
 
@@ -95,26 +110,75 @@ class TrainStep(BaseStep):
             )
             eval_result.save(output_directory)
 
-            pipeline = make_pipeline(transformer, estimator)
-            mlflow.sklearn.log_model(pipeline, f"{self.name}/model")
+            model = make_pipeline(transformer, estimator)
+            model_schema = infer_signature(raw_X_train, model.predict(raw_X_train.copy()))
+            model_info = mlflow.sklearn.log_model(
+                model, f"{self.name}/model", signature=model_schema
+            )
 
             with open(os.path.join(output_directory, "run_id"), "w") as f:
                 f.write(run.info.run_id)
 
-        with open(os.path.join(output_directory, "pipeline.pkl"), "wb") as f:
-            cloudpickle.dump(pipeline, f)
+        with open(os.path.join(output_directory, "model.pkl"), "wb") as f:
+            cloudpickle.dump(model, f)
 
             # Do step-specific code to execute the train step
             _logger.info("train run code %s", output_directory)
 
-        card = BaseCard(self.pipeline_name, self.name)
-        card.add_tab("Model Architecture", "{{MODEL_ARCH}}").add_html("MODEL_ARCH", repr(pipeline))
-        card.add_tab("Estimator Schema", "{{MODEL_SIGNATURE}}").add_html(
-            "MODEL_SIGNATURE", signature.to_dict()
+        target_data = raw_validation_df[self.target_col]
+        prediction_result = model.predict(raw_validation_df.drop(self.target_col, axis=1))
+        pred_and_error_df = pd.DataFrame(
+            {
+                "target": target_data,
+                "prediction": prediction_result,
+                "error": prediction_result - target_data,
+            }
+        )
+
+        card = self._build_step_card(
+            pred_and_error_df=pred_and_error_df,
+            model=model,
+            model_schema=model_schema,
+            run_id=run.info.run_id,
+            model_uri=model_info.model_uri,
         )
         card.save_as_html(output_directory)
         for step_name in ("ingest", "split", "transform", "train"):
             self._log_step_card(run.info.run_id, step_name)
+
+        return card
+
+    def _build_step_card(self, pred_and_error_df, model, model_schema, run_id, model_uri):
+        import pprint
+        from pandas_profiling import ProfileReport
+        from sklearn.utils import estimator_html_repr
+        from sklearn import set_config
+
+        card = BaseCard(self.pipeline_name, self.name)
+        # Tab 0: TODO add graphs for model performance summary.
+        # Tab 1: Prediction and error data profile.
+        pred_and_error_df_profile = ProfileReport(
+            pred_and_error_df, title="Predictions and Errors (validation dataset)", minimal=True
+        )
+        card.add_tab("Profile of Predictions and Errors", "{{PROFILE}}").add_pandas_profile(
+            "PROFILE", pred_and_error_df_profile
+        )
+        # Tab 2: Model architecture.
+        set_config(display="diagram")
+        model_repr = estimator_html_repr(model)
+        card.add_tab("Model Architecture", "{{MODEL_ARCH}}").add_html("MODEL_ARCH", model_repr)
+
+        # Tab 3: Inferred model (transformer + estimator) schema.
+        pp = pprint.PrettyPrinter(indent=4, compact=False, width=80)
+        card.add_tab("Model Schema", "{{MODEL_SCHEMA}}").add_html(
+            "MODEL_SCHEMA", pp.pformat(model_schema.to_dict())
+        )
+        # Tab 4: Run summary.
+        (
+            card.add_tab(f"Run Summary ({self.name.capitalize()})", "{{RUN_ID}}" + "{{MODEL_URI}}")
+            .add_markdown("RUN_ID", f"**MLflow Run ID:** `{run_id}`")
+            .add_markdown("MODEL_URI", f"**MLflow Model URI:** `{model_uri}`")
+        )
 
         return card
 
