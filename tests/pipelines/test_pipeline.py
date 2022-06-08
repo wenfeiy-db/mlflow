@@ -1,8 +1,11 @@
 import os
 import pathlib
+
+import pandas as pd
 import pytest
 import yaml
 from typing import Generator
+from unittest import mock
 
 import mlflow
 from mlflow.pipelines.pipeline import Pipeline
@@ -11,6 +14,7 @@ from mlflow.exceptions import MlflowException
 from mlflow.tracking.client import MlflowClient
 from mlflow.tracking.context.registry import resolve_tags
 from mlflow.utils.file_utils import path_to_local_file_uri
+from mlflow.entities import Run
 
 # pylint: disable=unused-import
 from tests.pipelines.helper_functions import (
@@ -175,3 +179,34 @@ def test_test_step_logs_step_cards_as_artifacts():
             "train/card.html",
         }
     )
+
+
+@pytest.mark.usefixtures("enter_pipeline_example_directory")
+def test_pipeline_get_artifacts():
+    pipeline = Pipeline()
+    pipeline.clean()
+
+    pipeline.run("ingest")
+    pipeline.run("split")
+    pipeline.run("transform")
+    pipeline.run("train")
+
+    assert isinstance(pipeline.get_artifact("ingested_data"), pd.DataFrame)
+    assert isinstance(pipeline.get_artifact("training_data"), pd.DataFrame)
+    assert isinstance(pipeline.get_artifact("validation_data"), pd.DataFrame)
+    assert isinstance(pipeline.get_artifact("test_data"), pd.DataFrame)
+    assert isinstance(pipeline.get_artifact("transformed_training_data"), pd.DataFrame)
+    assert isinstance(pipeline.get_artifact("transformed_validation_data"), pd.DataFrame)
+    assert hasattr(pipeline.get_artifact("transformer"), "transform")
+    assert isinstance(pipeline.get_artifact("model"), mlflow.pyfunc.PyFuncModel)
+    assert isinstance(pipeline.get_artifact("run"), Run)
+
+    with pytest.raises(MlflowException, match="The artifact abcde is not supported."):
+        pipeline.get_artifact("abcde")
+
+    pipeline.clean()
+    with mock.patch("mlflow.pipelines.regression.v1.pipeline._logger.warning") as mock_warning:
+        pipeline.get_artifact("ingested_data")
+        mock_warning.assert_called_once_with(
+            "ingested_data is not found. Re-run the ingest step to generate."
+        )

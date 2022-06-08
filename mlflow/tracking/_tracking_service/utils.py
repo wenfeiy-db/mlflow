@@ -1,6 +1,7 @@
 import os
 from functools import partial
 import logging
+from contextlib import contextmanager
 
 from mlflow.store.tracking import DEFAULT_LOCAL_FILE_AND_ARTIFACT_PATH
 from mlflow.store.db.db_types import DATABASE_ENGINES
@@ -70,6 +71,18 @@ def set_tracking_uri(uri: str) -> None:
     """
     global _tracking_uri
     _tracking_uri = uri
+
+
+@contextmanager
+def _use_tracking_uri(uri: str) -> None:
+    """
+    Similar to `mlflow.tracking.set_tracking_uri` function but return a context manager.
+    """
+    global _tracking_uri
+    old_tracking_uri = _tracking_uri
+    _tracking_uri = uri
+    yield
+    _tracking_uri = old_tracking_uri
 
 
 def _resolve_tracking_uri(tracking_uri=None):

@@ -214,3 +214,14 @@ class _BasePipeline:
             s.from_pipeline_config(pipeline_config, self._pipeline_root_path)
             for s in self._get_step_classes()
         ]
+
+    @abc.abstractmethod
+    def get_artifact(self, artifact: str):
+        """
+        Read an artifact from pipeline output. artifact names can be obtained from
+        `Pipeline.inspect()` or `Pipeline.run()` output.
+
+        Returns None if the specified artifact is not found.
+        Raise an error if the artifact is not supported.
+        """
+        pass
