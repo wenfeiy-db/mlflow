@@ -42,6 +42,13 @@ class RegisterStep(BaseStep):
 
     def _run(self, output_directory):
         run_start_time = time.time()
+        run_id_path = get_step_output_path(
+            pipeline_name=self.pipeline_name,
+            step_name="train",
+            relative_path="run_id",
+        )
+        with open(run_id_path, "r") as f:
+            run_id = f.read()
 
         model_validation_path = get_step_output_path(
             pipeline_name=self.pipeline_name,
@@ -50,11 +57,14 @@ class RegisterStep(BaseStep):
         )
         with open(model_validation_path, "r") as f:
             model_validation = f.read()
+        artifact_path = "train/model"
         if model_validation == "VALIDATED" or (
             model_validation == "UNKNOWN" and self.allow_non_validated_model
         ):
             apply_pipeline_tracking_config(self.tracking_config)
-            self.model_uri = mlflow.get_artifact_uri("train/model")
+            self.model_uri = "runs:/{run_id}/{artifact_path}".format(
+                run_id=run_id, artifact_path=artifact_path
+            )
             self.model_details = mlflow.register_model(
                 model_uri=self.model_uri,
                 name=self.register_model_name,
