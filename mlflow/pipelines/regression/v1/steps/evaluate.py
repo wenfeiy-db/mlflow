@@ -209,22 +209,7 @@ class EvaluateStep(BaseStep):
         metric_df = pd.DataFrame.from_records(
             list(eval_result.metrics.items()), columns=["metric", "value"]
         )
-        metric_table_html = (
-            metric_df.style.set_table_attributes('style="border-collapse:collapse"')
-            .set_table_styles(
-                [
-                    {
-                        "selector": "table, th, td",
-                        "props": [
-                            ("border", "1px solid grey"),
-                        ],
-                    },
-                ]
-            )
-            .hide_index()
-            .format({"value": "{:.6g}"})
-            .render()
-        )
+        metric_table_html = BaseCard.render_table(metric_df.style.format({"value": "{:.6g}"}))
 
         summary_tab = card.add_tab(
             "Model Performance Summary Metrics",
@@ -242,22 +227,10 @@ class EvaluateStep(BaseStep):
                 )
                 return (color,) * len(row)
 
-            criteria_html = (
-                criteria_summary_df.style.apply(criteria_table_row_format, axis=1)
-                .set_table_attributes('style="border-collapse:collapse"')
-                .set_table_styles(
-                    [
-                        {
-                            "selector": "table, th, td",
-                            "props": [
-                                ("border", "1px solid grey"),
-                            ],
-                        },
-                    ]
+            criteria_html = BaseCard.render_table(
+                criteria_summary_df.style.apply(criteria_table_row_format, axis=1).format(
+                    {"value": "{:.6g}", "threshold": "{:.6g}"}
                 )
-                .hide_index()
-                .format({"value": "{:.6g}", "threshold": "{:.6g}"})
-                .render()
             )
             summary_tab.add_html(
                 "METRIC_VALIDATION_RESULTS",

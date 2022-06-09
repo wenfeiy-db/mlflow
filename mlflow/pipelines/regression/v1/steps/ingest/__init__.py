@@ -130,13 +130,7 @@ class IngestStep(BaseStep):
             )
         )
         # Tab #2 -- Ingested dataset schema.
-        schema_html = (
-            "<table border=2>\n"
-            + "\n".join(
-                [f"<td>{col['name']}</td><td>{col['type']}</td><tr>" for col in schema["fields"]]
-            )
-            + "</table>"
-        )
+        schema_html = BaseCard.render_table(schema["fields"])
         card.add_tab("Data Schema", "{{SCHEMA}}").add_html("SCHEMA", schema_html)
         (  # Tab #3 -- Step run summary.
             card.add_tab(

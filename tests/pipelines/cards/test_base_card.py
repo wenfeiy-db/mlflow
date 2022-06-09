@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 
 from mlflow.exceptions import MlflowException
@@ -59,3 +61,21 @@ def test_card_tab_works():
 def test_card_tab_fails_with_invalid_variable():
     with pytest.raises(MlflowException, match=r"(not a valid template variable)"):
         CardTab("tab", "{{MARKDOWN_1}}").add_html("HTML_1", "<span style='color:blue'>blue</span>")
+
+
+def test_render_table():
+    import pandas as pd
+    import numpy as np
+
+    assert "</table>" in BaseCard.render_table(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+    assert "</table>" in BaseCard.render_table(pd.DataFrame({"a": [1, 2], "b": [3, 4]}).style)
+    assert "</table>" in BaseCard.render_table([(1, 2), (3, 4)], columns=["a", "b"])
+    assert "</table>" in BaseCard.render_table([{"a": 1, "b": 2}, {"a": 3, "b": 4}])
+    assert "</table>" in BaseCard.render_table({"a": [1, 2], "b": [3, 4]})
+    assert "</table>" in BaseCard.render_table(np.array([[1, 2], [3, 4]]), columns=["a", "b"])
+
+    col_name = uuid.uuid4().hex
+    assert col_name in BaseCard.render_table({"a": [1, 2], "b": [3, 4], col_name: [5, 6]})
+    assert col_name not in BaseCard.render_table(
+        {"a": [1, 2], "b": [3, 4], col_name: [5, 6]}, columns=["a", "b"]
+    )

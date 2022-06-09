@@ -226,6 +226,40 @@ class BaseCard:
 
             return pickle.load(f)
 
+    @staticmethod
+    def render_table(table, columns=None):
+        """
+        Renders a table-like object as an HTML table.
+
+        :param table: Table-like object (e.g. pandas DataFrame, 2D numpy array, list of tuples).
+        :param columns: Column names to use. If `table` doesn't have column names, this argument
+            provides names for the columns. Otherwise, only the specified columns will be included
+            in the output HTML table.
+        """
+        import pandas as pd
+        from pandas.io.formats.style import Styler
+
+        if not isinstance(table, Styler):
+            table = pd.DataFrame(table, columns=columns).style
+
+        return (
+            table.set_table_attributes('style="border-collapse:collapse"')
+            .set_table_styles(
+                [
+                    {
+                        "selector": "table, th, td",
+                        "props": [
+                            ("border", "1px solid grey"),
+                            ("text-align", "left"),
+                            ("padding", "5px"),
+                        ],
+                    }
+                ]
+            )
+            .hide_index()
+            .render()
+        )
+
 
 class FailureCard(BaseCard):
     """
