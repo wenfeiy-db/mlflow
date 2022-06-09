@@ -181,7 +181,13 @@ class TrainStep(BaseStep):
         )
         # Tab 4: Run summary.
         (
-            card.add_tab(f"Run Summary ({self.name.capitalize()})", "{{RUN_ID}}" + "{{MODEL_URI}}")
+            card.add_tab(
+                "Run Summary",
+                "{{ RUN_ID }}"
+                + "{{ MODEL_URI }}"
+                + "{{ EXE_DURATION }}"
+                + "{{ LAST_UPDATE_TIME }}",
+            )
             .add_markdown("RUN_ID", f"**MLflow Run ID:** `{run_id}`")
             .add_markdown("MODEL_URI", f"**MLflow Model URI:** `{model_uri}`")
         )

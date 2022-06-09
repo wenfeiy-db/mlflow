@@ -7,6 +7,7 @@ import random
 import shutil
 import string
 from io import StringIO
+from typing import Union
 
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 
@@ -121,6 +122,17 @@ class BaseCard:
         tab = CardTab(name, html_template)
         self._tabs.append((name, tab))
         return tab
+
+    def get_tab(self, name) -> Union[CardTab, None]:
+        """
+        Returns an existing tab with the specified name. Returns None if not found.
+
+        :param name: a string representing the name of the tab.
+        """
+        for key, tab in self._tabs:
+            if key == name:
+                return tab
+        return None
 
     def add_text(self, text: str) -> BaseCard:
         """

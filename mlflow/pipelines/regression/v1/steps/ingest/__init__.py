@@ -140,8 +140,11 @@ class IngestStep(BaseStep):
         card.add_tab("Data Schema", "{{SCHEMA}}").add_html("SCHEMA", schema_html)
         (  # Tab #3 -- Step run summary.
             card.add_tab(
-                f"Run Summary ({self.name.capitalize()})",
-                "{{ INGESTED_ROWS }}" + "{{ DATA_SOURCE }}",
+                "Run Summary",
+                "{{ INGESTED_ROWS }}"
+                + "{{ DATA_SOURCE }}"
+                + "{{ EXE_DURATION }}"
+                + "{{ LAST_UPDATE_TIME }}",
             )
             .add_markdown(
                 name="INGESTED_ROWS",

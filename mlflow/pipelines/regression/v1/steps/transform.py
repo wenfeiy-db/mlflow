@@ -3,7 +3,6 @@ import logging
 import os
 import sys
 import time
-import datetime
 
 import cloudpickle
 
@@ -130,25 +129,15 @@ class TransformStep(BaseStep):
             )
 
         # Tab 5: run summary
-        run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
         (
             card.add_tab(
-                f"Run Summary ({self.name.capitalize()})",
+                "Run Summary",
                 """
                 {{ RAW_FEATURES_IN_TRANSFORMER }}
-                {{ EXECUTION_DURATION }}
-                {{ RUN_END_TIMESTAMP }}
-                {{ RUN_STATUS }}
+                {{ EXE_DURATION }}
+                {{ LAST_UPDATE_TIME }}
                 """,
-            )
-            .add_markdown(
-                "RUN_END_TIMESTAMP",
-                f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`",
-            )
-            .add_markdown(
-                "EXECUTION_DURATION", f"**Execution duration (s):** `{self.execution_duration:.2f}`"
-            )
-            .add_markdown(
+            ).add_markdown(
                 "RAW_FEATURES_IN_TRANSFORMER",
                 f"**Feature set before transformation:** `{train_df.columns}`",
             )

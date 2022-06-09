@@ -1,4 +1,3 @@
-import datetime
 import logging
 import os
 import time
@@ -134,27 +133,18 @@ class SplitStep(BaseStep):
             "PROFILE", test_profile
         )
         # Tab #4: run summary.
-        run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
         (
             card.add_tab(
-                f"Run Summary ({self.name.capitalize()})",
+                "Run Summary",
                 """
                 {{ SCHEMA_LOCATION }}
                 {{ TRAIN_SPLIT_NUM_ROWS }}
                 {{ VALIDATION_SPLIT_NUM_ROWS }}
                 {{ TEST_SPLIT_NUM_ROWS }}
                 {{ NUM_DROPPED_ROWS }}
-                {{ EXECUTION_DURATION}}
-                {{ RUN_END_TIMESTAMP }}
-                {{ RUN_STATUS }}
+                {{ EXE_DURATION}}
+                {{ LAST_UPDATE_TIME }}
                 """,
-            )
-            .add_markdown(
-                "RUN_END_TIMESTAMP",
-                f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`",
-            )
-            .add_markdown(
-                "EXECUTION_DURATION", f"**Execution duration (s):** `{self.execution_duration:.2f}`"
             )
             .add_markdown(
                 "NUM_DROPPED_ROWS", f"**Number of dropped rows:** `{self.num_dropped_rows}`"

@@ -2,7 +2,6 @@ import logging
 import importlib.util
 import sys
 import operator
-import datetime
 import os
 import time
 import pandas as pd
@@ -207,8 +206,6 @@ class EvaluateStep(BaseStep):
         # Build card
         card = BaseCard(self.pipeline_name, self.name)
 
-        run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
-
         metric_df = pd.DataFrame.from_records(
             list(eval_result.metrics.items()), columns=["metric", "value"]
         )
@@ -317,19 +314,11 @@ class EvaluateStep(BaseStep):
             output_file=os.path.join(output_directory, "pred_and_error_profile.html")
         )
 
-        execution_duration_text = f"**Execution duration (s):** `{self.execution_duration:.6g}`"
         (
             card.add_tab(
-                "Step run summary",
-                "{{EXECUTION_DURATION}}<br>{{RUN_END_TIMESTAMP}}<br>"
-                + "{{RUN_STATUS}}<br>{{VALIDATION_STATUS}}",
-            )
-            .add_markdown("EXECUTION_DURATION", execution_duration_text)
-            .add_markdown(
-                "RUN_END_TIMESTAMP",
-                f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`",
-            )
-            .add_markdown(
+                "Run Summary",
+                "{{ VALIDATION_STATUS }}" + "{{ EXE_DURATION }}" + "{{ LAST_UPDATE_TIME }}",
+            ).add_markdown(
                 "VALIDATION_STATUS", f"**Validation status:** `{self.model_validation_status}`"
             )
         )

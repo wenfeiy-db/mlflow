@@ -5,13 +5,13 @@ import os
 import time
 import traceback
 import yaml
-from enum import Enum
-from typing import TypeVar, Dict, Any
 
+from enum import Enum
 from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME, FailureCard, CARD_HTML_NAME
 from mlflow.pipelines.utils import get_pipeline_name, display_html
 from mlflow.tracking import MlflowClient
 from mlflow.utils.databricks_utils import is_in_databricks_runtime
+from typing import TypeVar, Dict, Any
 
 
 _logger = logging.getLogger(__name__)
@@ -101,6 +101,7 @@ class BaseStep(metaclass=abc.ABCMeta):
                                  outputs should be stored.
         :return: None
         """
+        start_timestamp = time.time()
         self._initialize_databricks_spark_connection_and_hooks_if_applicable()
         try:
             self._update_status(status=StepStatus.RUNNING, output_directory=output_directory)
@@ -115,8 +116,7 @@ class BaseStep(metaclass=abc.ABCMeta):
             )
             raise
         finally:
-            self.step_card.save(path=output_directory)
-            self.step_card.save_as_html(path=output_directory)
+            self._serialize_card(start_timestamp, output_directory)
 
     def inspect(self, output_directory: str):
         """
@@ -208,6 +208,20 @@ class BaseStep(metaclass=abc.ABCMeta):
                 return StepExecutionState.from_dict(json.load(f))
         else:
             return StepExecutionState(StepStatus.UNKNOWN, 0)
+
+    def _serialize_card(self, start_timestamp: float, output_directory: str) -> None:
+        if self.step_card is None:
+            return
+        execution_duration = time.time() - start_timestamp
+        tab = self.step_card.get_tab("Run Summary")
+        if tab is not None:
+            tab.add_markdown("EXE_DURATION", f"**Run duration (s)**: {execution_duration:.3g}")
+            tab.add_markdown(
+                "LAST_UPDATE_TIME",
+                f"**Last updated:**: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}",
+            )
+        self.step_card.save(path=output_directory)
+        self.step_card.save_as_html(path=output_directory)
 
     def _update_status(self, status: StepStatus, output_directory: str) -> None:
         execution_state = StepExecutionState(status=status, last_updated_timestamp=time.time())

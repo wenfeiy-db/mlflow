@@ -1,4 +1,3 @@
-import datetime
 import logging
 import time
 from typing import Dict, Any
@@ -84,7 +83,6 @@ class RegisterStep(BaseStep):
     def _build_card(self) -> BaseCard:
         # Build card
 
-        run_end_datetime = datetime.datetime.fromtimestamp(self.run_end_time)
         final_markdown = []
         if self.model_url is not None:
             final_markdown.append(f"**Model URL:** `{self.model_url}`")
@@ -94,14 +92,10 @@ class RegisterStep(BaseStep):
             final_markdown.append(f"**Model Version:** `{self.version}`")
         if self.alerts is not None:
             final_markdown.append(f"**Alerts:** `{self.alerts}`")
-        final_markdown.append(
-            f"**Last run completed at:** `{run_end_datetime.strftime('%Y-%m-%d %H:%M:%S')}`"
-        )
-        final_markdown.append(f"**Execution duration (s):** `{self.execution_duration:.2f}`")
         card = BaseCard(self.pipeline_name, self.name)
-        card.add_tab(f"Run Summary ({self.name.capitalize()})", "{{SUMMARY}}").add_markdown(
-            "SUMMARY", "<br>\n".join(final_markdown)
-        )
+        card.add_tab(
+            "Run Summary", "{{ SUMMARY }}" + "{{ EXE_DURATION }}" + "{{ LAST_UPDATE_TIME }}"
+        ).add_markdown("SUMMARY", "<br>\n".join(final_markdown))
         return card
 
     @classmethod
