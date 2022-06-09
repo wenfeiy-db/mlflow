@@ -162,7 +162,7 @@ class EvaluateStep(BaseStep):
                 custom_metrics=self._load_custom_metric_functions(),
                 evaluator_config={
                     "explainability_algorithm": "kernel",
-                    "explainability_nsamples": 100,
+                    "explainability_nsamples": 10,
                 },
             )
             eval_result.save(output_directory)
