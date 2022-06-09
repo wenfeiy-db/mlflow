@@ -74,15 +74,23 @@ def set_tracking_uri(uri: str) -> None:
 
 
 @contextmanager
-def _use_tracking_uri(uri: str) -> None:
+def _use_tracking_uri(uri: str, local_store_root_path: str = None) -> None:
     """
     Similar to `mlflow.tracking.set_tracking_uri` function but return a context manager.
+    :param uri: tracking URI to use.
+    :param local_store_root_path: the local store root path for the tracking URI.
     """
     global _tracking_uri
+    cwd = os.getcwd()
     old_tracking_uri = _tracking_uri
-    _tracking_uri = uri
-    yield
-    _tracking_uri = old_tracking_uri
+    try:
+        if local_store_root_path is not None:
+            os.chdir(local_store_root_path)
+        _tracking_uri = uri
+        yield
+    finally:
+        _tracking_uri = old_tracking_uri
+        os.chdir(cwd)
 
 
 def _resolve_tracking_uri(tracking_uri=None):

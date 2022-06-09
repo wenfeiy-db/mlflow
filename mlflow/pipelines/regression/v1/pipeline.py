@@ -19,6 +19,7 @@ from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep
 from mlflow.pipelines.regression.v1.steps.register import RegisterStep
 from mlflow.pipelines.step import BaseStep
 from typing import List
+from mlflow.pipelines.utils import get_pipeline_root_path
 from mlflow.pipelines.utils.execution import get_execution_directory_path
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
@@ -108,6 +109,7 @@ class RegressionPipeline(_BasePipeline):
                 return None
 
         train_step_tracking_uri = train_step.tracking_config.tracking_uri
+        pipeline_root_path = get_pipeline_root_path()
 
         def read_dataframe(artifact_name, output_dir, file_name, step_name):
             data_path = os.path.join(output_dir, file_name)
@@ -159,7 +161,7 @@ class RegressionPipeline(_BasePipeline):
         elif artifact == "model":
             run_id = read_run_id()
             if run_id:
-                with _use_tracking_uri(train_step_tracking_uri):
+                with _use_tracking_uri(train_step_tracking_uri, pipeline_root_path):
                     return mlflow.pyfunc.load_model(f"runs:/{run_id}/{train_step.name}/model")
             else:
                 log_artifact_not_found_warning("model", train_step.name)
@@ -168,7 +170,7 @@ class RegressionPipeline(_BasePipeline):
         elif artifact == "transformer":
             run_id = read_run_id()
             if run_id:
-                with _use_tracking_uri(train_step_tracking_uri):
+                with _use_tracking_uri(train_step_tracking_uri, pipeline_root_path):
                     return mlflow.sklearn.load_model(
                         f"runs:/{run_id}/{transform_step.name}/transformer"
                     )
@@ -179,7 +181,7 @@ class RegressionPipeline(_BasePipeline):
         elif artifact == "run":
             run_id = read_run_id()
             if run_id:
-                with _use_tracking_uri(train_step_tracking_uri):
+                with _use_tracking_uri(train_step_tracking_uri, pipeline_root_path):
                     return MlflowClient().get_run(run_id)
             else:
                 log_artifact_not_found_warning("mlflow run", train_step.name)
