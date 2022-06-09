@@ -390,23 +390,23 @@ transform_objects = steps/transform/outputs/transformer.pkl steps/transform/outp
 
 transform: $(transform_objects)
 
-steps/%/outputs/transformer.pkl steps/%/outputs/transformed_training_data.parquet steps/%/outputs/transformed_validation_data.parquet: {path:prp/steps/transform.py} steps/split/outputs/train.parquet steps/transform/conf.yaml
+steps/%/outputs/transformer.pkl steps/%/outputs/transformed_training_data.parquet steps/%/outputs/transformed_validation_data.parquet: {path:prp/steps/transform.py} steps/split/outputs/train.parquet steps/split/outputs/validation.parquet steps/transform/conf.yaml
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.transform import TransformStep; TransformStep.from_step_config_path(step_config_path='{path:exe/steps/transform/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/transform/outputs}')"
 
-train_objects = steps/train/outputs/pipeline.pkl steps/train/outputs/run_id
+train_objects = steps/train/outputs/model.pkl steps/train/outputs/run_id
 
 train: $(train_objects)
 
-steps/%/outputs/pipeline.pkl steps/%/outputs/run_id: {path:prp/steps/train.py} steps/transform/outputs/transformed_training_data.parquet steps/transform/outputs/transformed_validation_data.parquet steps/transform/outputs/transformer.pkl steps/train/conf.yaml
+steps/%/outputs/model.pkl steps/%/outputs/run_id: {path:prp/steps/train.py} steps/transform/outputs/transformed_training_data.parquet steps/transform/outputs/transformed_validation_data.parquet steps/split/outputs/train.parquet steps/split/outputs/validation.parquet steps/transform/outputs/transformer.pkl steps/train/conf.yaml
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.train import TrainStep; TrainStep.from_step_config_path(step_config_path='{path:exe/steps/train/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/train/outputs}')"
 
-evaluate_objects = steps/evaluate/outputs/metrics.json steps/evaluate/outputs/artifacts steps/evaluate/outputs/artifacts_metadata.json steps/evaluate/outputs/model_validation_status
+evaluate_objects = steps/evaluate/outputs/metrics.json steps/evaluate/outputs/artifacts steps/evaluate/outputs/model_validation_status
 
 evaluate: $(evaluate_objects)
 
-steps/%/outputs/metrics.json steps/%/outputs/artifacts steps/%/outputs/artifacts_metadata.json steps/%/outputs/model_validation_status: steps/train/outputs/pipeline.pkl steps/split/outputs/train.parquet steps/split/outputs/test.parquet steps/train/outputs/run_id steps/evaluate/conf.yaml
+steps/%/outputs/metrics.json steps/%/outputs/artifacts steps/%/outputs/model_validation_status: steps/train/outputs/model.pkl steps/split/outputs/test.parquet steps/train/outputs/run_id steps/evaluate/conf.yaml
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep; EvaluateStep.from_step_config_path(step_config_path='{path:exe/steps/evaluate/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/evaluate/outputs}')"
 

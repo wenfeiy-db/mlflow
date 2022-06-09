@@ -84,7 +84,9 @@ def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_d
 
 
 @pytest.mark.usefixtures("enter_test_pipeline_directory")
-def test_pipelines_log_to_expected_mlflow_backend_and_experiment_with_expected_run_tags(tmp_path):
+def test_pipelines_log_to_expected_mlflow_backend_with_expected_run_tags_once_on_reruns(
+    tmp_path,
+):
     experiment_name = "my_test_exp"
     tracking_uri = "sqlite:///" + str((tmp_path / "tracking_dst.db").resolve())
     artifact_location = str((tmp_path / "mlartifacts").resolve())
@@ -100,11 +102,11 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment_with_expected_r
     with open(profile_path, "w") as f:
         yaml.safe_dump(profile_contents, f)
 
+    mlflow.set_tracking_uri(tracking_uri)
     pipeline = Pipeline(profile="local")
     pipeline.clean()
     pipeline.run()
 
-    mlflow.set_tracking_uri(tracking_uri)
     logged_runs = mlflow.search_runs(experiment_names=[experiment_name], output_format="list")
     assert len(logged_runs) == 1
     logged_run = logged_runs[0]
@@ -122,6 +124,10 @@ def test_pipelines_log_to_expected_mlflow_backend_and_experiment_with_expected_r
     }
     run_tags = MlflowClient(tracking_uri).get_run(run_id=logged_run.info.run_id).data.tags
     assert resolve_tags().items() <= run_tags.items()
+
+    pipeline.run()
+    logged_runs = mlflow.search_runs(experiment_names=[experiment_name], output_format="list")
+    assert len(logged_runs) == 1
 
 
 @pytest.mark.usefixtures("enter_test_pipeline_directory")
