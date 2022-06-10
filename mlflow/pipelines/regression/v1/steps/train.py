@@ -19,6 +19,7 @@ from mlflow.pipelines.utils.tracking import (
     get_run_tags_env_vars,
 )
 from mlflow.projects.utils import get_databricks_env_vars
+from mlflow.types import ColSpec
 
 _logger = logging.getLogger(__name__)
 
@@ -155,7 +156,6 @@ class TrainStep(BaseStep):
         return card
 
     def _build_step_card(self, pred_and_error_df, model, model_schema, run_id, model_uri):
-        import pprint
         from pandas_profiling import ProfileReport
         from sklearn.utils import estimator_html_repr
         from sklearn import set_config
@@ -175,19 +175,31 @@ class TrainStep(BaseStep):
         card.add_tab("Model Architecture", "{{MODEL_ARCH}}").add_html("MODEL_ARCH", model_repr)
 
         # Tab 3: Inferred model (transformer + estimator) schema.
-        pp = pprint.PrettyPrinter(indent=4, compact=False, width=80)
+        def render_schema(inputs, title):
+            table = BaseCard.render_table(
+                (
+                    {
+                        "Name": "  " + (spec.name or "-"),
+                        "Type": repr(spec.type) if isinstance(spec, ColSpec) else repr(spec),
+                    }
+                    for spec in inputs
+                )
+            )
+            return '<div style="margin: 5px"><h2>{title}</h2>{table}</div>'.format(
+                title=title, table=table
+            )
+
+        schema_tables = [render_schema(model_schema.inputs.inputs, "Inputs")]
+        if model_schema.outputs:
+            schema_tables += [render_schema(model_schema.outputs.inputs, "Outputs")]
+
         card.add_tab("Model Schema", "{{MODEL_SCHEMA}}").add_html(
-            "MODEL_SCHEMA", pp.pformat(model_schema.to_dict())
+            "MODEL_SCHEMA",
+            '<div style="display: flex">{tables}</div>'.format(tables="\n".join(schema_tables)),
         )
         # Tab 4: Run summary.
         (
-            card.add_tab(
-                "Run Summary",
-                "{{ RUN_ID }}"
-                + "{{ MODEL_URI }}"
-                + "{{ EXE_DURATION }}"
-                + "{{ LAST_UPDATE_TIME }}",
-            )
+            card.add_tab(f"Run Summary ({self.name.capitalize()})", "{{RUN_ID}}" + "{{MODEL_URI}}")
             .add_markdown("RUN_ID", f"**MLflow Run ID:** `{run_id}`")
             .add_markdown("MODEL_URI", f"**MLflow Model URI:** `{model_uri}`")
         )
