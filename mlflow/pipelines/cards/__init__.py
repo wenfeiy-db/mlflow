@@ -68,7 +68,14 @@ class CardTab:
         self.add_html(name, md_to_html(markdown))
         return self
 
-    def add_image(self, name: str, image_file_path: str, width: int = None, height: int = None):
+    def add_image(
+        self, name: str, image_file_path: str, width: int = None, height: int = None
+    ) -> None:
+        if not os.path.exists(image_file_path):
+            self.add_html(name, "Image Unavailable")
+            _logger.warning(f"Unable to locate image file {image_file_path} to render {name}.")
+            return
+
         with open(image_file_path, "rb") as f:
             base64_str = base64.b64encode(f.read()).decode("utf-8")
 

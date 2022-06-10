@@ -249,16 +249,8 @@ class EvaluateStep(BaseStep):
         shap_beeswarm_plot_path = os.path.join(
             output_directory, "artifacts", "shap_beeswarm_plot_on_data_test.png"
         )
-
-        if os.path.exists(shap_bar_plot_path):
-            shap_plot_tab.add_image("SHAP_BAR_PLOT", shap_bar_plot_path, width=800)
-        else:
-            shap_plot_tab.add_html("SHAP_BAR_PLOT", "Image Unavailable")
-
-        if os.path.exists(shap_beeswarm_plot_path):
-            shap_plot_tab.add_image("SHAP_BEESWARM_PLOT", shap_beeswarm_plot_path, width=800)
-        else:
-            shap_plot_tab.add_html("SHAP_BEESWARM_PLOT", "Image Unavailable")
+        shap_plot_tab.add_image("SHAP_BAR_PLOT", shap_bar_plot_path, width=800)
+        shap_plot_tab.add_image("SHAP_BEESWARM_PLOT", shap_beeswarm_plot_path, width=800)
 
         # Constructs data profiles of predictions and errors
         model = mlflow.pyfunc.load_model(model_uri)
