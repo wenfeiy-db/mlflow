@@ -31,14 +31,14 @@ class TransformStep(BaseStep):
         run_start_time = time.time()
 
         train_data_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
+            pipeline_name=self.hashed_pipeline_root,
             step_name="split",
             relative_path="train.parquet",
         )
         train_df = pd.read_parquet(train_data_path)
 
         validation_data_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
+            pipeline_name=self.hashed_pipeline_root,
             step_name="split",
             relative_path="validation.parquet",
         )

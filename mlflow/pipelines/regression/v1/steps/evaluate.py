@@ -134,14 +134,14 @@ class EvaluateStep(BaseStep):
         self._validate_validation_criteria()
 
         test_data_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
+            pipeline_name=self.hashed_pipeline_root,
             step_name="split",
             relative_path="test.parquet",
         )
         test_data = pd.read_parquet(test_data_path)
 
         run_id_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
+            pipeline_name=self.hashed_pipeline_root,
             step_name="train",
             relative_path="run_id",
         )

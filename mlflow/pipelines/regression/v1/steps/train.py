@@ -39,7 +39,7 @@ class TrainStep(BaseStep):
         apply_pipeline_tracking_config(self.tracking_config)
 
         transformed_training_data_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
+            pipeline_name=self.hashed_pipeline_root,
             step_name="transform",
             relative_path="transformed_training_data.parquet",
         )
@@ -47,14 +47,14 @@ class TrainStep(BaseStep):
         X_train, y_train = train_df.drop(columns=[self.target_col]), train_df[self.target_col]
 
         transformed_validation_data_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
+            pipeline_name=self.hashed_pipeline_root,
             step_name="transform",
             relative_path="transformed_validation_data.parquet",
         )
         validation_df = pd.read_parquet(transformed_validation_data_path)
 
         raw_training_data_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
+            pipeline_name=self.hashed_pipeline_root,
             step_name="split",
             relative_path="train.parquet",
         )
@@ -62,14 +62,14 @@ class TrainStep(BaseStep):
         raw_X_train = raw_train_df.drop(columns=[self.target_col])
 
         raw_validation_data_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
+            pipeline_name=self.hashed_pipeline_root,
             step_name="split",
             relative_path="validation.parquet",
         )
         raw_validation_df = pd.read_parquet(raw_validation_data_path)
 
         transformer_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
+            pipeline_name=self.hashed_pipeline_root,
             step_name="transform",
             relative_path="transformer.pkl",
         )

@@ -5,6 +5,7 @@ from mlflow.exceptions import MlflowException
 from mlflow.pipelines.step import BaseStep, StepStatus
 from mlflow.pipelines.utils import (
     get_pipeline_config,
+    get_hashed_pipeline_root,
     get_pipeline_name,
     get_pipeline_root_path,
     get_default_profile,
@@ -81,6 +82,7 @@ class _BasePipeline:
         """
         self._pipeline_root_path = pipeline_root_path
         self._profile = profile
+        self._hashed_pipeline_root = get_hashed_pipeline_root(pipeline_root_path)
         self._name = get_pipeline_name(pipeline_root_path)
         self._steps = self._resolve_pipeline_steps()
 
@@ -114,7 +116,7 @@ class _BasePipeline:
             with capture_output():
                 last_executed_step = run_pipeline_step(
                     self._pipeline_root_path,
-                    self.name,
+                    self._hashed_pipeline_root,
                     self._steps,
                     # Runs the last step of the pipeline if no step is specified.
                     self._get_step(step) if step else self._steps[-1],
@@ -122,7 +124,7 @@ class _BasePipeline:
         else:
             last_executed_step = run_pipeline_step(
                 self._pipeline_root_path,
-                self.name,
+                self._hashed_pipeline_root,
                 self._steps,
                 # Runs the last step of the pipeline if no step is specified.
                 self._get_step(step) if step else self._steps[-1],
@@ -132,7 +134,7 @@ class _BasePipeline:
 
         # Verify that the step execution succeeded and throw if it didn't.
         last_executed_step_output_directory = get_step_output_path(
-            self.name, last_executed_step.name, ""
+            self._hashed_pipeline_root, last_executed_step.name, ""
         )
         last_executed_step_status = last_executed_step.get_execution_state(
             last_executed_step_output_directory
@@ -162,7 +164,7 @@ class _BasePipeline:
         if not step:
             display_html(html_file_path=self._get_pipeline_dag_file())
         else:
-            output_directory = get_step_output_path(self.name, step, "")
+            output_directory = get_step_output_path(self._hashed_pipeline_root, step, "")
             self._get_step(step).inspect(output_directory)
 
     def clean(self, step: str = None) -> None:
@@ -175,7 +177,7 @@ class _BasePipeline:
         :return: None
         """
         to_clean = self._steps if not step else [self._get_step(step)]
-        clean_execution_state(self.name, to_clean)
+        clean_execution_state(self._hashed_pipeline_root, to_clean)
 
     def _get_step(self, step_name) -> BaseStep:
         """Returns a step class object from the pipeline."""

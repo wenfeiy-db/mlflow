@@ -42,7 +42,7 @@ class RegisterStep(BaseStep):
     def _run(self, output_directory):
         run_start_time = time.time()
         run_id_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
+            pipeline_name=self.hashed_pipeline_root,
             step_name="train",
             relative_path="run_id",
         )
@@ -50,7 +50,7 @@ class RegisterStep(BaseStep):
             run_id = f.read()
 
         model_validation_path = get_step_output_path(
-            pipeline_name=self.pipeline_name,
+            pipeline_name=self.hashed_pipeline_root,
             step_name="evaluate",
             relative_path="model_validation_status",
         )

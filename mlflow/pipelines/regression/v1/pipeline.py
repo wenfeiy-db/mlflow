@@ -47,7 +47,7 @@ class RegressionPipeline(_BasePipeline):
         )
 
         pipeline_dag_file = os.path.join(
-            get_execution_directory_path(self._name), "pipeline_dag.html"
+            get_execution_directory_path(self._hashed_pipeline_root), "pipeline_dag.html"
         )
         with open(pipeline_dag_file, "w") as f:
             f.write(pipeline_dag_template)
@@ -90,10 +90,12 @@ class RegressionPipeline(_BasePipeline):
         """
         ingest_step, split_step, transform_step, train_step, _, _ = self._steps
 
-        ingest_output_dir = get_step_output_path(self.name, ingest_step.name, "")
-        split_output_dir = get_step_output_path(self.name, split_step.name, "")
-        transform_output_dir = get_step_output_path(self.name, transform_step.name, "")
-        train_output_dir = get_step_output_path(self.name, train_step.name, "")
+        ingest_output_dir = get_step_output_path(self._hashed_pipeline_root, ingest_step.name, "")
+        split_output_dir = get_step_output_path(self._hashed_pipeline_root, split_step.name, "")
+        transform_output_dir = get_step_output_path(
+            self._hashed_pipeline_root, transform_step.name, ""
+        )
+        train_output_dir = get_step_output_path(self._hashed_pipeline_root, train_step.name, "")
 
         def log_artifact_not_found_warning(artifact_name, step_name):
             _logger.warning(

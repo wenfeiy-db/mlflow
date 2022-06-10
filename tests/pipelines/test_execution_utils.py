@@ -12,6 +12,7 @@ from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 from mlflow.pipelines.regression.v1.steps.split import SplitStep
 from mlflow.pipelines.regression.v1.steps.transform import TransformStep
 from mlflow.pipelines.step import StepStatus
+from mlflow.pipelines.utils import get_hashed_pipeline_root
 from mlflow.pipelines.utils.execution import (
     _get_or_create_execution_directory,
     run_pipeline_step,
@@ -223,14 +224,14 @@ def test_run_pipeline_step_sets_environment_as_expected(tmp_path):
 def run_test_pipeline_step(pipeline_steps, target_step):
     return run_pipeline_step(
         pipeline_root_path=os.getcwd(),
-        pipeline_name=os.path.basename(os.getcwd()),
+        pipeline_name=get_hashed_pipeline_root(os.getcwd()),
         pipeline_steps=pipeline_steps,
         target_step=target_step,
     )
 
 
 def get_test_pipeline_step_output_directory(step):
-    return get_step_output_path(os.path.basename(os.getcwd()), step.name, "")
+    return get_step_output_path(get_hashed_pipeline_root(os.getcwd()), step.name, "")
 
 
 def get_test_pipeline_step_execution_state(step):

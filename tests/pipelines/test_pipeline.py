@@ -10,6 +10,7 @@ from unittest import mock
 import mlflow
 from mlflow.pipelines.pipeline import Pipeline
 from mlflow.pipelines.utils.execution import get_step_output_path
+from mlflow.pipelines.utils import get_hashed_pipeline_root
 from mlflow.exceptions import MlflowException
 from mlflow.tracking.client import MlflowClient
 from mlflow.tracking.context.registry import resolve_tags
@@ -50,7 +51,9 @@ def test_create_pipeline_and_clean_works():
 
 @pytest.mark.usefixtures("enter_pipeline_example_directory")
 @pytest.mark.parametrize("custom_execution_directory", [None, "custom"])
-def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_directory, tmp_path):
+def test_pipelines_execution_directory_is_managed_as_expected(
+    custom_execution_directory, enter_pipeline_example_directory, tmp_path
+):
     if custom_execution_directory is not None:
         custom_execution_directory = tmp_path / custom_execution_directory
 
@@ -60,7 +63,10 @@ def test_pipelines_execution_directory_is_managed_as_expected(custom_execution_d
     expected_execution_directory_location = (
         pathlib.Path(custom_execution_directory)
         if custom_execution_directory
-        else pathlib.Path.home() / ".mlflow" / "pipelines" / "sklearn_regression"
+        else pathlib.Path.home()
+        / ".mlflow"
+        / "pipelines"
+        / get_hashed_pipeline_root(enter_pipeline_example_directory)
     )
 
     # Run the full pipeline and verify that outputs for each step were written to the expected
@@ -149,7 +155,7 @@ def test_pipelines_run_throws_exception_and_produces_failure_card_when_step_fail
         pipeline.run(step="split")
 
     step_card_path = get_step_output_path(
-        pipeline_name=pipeline.name,
+        pipeline_name=pipeline._hashed_pipeline_root,
         step_name="ingest",
         relative_path="card.html",
     )
@@ -171,7 +177,7 @@ def test_test_step_logs_step_cards_as_artifacts():
 
     tracking_uri = pipeline._get_step("train").tracking_config.tracking_uri
     local_run_id_path = get_step_output_path(
-        pipeline_name=pipeline.name,
+        pipeline_name=pipeline._hashed_pipeline_root,
         step_name="train",
         relative_path="run_id",
     )
