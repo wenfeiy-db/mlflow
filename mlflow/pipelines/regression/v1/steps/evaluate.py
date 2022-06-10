@@ -237,34 +237,28 @@ class EvaluateStep(BaseStep):
                 "<h3 class='section-title'>Model Validation Results</h3> " + criteria_html,
             )
 
+        shap_plot_tab = card.add_tab(
+            "Feature importance with raw features",
+            '<h3 class="section-title">Shap bar plot</h3>{{SHAP_BAR_PLOT}}'
+            '<h3 class="section-title">Shap beeswarm plot</h3>{{SHAP_BEESWARM_PLOT}}',
+        )
+
         shap_bar_plot_path = os.path.join(
             output_directory, "artifacts", "shap_feature_importance_plot_on_data_test.png"
-        )
-        shap_bar_plot_res_path = card._add_resource_file(shap_bar_plot_path)
-        shap_bar_plot_img = (
-            f'<img src="{shap_bar_plot_res_path}" width="800" />'
-            if os.path.exists(shap_bar_plot_path)
-            else "Unavailable"
         )
         shap_beeswarm_plot_path = os.path.join(
             output_directory, "artifacts", "shap_beeswarm_plot_on_data_test.png"
         )
-        shap_beeswarm_plot_res_path = card._add_resource_file(shap_beeswarm_plot_path)
-        shap_beeswarm_plot_img = (
-            f'<img src="{shap_beeswarm_plot_res_path}" width="800" />'
-            if os.path.exists(shap_beeswarm_plot_path)
-            else "Unavailable"
-        )
 
-        (
-            card.add_tab(
-                "Feature importance with raw features",
-                '<h3 class="section-title">Shap bar plot</h3>{{SHAP_BAR_PLOT}}'
-                + '<h3 class="section-title">Shap beeswarm plot</h3>{{SHAP_BEESWARM_PLOT}}',
-            )
-            .add_html("SHAP_BAR_PLOT", shap_bar_plot_img)
-            .add_html("SHAP_BEESWARM_PLOT", shap_beeswarm_plot_img)
-        )
+        if os.path.exists(shap_bar_plot_path):
+            shap_plot_tab.add_image("SHAP_BAR_PLOT", shap_bar_plot_path, width=800)
+        else:
+            shap_plot_tab.add_html("SHAP_BAR_PLOT", "Image Unavailable")
+
+        if os.path.exists(shap_beeswarm_plot_path):
+            shap_plot_tab.add_image("SHAP_BEESWARM_PLOT", shap_beeswarm_plot_path, width=800)
+        else:
+            shap_plot_tab.add_html("SHAP_BEESWARM_PLOT", "Image Unavailable")
 
         # Constructs data profiles of predictions and errors
         model = mlflow.pyfunc.load_model(model_uri)

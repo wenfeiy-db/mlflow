@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import base64
 import html
 import os
+import pathlib
 import logging
 import random
-import shutil
 import string
 from io import StringIO
 from typing import Union
@@ -67,6 +68,18 @@ class CardTab:
         self.add_html(name, md_to_html(markdown))
         return self
 
+    def add_image(self, name: str, image_file_path: str, width: int = None, height: int = None):
+        with open(image_file_path, "rb") as f:
+            base64_str = base64.b64encode(f.read()).decode('utf-8')
+
+        image_type = pathlib.Path(image_file_path).suffix[1:]
+
+        width_style = f'width="{width}"' if width else ""
+        height_style = f'height="{width}"' if height else ""
+        img_html = (f'<img src="data:image/{image_type};base64, {base64_str}" '
+                   f"{width_style} {height_style} />")
+        self.add_html(name, img_html)
+
     def add_pandas_profile(self, name: str, profile) -> CardTab:
         """
         Add a new tab representing the provided pandas profile to the card.
@@ -110,7 +123,6 @@ class BaseCard:
 
         self._string_builder = StringIO()
         self._tabs = []
-        self._resource_files = {}
 
     def add_tab(self, name, html_template) -> CardTab:
         """
@@ -177,37 +189,11 @@ class BaseCard:
         """
         return self._string_builder.getvalue()
 
-    def _add_resource_file(self, path):
-        """
-        Add a resource file. Return a relative path pointing to the file.
-        In html content, use the returned relative path instead of original path.
-        When calling `save_as_html`, resource files will be saved to the
-        `_CARD_RESOURCE_DIR_NAME` subdirectory in the same directory.
-        This is a private method and it might change in future.
-
-        TODO: Make pickling / unpickling support resource files.
-        """
-        res_name = f"r{len(self._resource_files) + 1:04}_{os.path.basename(path)}"
-        rel_path = os.path.join(_CARD_RESOURCE_DIR_NAME, res_name)
-        self._resource_files[path] = rel_path
-        return rel_path
-
     def save_as_html(self, path) -> None:
         if os.path.isdir(path):
             path = os.path.join(path, CARD_HTML_NAME)
         with open(path, "w", encoding="utf-8") as f:
             f.write(self.to_html())
-
-        if len(self._resource_files) > 0:
-            dir_path = os.path.dirname(path)
-            resource_dir = os.path.join(dir_path, _CARD_RESOURCE_DIR_NAME)
-            os.makedirs(resource_dir, exist_ok=True)
-            for original_path, rel_path in self._resource_files.items():
-                if not os.path.exists(original_path):
-                    _logger.warning(f"Unable to find artifact at location: {original_path}")
-                    continue
-                dest_path = os.path.join(resource_dir, os.path.basename(rel_path))
-                shutil.copy(original_path, dest_path)
 
     def save(self, path: str) -> None:
         if os.path.isdir(path):
