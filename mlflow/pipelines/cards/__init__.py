@@ -70,14 +70,16 @@ class CardTab:
 
     def add_image(self, name: str, image_file_path: str, width: int = None, height: int = None):
         with open(image_file_path, "rb") as f:
-            base64_str = base64.b64encode(f.read()).decode('utf-8')
+            base64_str = base64.b64encode(f.read()).decode("utf-8")
 
         image_type = pathlib.Path(image_file_path).suffix[1:]
 
         width_style = f'width="{width}"' if width else ""
         height_style = f'height="{width}"' if height else ""
-        img_html = (f'<img src="data:image/{image_type};base64, {base64_str}" '
-                   f"{width_style} {height_style} />")
+        img_html = (
+            f'<img src="data:image/{image_type};base64, {base64_str}" '
+            f"{width_style} {height_style} />"
+        )
         self.add_html(name, img_html)
 
     def add_pandas_profile(self, name: str, profile) -> CardTab:
