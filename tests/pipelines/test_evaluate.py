@@ -1,54 +1,26 @@
-import sys
 from unittest import mock
 from pathlib import Path
-import shutil
 
 import pytest
 from sklearn.datasets import load_diabetes
-from sklearn.linear_model import LinearRegression
 
 import mlflow
 from mlflow.utils.file_utils import read_yaml
 from mlflow.pipelines.utils import _PIPELINE_CONFIG_FILE_NAME
-from mlflow.pipelines.utils.execution import _MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR
 from mlflow.pipelines.regression.v1.steps.split import _OUTPUT_TEST_FILE_NAME
 from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep
 from mlflow.exceptions import MlflowException
 
-
-@pytest.fixture(autouse=True)
-def tmp_pipeline_exec_path(monkeypatch, tmp_path) -> Path:
-    path = tmp_path.joinpath("pipeline_execution")
-    path.mkdir(parents=True)
-    monkeypatch.setenv(_MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR, str(path))
-    yield path
-    shutil.rmtree(path)
-
-
-@pytest.fixture
-def tmp_pipeline_root_path(tmp_path) -> Path:
-    path = tmp_path.joinpath("pipeline_root")
-    path.mkdir(parents=True)
-    yield path
-    shutil.rmtree(path)
+# pylint: disable=unused-import
+from tests.pipelines.helper_functions import (
+    clear_custom_metrics_module_cache,
+    tmp_pipeline_exec_path,
+    tmp_pipeline_root_path,
+    train_and_log_model,
+)  # pylint: enable=unused-import
 
 
-@pytest.fixture(autouse=True)
-def clear_custom_metrics_module_cache():
-    key = "steps.custom_metrics"
-    if key in sys.modules:
-        del sys.modules[key]
-
-
-def train_and_log_model():
-    mlflow.set_experiment("demo")
-    with mlflow.start_run() as run:
-        X, y = load_diabetes(as_frame=True, return_X_y=True)
-        model = LinearRegression().fit(X, y)
-        mlflow.sklearn.log_model(model, artifact_path="train/model")
-    return run.info.run_id
-
-
+@pytest.mark.usefixtures("clear_custom_metrics_module_cache")
 @pytest.mark.parametrize("mae_threshold", [-1, 1_000_000])
 def test_evaluate_step_run(
     tmp_pipeline_root_path: Path, tmp_pipeline_exec_path: Path, mae_threshold: int
@@ -122,6 +94,7 @@ def weighted_mean_squared_error(eval_df, builtin_metrics):
     assert model_validation_status_path.read_text() == expected_status
 
 
+@pytest.mark.usefixtures("clear_custom_metrics_module_cache")
 def test_no_validation_criteria(tmp_pipeline_root_path: Path, tmp_pipeline_exec_path: Path):
     split_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "split", "outputs")
     split_step_output_dir.mkdir(parents=True)
@@ -165,6 +138,7 @@ steps:
     assert model_validation_status_path.read_text() == "UNKNOWN"
 
 
+@pytest.mark.usefixtures("clear_custom_metrics_module_cache", "tmp_pipeline_exec_path")
 def test_validation_criteria_contain_undefined_metrics(tmp_pipeline_root_path: Path):
     pipeline_yaml = tmp_pipeline_root_path.joinpath(_PIPELINE_CONFIG_FILE_NAME)
     pipeline_yaml.write_text(
@@ -196,6 +170,7 @@ steps:
         evaluate_step._validate_validation_criteria()
 
 
+@pytest.mark.usefixtures("clear_custom_metrics_module_cache", "tmp_pipeline_exec_path")
 def test_custom_metric_function_does_not_exist(tmp_pipeline_root_path: Path):
     pipeline_yaml = tmp_pipeline_root_path.joinpath(_PIPELINE_CONFIG_FILE_NAME)
     pipeline_yaml.write_text(
@@ -234,6 +209,7 @@ def one(eval_df, builtin_metrics):
     assert "weighted_mean_squared_error" in str(exc.value.__cause__)
 
 
+@pytest.mark.usefixtures("clear_custom_metrics_module_cache", "tmp_pipeline_exec_path")
 def test_custom_metrics_module_does_not_exist(tmp_pipeline_root_path: Path):
     pipeline_yaml = tmp_pipeline_root_path.joinpath(_PIPELINE_CONFIG_FILE_NAME)
     pipeline_yaml.write_text(
@@ -267,6 +243,7 @@ metrics:
     assert "No module named 'steps.custom_metrics'" in str(exc.value.__cause__)
 
 
+@pytest.mark.usefixtures("clear_custom_metrics_module_cache", "tmp_pipeline_exec_path")
 def test_custom_metrics_override_builtin_metrics(
     tmp_pipeline_root_path: Path, tmp_pipeline_exec_path: Path
 ):

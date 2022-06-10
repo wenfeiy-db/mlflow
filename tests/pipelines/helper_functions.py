@@ -1,18 +1,54 @@
+import mlflow
 import os
 import pathlib
 import shutil
-from contextlib import contextmanager
+import sys
 
-import mlflow
+from contextlib import contextmanager
+from mlflow.pipelines.utils.execution import _MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR
+from mlflow.pipelines.regression.v1.steps.split import _OUTPUT_TEST_FILE_NAME
 from mlflow.pipelines.step import BaseStep
 from mlflow.utils.file_utils import TempDir
+from pathlib import Path
+from sklearn.datasets import load_diabetes
+from sklearn.linear_model import LinearRegression
 
 import pytest
 
 PIPELINE_EXAMPLE_PATH_ENV_VAR_FOR_TESTS = "_PIPELINE_EXAMPLE_PATH"
 PIPELINE_EXAMPLE_PATH_FROM_MLFLOW_ROOT = "examples/pipelines/sklearn_regression"
 
+## Methods
+def setup_model_and_evaluate(tmp_pipeline_exec_path: Path):
+    split_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "split", "outputs")
+    split_step_output_dir.mkdir(parents=True)
+    X, y = load_diabetes(as_frame=True, return_X_y=True)
+    test_df = X.assign(y=y).sample(n=100, random_state=42)
+    test_df.to_parquet(split_step_output_dir.joinpath(_OUTPUT_TEST_FILE_NAME))
 
+    run_id = train_and_log_model()
+    train_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "train", "outputs")
+    train_step_output_dir.mkdir(parents=True)
+    train_step_output_dir.joinpath("run_id").write_text(run_id)
+
+    evaluate_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "evaluate", "outputs")
+    evaluate_step_output_dir.mkdir(parents=True)
+
+    register_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "register", "outputs")
+    register_step_output_dir.mkdir(parents=True)
+    return evaluate_step_output_dir, register_step_output_dir
+
+
+def train_and_log_model():
+    mlflow.set_experiment("demo")
+    with mlflow.start_run() as run:
+        X, y = load_diabetes(as_frame=True, return_X_y=True)
+        model = LinearRegression().fit(X, y)
+        mlflow.sklearn.log_model(model, artifact_path="train/model")
+    return run.info.run_id
+
+
+## Fixtures
 @pytest.fixture
 def enter_pipeline_example_directory():
     pipeline_example_path = os.environ.get(PIPELINE_EXAMPLE_PATH_ENV_VAR_FOR_TESTS)
@@ -33,6 +69,30 @@ def enter_test_pipeline_directory(enter_pipeline_example_directory):
         shutil.copytree(pipeline_example_root_path, test_pipeline_path)
         os.chdir(test_pipeline_path)
         yield os.getcwd()
+
+
+@pytest.fixture
+def tmp_pipeline_exec_path(monkeypatch, tmp_path) -> Path:
+    path = tmp_path.joinpath("pipeline_execution")
+    path.mkdir(parents=True)
+    monkeypatch.setenv(_MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR, str(path))
+    yield path
+    shutil.rmtree(path)
+
+
+@pytest.fixture
+def tmp_pipeline_root_path(tmp_path) -> Path:
+    path = tmp_path.joinpath("pipeline_root")
+    path.mkdir(parents=True)
+    yield path
+    shutil.rmtree(path)
+
+
+@pytest.fixture
+def clear_custom_metrics_module_cache():
+    key = "steps.custom_metrics"
+    if key in sys.modules:
+        del sys.modules[key]
 
 
 @contextmanager
