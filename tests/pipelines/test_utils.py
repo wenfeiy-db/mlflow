@@ -54,7 +54,7 @@ def test_get_hashed_pipeline_root_returns_correctly_for_valid_pipeline_directory
     enter_pipeline_example_directory, tmp_path
 ):
     pipeline_root_path = enter_pipeline_example_directory
-    pipeline_root_path_str = pipeline_root_path.as_posix()
+    pipeline_root_path_str = str(pipeline_root_path)
     assert pathlib.Path.cwd() == pipeline_root_path
     assert (
         get_hashed_pipeline_root()
