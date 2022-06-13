@@ -20,7 +20,7 @@ from mlflow.pipelines.regression.v1.steps.register import RegisterStep
 from mlflow.pipelines.step import BaseStep
 from typing import List
 from mlflow.pipelines.utils import get_pipeline_root_path
-from mlflow.pipelines.utils.execution import get_execution_directory_path
+from mlflow.pipelines.utils.execution import get_or_create_base_execution_directory
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 from mlflow.tracking._tracking_service.utils import _use_tracking_uri
@@ -47,7 +47,7 @@ class RegressionPipeline(_BasePipeline):
         )
 
         pipeline_dag_file = os.path.join(
-            get_execution_directory_path(self._hashed_pipeline_root), "pipeline_dag.html"
+            get_or_create_base_execution_directory(self._hashed_pipeline_root), "pipeline_dag.html"
         )
         with open(pipeline_dag_file, "w") as f:
             f.write(pipeline_dag_template)
