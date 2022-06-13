@@ -1,7 +1,7 @@
-import os
-import logging
-import subprocess
 import functools
+import logging
+import os
+import subprocess
 
 from mlflow.exceptions import MlflowException
 from mlflow.utils.rest_utils import MlflowHostCreds
@@ -419,6 +419,9 @@ def get_databricks_host_creds(server_uri=None):
 
 
 def is_running_in_ipython_environment():
-    from IPython import get_ipython
+    try:
+        from IPython import get_ipython
 
-    return get_ipython() is not None
+        return get_ipython() is not None
+    except ImportError:
+        return False
