@@ -164,7 +164,9 @@ class TrainStep(BaseStep):
         # Tab 0: TODO add graphs for model performance summary.
         # Tab 1: Prediction and error data profile.
         pred_and_error_df_profile = ProfileReport(
-            pred_and_error_df, title="Predictions and Errors (validation dataset)", minimal=True
+            pred_and_error_df.reset_index(drop=True),
+            title="Predictions and Errors (validation dataset)",
+            minimal=True,
         )
         card.add_tab("Profile of Predictions and Errors", "{{PROFILE}}").add_pandas_profile(
             "PROFILE", pred_and_error_df_profile
