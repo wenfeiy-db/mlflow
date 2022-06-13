@@ -273,6 +273,6 @@ class FailureCard(BaseCard):
             "STEP_STATUS",
             '<p><strong>Step status: <span style="color:red">Failed</span></strong></p>',
         )
-        self.add_tab("Stacktrace", "{{STACKTRACE}}").add_html(
+        self.add_tab("Stacktrace", "<div class='stacktrace-container'>{{ STACKTRACE }}").add_html(
             "STACKTRACE", f'<p style="margin-top:0px"><code>{failure_traceback}</p></code>'
         )
