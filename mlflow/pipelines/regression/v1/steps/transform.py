@@ -114,14 +114,12 @@ class TransformStep(BaseStep):
         card.add_tab("Transformer", "{{TRANSFORMER}}").add_html("TRANSFORMER", transformer_repr)
 
         # Tab 4: transformer output schema
-        from sklearn.pipeline import make_pipeline
-
-        # Construct a fake pipeline containing the transformer and a passthrough estimator.
         try:
-            p = make_pipeline([transformer, "passthrough"])
-            output_schema = list(p[:-1].get_feature_names_out(train_df.columns))
             card.add_tab("Output Schema", "{{OUTPUT_SCHEMA}}").add_html(
-                "OUTPUT_SCHEMA", output_schema
+                "OUTPUT_SCHEMA",
+                BaseCard.render_table(
+                    {"Name": n, "Type": t} for n, t in train_transformed.dtypes.items()
+                ),
             )
         except Exception as e:
             card.add_tab("Output Schema", "{{OUTPUT_SCHEMA}}").add_html(
