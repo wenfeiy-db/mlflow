@@ -139,7 +139,13 @@ class TransformStep(BaseStep):
         transformer_repr = estimator_html_repr(transformer)
         card.add_tab("Transformer", "{{TRANSFORMER}}").add_html("TRANSFORMER", transformer_repr)
 
-        # Tab 4: transformer output schema
+        # Tab 4: transformer input schema
+        card.add_tab("Input Schema", "{{INPUT_SCHEMA}}").add_html(
+            "INPUT_SCHEMA",
+            BaseCard.render_table({"Name": n, "Type": t} for n, t in train_df.dtypes.items()),
+        )
+
+        # Tab 5: transformer output schema
         try:
             card.add_tab("Output Schema", "{{OUTPUT_SCHEMA}}").add_html(
                 "OUTPUT_SCHEMA",
@@ -152,18 +158,14 @@ class TransformStep(BaseStep):
                 "OUTPUT_SCHEMA", f"Failed to extract transformer schema. Error: {e}"
             )
 
-        # Tab 5: run summary
+        # Tab 6: run summary
         (
             card.add_tab(
                 "Run Summary",
                 """
-                {{ RAW_FEATURES_IN_TRANSFORMER }}
                 {{ EXE_DURATION }}
                 {{ LAST_UPDATE_TIME }}
                 """,
-            ).add_markdown(
-                "RAW_FEATURES_IN_TRANSFORMER",
-                f"**Feature set before transformation:** `{train_df.columns}`",
             )
         )
 
