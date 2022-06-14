@@ -219,18 +219,22 @@ class EvaluateStep(BaseStep):
         summary_tab.add_markdown("METRICS", metric_table_html)
 
         if criteria_summary is not None:
-            criteria_summary_df = pd.DataFrame(criteria_summary)
 
-            def criteria_table_row_format(row):
-                color = "background-color: {}".format(
-                    "lightgreen" if row.validated else "lightpink"
+            def get_icon(validated):
+                return (
+                    # check mark button emoji
+                    "\u2705"
+                    if validated
+                    # cross mark emoji
+                    else "\u274c"
                 )
-                return (color,) * len(row)
+
+            criteria_summary_df = pd.DataFrame(criteria_summary).assign(
+                validated=lambda df: df["validated"].map(get_icon)
+            )
 
             criteria_html = BaseCard.render_table(
-                criteria_summary_df.style.apply(criteria_table_row_format, axis=1).format(
-                    {"value": "{:.6g}", "threshold": "{:.6g}"}
-                )
+                criteria_summary_df.style.format({"value": "{:.6g}", "threshold": "{:.6g}"})
             )
             summary_tab.add_html(
                 "METRIC_VALIDATION_RESULTS",
