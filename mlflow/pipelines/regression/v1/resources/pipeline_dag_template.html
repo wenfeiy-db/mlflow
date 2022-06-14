@@ -42,30 +42,40 @@
     </style>
 
     <div class="wrapper">
-      
       <div class="mermaid pane-loading">
           flowchart TB
-          pipeline(pipeline.yaml)
+          pipeline([pipeline.yaml])
 
           ingestUserCode([steps/ingest.py]) --> ingestMLPStep[["<font>ingest</font>"]]
           ingestMLPStep --> dataParquet[(ingested_data)]
 
           data[(ingested_data)] --> splitStep[["<font>split</font>"]]
+          splitUserCode([steps/split.py]) --> splitStep
           splitStep --> splitData1[(training_data, <br> validation_data)]
           splitStep --> splitData2[(test_data)]
           splitData1 --> transformMLPStep[["<font>transform</font>"]]
 
           transformUserCode([steps/transform.py]) --> transformMLPStep
           transformMLPStep --> transformedParquet[(transformed_training_data, <br/> transformed_validation_data)]
+          transformMLPStep --> transformer{{transformer}}
           transformedParquet --> trainMLPStep[["<font>train</font>"]]
 
           trainUserCode([steps/train.py]) --> trainMLPStep
+          customMetricsUserCode([steps/custom_metrics.py]) --> trainMLPStep
+          transformer --> trainMLPStep
           trainMLPStep --> run{{run}}
           trainMLPStep --> model{{model}}
 
           model --> evaluateMLPStep[["<font>evaluate</font>"]]
-          evaluateUserCode([steps/evaluate.py]) --> evaluateMLPStep
+          transformer --> evaluateMLPStep
           splitData2 --> evaluateMLPStep
+          customMetricsUserCode --> evaluateMLPStep
+          evaluateMLPStep --> model_validation_status{{model_validation_status}}
+          run --> registerMLPStep[["<font>register</font>"]]
+          run --> evaluateMLPStep
+
+          model_validation_status --> registerMLPStep
+          registerMLPStep --> registered_model{{registered_model}}
 
           click ingestMLPStep noOp "  # Dataset locations on the local filesystem are supported, as well as any remote
   # locations resolvable by MLflow, such as those listed in
@@ -82,7 +92,9 @@
           click trainMLPStep noOp "# Please override the steps/train.py for customization"
           click trainUserCode noOp "def train() -> model"
           click evaluateMLPStep noOp "# Please override the steps/evaluate.py for customization"
-          click evaluateUserCode noOp "def custom_metric_fns() -> List[Callable]"
+          click registerMLPStep noOp "# register step"
+          click customMetricsUserCode noOp "def custom_metric_fns() -> List[Callable]"
+          click splitUserCode noOp "def process_splits(train_df: DataFrame, validation_df: DataFrame, test_df: DataFrame) -> (DataFrame, DataFrame, DataFrame)"
 
           click pipeline renderMoreInformation "{{pipeline_yaml}}"
           click dataParquet noOp "data ingested from source"
@@ -92,6 +104,9 @@
           click transformedParquet noOp "Transformed output of training and validation needed for training"
           click run noOp "Output run which is tracked in MLFlow"
           click model noOp "Output model form training"
+          click transformer noOp "Output transformer from transform step"
+          click model_validation_status noOp "Output model validation status from evaluate step"
+          click registered_model noOp "Output registered model from register step"
 
       </div>
       <div id="editor"></div>
