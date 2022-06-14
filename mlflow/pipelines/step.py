@@ -130,6 +130,10 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         card_path = os.path.join(output_directory, CARD_PICKLE_NAME)
         if not os.path.exists(card_path):
+            _logger.info(
+                "Unable to locate runtime info for step '%s'. Re-run the step before inspect.",
+                self.name,
+            )
             return None
 
         card = BaseCard.load(card_path)
