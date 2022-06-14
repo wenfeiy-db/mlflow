@@ -2,7 +2,10 @@
 <html lang="en">
   <body>
     <style>
-      .mermaidTooltip{
+      @keyframes spin {
+        to { transform: translate(calc(-50%), calc(50vh - 50%)) rotate(360deg); }
+      }
+      .mermaidTooltip {
         display: none;
       }
       .wrapper {
@@ -11,9 +14,26 @@
       .mermaid {
         width: 60%;
       }
+      .pane-loading {
+        font-size: 0;
+        color: transparent;
+      }
+      .pane-loading::after {
+        content: "";
+        position: absolute;
+        inset: 0 50%;
+        width: 32px;
+        height: 32px;
+        transform: translate(calc(-50%), calc(50vh - 50%));
+        border: 0.25rem solid #9370DB;
+        border-bottom: 0.25rem solid rgba(0,0,0,0);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
       #editor {
         font-size: 13px;
         width: 40%;
+        position: relative;
       }
       font {
         font-size: 24px;
@@ -22,7 +42,8 @@
     </style>
 
     <div class="wrapper">
-      <div class="mermaid">
+      
+      <div class="mermaid pane-loading">
           flowchart TB
           pipeline(pipeline.yaml)
 
@@ -97,6 +118,7 @@
                 htmlLabels:true,
             }
           };
+          document.querySelector('.mermaid.pane-loading').classList.remove('pane-loading');
           mermaid.initialize(config);
           mermaid.init();
           const nodes = document.querySelectorAll(".node");
@@ -135,10 +157,14 @@
         rect.style.color = "#fff";
         rect.style.strokeDasharray = "5 5";
 
+        document.querySelector("#editor").classList.add('pane-loading');
+        const hideSpinner = () => document.querySelector("#editor").classList.remove('pane-loading');
+
         require(["ace/ace"],
           function (ace) {
             require(["python", "monokai"],
               function () {
+                hideSpinner();
                 if (!window.editor) {
                   const editor = ace.edit("editor");
                   editor.setTheme("ace/theme/monokai");
@@ -147,9 +173,9 @@
                   window.editor = editor;
                 }
                 window.editor.setValue(title)
-              }
+              }, hideSpinner
             );
-          }
+          }, hideSpinner
         );
       }
     </script>
