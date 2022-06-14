@@ -135,16 +135,20 @@
         rect.style.color = "#fff";
         rect.style.strokeDasharray = "5 5";
 
-        require(["ace/ace", "python", "monokai"],
+        require(["ace/ace"],
           function (ace) {
-            if (!window.editor) {
-              const editor = ace.edit("editor");
-              editor.setTheme("ace/theme/monokai");
-              editor.session.setMode("ace/mode/python");
-              editor.setReadOnly(true);
-              window.editor = editor;
-            }
-            window.editor.setValue(title)
+            require(["python", "monokai"],
+              function () {
+                if (!window.editor) {
+                  const editor = ace.edit("editor");
+                  editor.setTheme("ace/theme/monokai");
+                  editor.session.setMode("ace/mode/python");
+                  editor.setReadOnly(true);
+                  window.editor = editor;
+                }
+                window.editor.setValue(title)
+              }
+            );
           }
         );
       }
