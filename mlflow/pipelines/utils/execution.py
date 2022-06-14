@@ -407,7 +407,7 @@ evaluate_objects = steps/evaluate/outputs/metrics.json steps/evaluate/outputs/ar
 
 evaluate: $(evaluate_objects)
 
-steps/%/outputs/metrics.json steps/%/outputs/artifacts steps/%/outputs/model_validation_status: steps/train/outputs/model.pkl steps/split/outputs/test.parquet steps/train/outputs/run_id steps/evaluate/conf.yaml steps/transform/outputs/transformer.pkl
+steps/%/outputs/metrics.json steps/%/outputs/artifacts steps/%/outputs/model_validation_status: {path:prp/steps/custom_metrics.py} steps/train/outputs/model.pkl steps/split/outputs/test.parquet steps/train/outputs/run_id steps/evaluate/conf.yaml steps/transform/outputs/transformer.pkl
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep; EvaluateStep.from_step_config_path(step_config_path='{path:exe/steps/evaluate/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/evaluate/outputs}')"
 
