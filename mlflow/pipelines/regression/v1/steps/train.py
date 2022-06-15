@@ -4,6 +4,7 @@ import os
 import sys
 
 import cloudpickle
+import pandas as pd
 
 import mlflow
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
@@ -34,7 +35,6 @@ class TrainStep(BaseStep):
         )
 
     def _run(self, output_directory):
-        import pandas as pd
         from sklearn.pipeline import make_pipeline
 
         apply_pipeline_tracking_config(self.tracking_config)
@@ -145,6 +145,7 @@ class TrainStep(BaseStep):
         )
 
         card = self._build_step_card(
+            eval_result=eval_result,
             pred_and_error_df=pred_and_error_df,
             model=model,
             model_schema=model_schema,
@@ -157,17 +158,28 @@ class TrainStep(BaseStep):
 
         return card
 
-    def _build_step_card(self, pred_and_error_df, model, model_schema, run_id, model_uri):
+    def _build_step_card(
+        self, eval_result, pred_and_error_df, model, model_schema, run_id, model_uri
+    ):
         from pandas_profiling import ProfileReport
         from sklearn.utils import estimator_html_repr
         from sklearn import set_config
 
         card = BaseCard(self.pipeline_name, self.name)
-        # Tab 0: TODO add graphs for model performance summary.
+        # Tab 0: model performance summary.
+        metric_df = pd.DataFrame.from_records(
+            list(eval_result.metrics.items()), columns=["metric", "value"]
+        )
+        metric_table_html = BaseCard.render_table(metric_df.style.format({"value": "{:.6g}"}))
+        card.add_tab(
+            "Model Performance Summary Metrics",
+            "<h3 class='section-title'>Summary Metrics (Validation Dataset)</h3> {{ METRICS }} ",
+        ).add_html("METRICS", metric_table_html)
+
         # Tab 1: Prediction and error data profile.
         pred_and_error_df_profile = ProfileReport(
             pred_and_error_df.reset_index(drop=True),
-            title="Predictions and Errors (validation dataset)",
+            title="Predictions and Errors (Validation Dataset)",
             minimal=True,
         )
         card.add_tab("Profile of Predictions and Errors", "{{PROFILE}}").add_pandas_profile(

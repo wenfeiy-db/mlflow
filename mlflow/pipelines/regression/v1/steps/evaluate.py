@@ -186,10 +186,13 @@ class EvaluateStep(BaseStep):
 
         summary_tab = card.add_tab(
             "Model Performance Summary Metrics",
-            "<h3 class='section-title'>Summary Metrics</h3> {{ METRICS }} "
+            "<h3 class='section-title'>Summary Metrics (Test Dataset)</h3>"
+            "<b>NOTE</b>: Use evaluation metrics over test dataset with care. "
+            "Fine-tuning model over test dataset is not advised."
+            "{{ METRICS }} "
             "{{ METRIC_VALIDATION_RESULTS }}",
         )
-        summary_tab.add_markdown("METRICS", metric_table_html)
+        summary_tab.add_html("METRICS", metric_table_html)
 
         if validation_results is not None:
 
@@ -211,11 +214,12 @@ class EvaluateStep(BaseStep):
             )
             summary_tab.add_html(
                 "METRIC_VALIDATION_RESULTS",
-                "<h3 class='section-title'>Model Validation Results</h3> " + criteria_html,
+                "<h3 class='section-title'>Model Validation Results (Test Dataset)</h3> "
+                + criteria_html,
             )
 
         shap_plot_tab = card.add_tab(
-            "Feature importance with raw features",
+            "Feature Importance (Raw Features)",
             '<h3 class="section-title">Shap bar plot</h3>{{SHAP_BAR_PLOT}}'
             '<h3 class="section-title">Shap beeswarm plot</h3>{{SHAP_BEESWARM_PLOT}}',
         )
@@ -241,9 +245,9 @@ class EvaluateStep(BaseStep):
             }
         )
         pred_and_error_df_profile = ProfileReport(
-            pred_and_error_df, title="Profile of Prediction and Error Dataset", minimal=True
+            pred_and_error_df, title="Profile of Predictions and Errors", minimal=True
         )
-        card.add_tab("Profile of Prediction and Error Dataset", "{{PROFILE}}").add_pandas_profile(
+        card.add_tab("Profile of Predictions and Errors", "{{PROFILE}}").add_pandas_profile(
             "PROFILE", pred_and_error_df_profile
         )
         pred_and_error_df_profile.to_file(
