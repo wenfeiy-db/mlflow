@@ -170,10 +170,8 @@ def test_pipelines_run_throws_exception_and_produces_failure_card_when_step_fail
 @pytest.mark.usefixtures("enter_pipeline_example_directory")
 def test_test_step_logs_step_cards_as_artifacts():
     pipeline = Pipeline(profile="local")
-    pipeline.run("ingest")
-    pipeline.run("split")
-    pipeline.run("transform")
-    pipeline.run("train")
+    pipeline.clean()
+    pipeline.run()
 
     tracking_uri = pipeline._get_step("train").tracking_config.tracking_uri
     local_run_id_path = get_step_output_path(
@@ -189,6 +187,8 @@ def test_test_step_logs_step_cards_as_artifacts():
             "split/card.html",
             "transform/card.html",
             "train/card.html",
+            "evaluate/card.html",
+            "register/card.html",
         }
     )
 

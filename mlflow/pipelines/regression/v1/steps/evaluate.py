@@ -1,7 +1,6 @@
 import logging
 import operator
 import os
-import time
 import pandas as pd
 from pathlib import Path
 from typing import Dict, Any
@@ -45,8 +44,6 @@ class EvaluateStep(BaseStep):
         super().__init__(step_config, pipeline_root)
         self.tracking_config = TrackingConfig.from_dict(step_config)
         self.target_col = self.step_config.get("target_col")
-        self.run_end_time = None
-        self.execution_duration = None
         self.model_validation_status = "UNKNOWN"
 
     def _validate_validation_criteria(self):
@@ -105,7 +102,6 @@ class EvaluateStep(BaseStep):
         return summary
 
     def _run(self, output_directory):
-        run_start_time = time.time()
         self._validate_validation_criteria()
 
         test_data_path = get_step_output_path(
@@ -120,8 +116,7 @@ class EvaluateStep(BaseStep):
             step_name="train",
             relative_path="run_id",
         )
-        with open(run_id_path, "r") as f:
-            run_id = f.read()
+        run_id = Path(run_id_path).read_text()
 
         apply_pipeline_tracking_config(self.tracking_config)
 
@@ -141,29 +136,32 @@ class EvaluateStep(BaseStep):
                 },
             )
             eval_result.save(output_directory)
+            validation_results = self._validate_model(eval_result, output_directory)
 
+        card = self._build_profiles_and_card(
+            model_uri, test_data, eval_result, validation_results, output_directory
+        )
+        card.save_as_html(output_directory)
+        self._log_step_card(run_id, self.name)
+        return card
+
+    def _validate_model(self, eval_result, output_directory):
         validation_criteria = self.step_config.get("validation_criteria")
+        validation_results = None
         if validation_criteria:
-            criteria_summary = self._check_validation_criteria(
+            validation_results = self._check_validation_criteria(
                 eval_result.metrics, validation_criteria
             )
             self.model_validation_status = (
-                "VALIDATED" if all(cr.validated for cr in criteria_summary) else "REJECTED"
+                "VALIDATED" if all(cr.validated for cr in validation_results) else "REJECTED"
             )
         else:
             self.model_validation_status = "UNKNOWN"
-            criteria_summary = None
-
         Path(output_directory, "model_validation_status").write_text(self.model_validation_status)
-
-        self.run_end_time = time.time()
-        self.execution_duration = self.run_end_time - run_start_time
-        return self._build_profiles_and_card(
-            model_uri, test_data, eval_result, criteria_summary, output_directory
-        )
+        return validation_results
 
     def _build_profiles_and_card(
-        self, model_uri, test_data, eval_result, criteria_summary, output_directory
+        self, model_uri, test_data, eval_result, validation_results, output_directory
     ):
         """
         Constructs data profiles of predictions and errors and a step card instance corresponding
@@ -172,7 +170,7 @@ class EvaluateStep(BaseStep):
         :param model_uri: the uri of the model being evaluated.
         :param test_data: the test split dataset used to evaluate the model.
         :param eval_result: the evaluation result on test dataset returned by `mlflow.evalaute`
-        :param criteria_summary: a list of `MetricValidationResult` instances
+        :param validation_results: a list of `MetricValidationResult` instances
         :param output_directory: output directory used by the evaluate step.
         """
         from mlflow.pipelines.cards import BaseCard
@@ -193,7 +191,7 @@ class EvaluateStep(BaseStep):
         )
         summary_tab.add_markdown("METRICS", metric_table_html)
 
-        if criteria_summary is not None:
+        if validation_results is not None:
 
             def get_icon(validated):
                 return (
@@ -204,12 +202,12 @@ class EvaluateStep(BaseStep):
                     else "\u274c"
                 )
 
-            criteria_summary_df = pd.DataFrame(criteria_summary).assign(
+            result_df = pd.DataFrame(validation_results).assign(
                 validated=lambda df: df["validated"].map(get_icon)
             )
 
             criteria_html = BaseCard.render_table(
-                criteria_summary_df.style.format({"value": "{:.6g}", "threshold": "{:.6g}"})
+                result_df.style.format({"value": "{:.6g}", "threshold": "{:.6g}"})
             )
             summary_tab.add_html(
                 "METRIC_VALIDATION_RESULTS",

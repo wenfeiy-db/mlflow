@@ -423,5 +423,5 @@ def is_running_in_ipython_environment():
         from IPython import get_ipython
 
         return get_ipython() is not None
-    except ImportError:
+    except (ImportError, ModuleNotFoundError):
         return False

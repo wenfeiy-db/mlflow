@@ -287,6 +287,13 @@ class BaseStep(metaclass=abc.ABCMeta):
         )
         if os.path.exists(local_card_path):
             MlflowClient().log_artifact(run_id, local_card_path, artifact_path=step_name)
+        else:
+            _logger.warning(
+                "Failed to log step card for step %s. Run ID: %s. Card local path: %s",
+                step_name,
+                run_id,
+                local_card_path,
+            )
 
     def _get_custom_metrics(self):
         return (self.step_config.get("metrics") or {}).get("custom")
