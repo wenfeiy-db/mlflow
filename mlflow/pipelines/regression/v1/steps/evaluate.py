@@ -7,6 +7,7 @@ from typing import Dict, Any
 from collections import namedtuple
 
 import mlflow
+from mlflow.tracking.fluent import _get_experiment_id, _set_experiment_primary_metric
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
@@ -45,6 +46,9 @@ class EvaluateStep(BaseStep):
         self.tracking_config = TrackingConfig.from_dict(step_config)
         self.target_col = self.step_config.get("target_col")
         self.model_validation_status = "UNKNOWN"
+        self.primary_metric = (self.step_config.get("metrics") or {}).get(
+            "primary", "root_mean_squared_error"
+        )
 
     def _validate_validation_criteria(self):
         """
@@ -119,6 +123,22 @@ class EvaluateStep(BaseStep):
         run_id = Path(run_id_path).read_text()
 
         apply_pipeline_tracking_config(self.tracking_config)
+        exp_id = _get_experiment_id()
+
+        metric_greater_is_better = {
+            **_BUILTIN_METRIC_TO_GREATER_IS_BETTER,
+            **self._get_custom_metric_greater_is_better(),
+        }
+        if self.primary_metric not in metric_greater_is_better:
+            raise RuntimeError(
+                f"The primary metric {self.primary_metric} is a custom metric, "
+                "you need to add the custom metric config in `pipeline.yaml` file."
+            )
+        primary_metric_greater_is_better = metric_greater_is_better[self.primary_metric]
+
+        _set_experiment_primary_metric(
+            exp_id, f"{self.primary_metric}_on_data_test", primary_metric_greater_is_better
+        )
 
         with mlflow.start_run(run_id=run_id):
             model_uri = mlflow.get_artifact_uri("train/model")
@@ -179,10 +199,21 @@ class EvaluateStep(BaseStep):
         # Build card
         card = BaseCard(self.pipeline_name, self.name)
 
-        metric_df = pd.DataFrame.from_records(
-            list(eval_result.metrics.items()), columns=["metric", "value"]
+        metrics = eval_result.metrics.copy()
+        primary_metric_value = metrics.pop(self.primary_metric)
+        metric_items = [(self.primary_metric, primary_metric_value)] + list(metrics.items())
+
+        metric_df = pd.DataFrame.from_records(metric_items, columns=["metric", "value"])
+
+        def row_style(row):
+            if row.metric == self.primary_metric:
+                return pd.Series("font-weight: bold", row.index)
+            else:
+                return pd.Series("", row.index)
+
+        metric_table_html = BaseCard.render_table(
+            metric_df.style.format({"value": "{:.6g}"}).apply(row_style, axis=1)
         )
-        metric_table_html = BaseCard.render_table(metric_df.style.format({"value": "{:.6g}"}))
 
         summary_tab = card.add_tab(
             "Model Performance Summary Metrics",
