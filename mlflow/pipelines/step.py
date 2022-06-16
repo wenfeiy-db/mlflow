@@ -11,7 +11,7 @@ import importlib
 from enum import Enum
 from typing import TypeVar, Dict, Any
 from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME, FailureCard, CARD_HTML_NAME
-from mlflow.pipelines.utils import get_hashed_pipeline_root, get_pipeline_name, display_html
+from mlflow.pipelines.utils import get_pipeline_name, display_html
 from mlflow.tracking import MlflowClient
 from mlflow.utils.databricks_utils import is_in_databricks_runtime
 from mlflow.exceptions import MlflowException, BAD_REQUEST
@@ -91,7 +91,6 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         self.step_config = step_config
         self.pipeline_root = pipeline_root
-        self.hashed_pipeline_root = get_hashed_pipeline_root(pipeline_root_path=pipeline_root)
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
         self.step_card = None
 
@@ -281,7 +280,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         from mlflow.pipelines.utils.execution import get_step_output_path
 
         local_card_path = get_step_output_path(
-            pipeline_name=self.hashed_pipeline_root,
+            pipeline_root_path=self.pipeline_root,
             step_name=step_name,
             relative_path=CARD_HTML_NAME,
         )

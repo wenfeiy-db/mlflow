@@ -1,14 +1,12 @@
 import os
 import pathlib
 import shutil
-import hashlib
 
 import pytest
 
 from mlflow.exceptions import MlflowException
 from mlflow.pipelines.utils import (
     get_pipeline_root_path,
-    get_hashed_pipeline_root,
     get_pipeline_name,
     get_pipeline_config,
     get_default_profile,
@@ -48,24 +46,6 @@ def test_get_pipeline_name_returns_correctly_for_valid_pipeline_directory(
 
     with chdir(tmp_path):
         assert get_pipeline_name(pipeline_root_path=pipeline_root_path) == "sklearn_regression"
-
-
-def test_get_hashed_pipeline_root_returns_correctly_for_valid_pipeline_directory(
-    enter_pipeline_example_directory, tmp_path
-):
-    pipeline_root_path = enter_pipeline_example_directory
-    pipeline_root_path_str = str(pipeline_root_path)
-    assert pathlib.Path.cwd() == pipeline_root_path
-    assert (
-        get_hashed_pipeline_root()
-        == hashlib.sha256(pipeline_root_path_str.encode("utf-8")).hexdigest()
-    )
-
-    with chdir(tmp_path):
-        assert (
-            get_hashed_pipeline_root(pipeline_root_path=pipeline_root_path_str)
-            == hashlib.sha256(pipeline_root_path_str.encode("utf-8")).hexdigest()
-        )
 
 
 def test_get_pipeline_name_throws_for_invalid_pipeline_directory(tmp_path):

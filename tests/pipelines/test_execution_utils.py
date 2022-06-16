@@ -12,7 +12,6 @@ from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
 from mlflow.pipelines.regression.v1.steps.split import SplitStep
 from mlflow.pipelines.regression.v1.steps.transform import TransformStep
 from mlflow.pipelines.step import StepStatus
-from mlflow.pipelines.utils import get_hashed_pipeline_root
 from mlflow.pipelines.utils.execution import (
     _get_or_create_execution_directory,
     run_pipeline_step,
@@ -120,14 +119,10 @@ def test_get_or_create_execution_directory_is_idempotent(tmp_path):
         assert (execution_dir_path / "steps" / test_step.name / "outputs").exists()
 
     execution_dir_path_1 = pathlib.Path(
-        _get_or_create_execution_directory(
-            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=[test_step]
-        )
+        _get_or_create_execution_directory(pipeline_root_path=tmp_path, pipeline_steps=[test_step])
     )
     execution_dir_path_2 = pathlib.Path(
-        _get_or_create_execution_directory(
-            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=[test_step]
-        )
+        _get_or_create_execution_directory(pipeline_root_path=tmp_path, pipeline_steps=[test_step])
     )
     assert execution_dir_path_1 == execution_dir_path_2
     assert_expected_execution_directory_contents_exist(execution_dir_path_1)
@@ -139,9 +134,7 @@ def test_get_or_create_execution_directory_is_idempotent(tmp_path):
         "mlflow.pipelines.utils.execution._create_makefile",
         side_effect=Exception("Makefile creation failed"),
     ), pytest.raises(Exception, match="Makefile creation failed"):
-        _get_or_create_execution_directory(
-            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=[test_step]
-        )
+        _get_or_create_execution_directory(pipeline_root_path=tmp_path, pipeline_steps=[test_step])
 
     # Verify that the directory exists but is empty due to short circuiting after
     # failed Makefile creation
@@ -150,9 +143,7 @@ def test_get_or_create_execution_directory_is_idempotent(tmp_path):
 
     # Re-create the execution directory and verify that all expected contents are present
     execution_dir_path_3 = pathlib.Path(
-        _get_or_create_execution_directory(
-            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=[test_step]
-        )
+        _get_or_create_execution_directory(pipeline_root_path=tmp_path, pipeline_steps=[test_step])
     )
     assert execution_dir_path_3 == execution_dir_path_1
     assert_expected_execution_directory_contents_exist(execution_dir_path_3)
@@ -164,9 +155,7 @@ def test_get_or_create_execution_directory_is_idempotent(tmp_path):
         "mlflow.pipelines.utils.execution._get_step_output_directory_path",
         side_effect=Exception("Step directory creation failed"),
     ), pytest.raises(Exception, match="Step directory creation failed"):
-        _get_or_create_execution_directory(
-            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=[test_step]
-        )
+        _get_or_create_execution_directory(pipeline_root_path=tmp_path, pipeline_steps=[test_step])
 
     # Verify that the directory exists & that a Makefile is present but step-specific directories
     # were not created due to failures
@@ -175,9 +164,7 @@ def test_get_or_create_execution_directory_is_idempotent(tmp_path):
 
     # Re-create the execution directory and verify that all expected contents are present
     execution_dir_path_4 = pathlib.Path(
-        _get_or_create_execution_directory(
-            pipeline_root_path=tmp_path, pipeline_name="test_pipeline", pipeline_steps=[test_step]
-        )
+        _get_or_create_execution_directory(pipeline_root_path=tmp_path, pipeline_steps=[test_step])
     )
     assert execution_dir_path_4 == execution_dir_path_1
     assert_expected_execution_directory_contents_exist(execution_dir_path_4)
@@ -212,7 +199,6 @@ def test_run_pipeline_step_sets_environment_as_expected(tmp_path):
         pipeline_steps = [TestStep1(), TestStep2()]
         run_pipeline_step(
             pipeline_root_path=tmp_path,
-            pipeline_name="test_pipeline",
             pipeline_steps=pipeline_steps,
             target_step=pipeline_steps[0],
         )
@@ -224,14 +210,13 @@ def test_run_pipeline_step_sets_environment_as_expected(tmp_path):
 def run_test_pipeline_step(pipeline_steps, target_step):
     return run_pipeline_step(
         pipeline_root_path=os.getcwd(),
-        pipeline_name=get_hashed_pipeline_root(os.getcwd()),
         pipeline_steps=pipeline_steps,
         target_step=target_step,
     )
 
 
 def get_test_pipeline_step_output_directory(step):
-    return get_step_output_path(get_hashed_pipeline_root(os.getcwd()), step.name, "")
+    return get_step_output_path(os.getcwd(), step.name, "")
 
 
 def get_test_pipeline_step_execution_state(step):

@@ -31,9 +31,7 @@ def test_split_step_run(tmp_path):
 
     with mock.patch.dict(
         os.environ, {_MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR: str(tmp_path)}
-    ), mock.patch("mlflow.pipelines.step.get_pipeline_name", return_value="fake_name"), mock.patch(
-        "mlflow.pipelines.step.get_hashed_pipeline_root", return_value="hashed_fake_name"
-    ):
+    ), mock.patch("mlflow.pipelines.step.get_pipeline_name", return_value="fake_name"):
         split_step = SplitStep({"split_ratios": split_ratios, "target_col": "y"}, "fake_root")
         split_step._run(str(split_output_dir))
 
@@ -83,8 +81,8 @@ def test_get_split_df():
 def test_from_pipeline_config_fails_without_target_col(tmp_path):
     with mock.patch.dict(
         os.environ, {_MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR: str(tmp_path)}
-    ), mock.patch("mlflow.pipelines.step.get_pipeline_name", return_value="fake_name"), mock.patch(
-        "mlflow.pipelines.step.get_hashed_pipeline_root", return_value="hashed_fake_name"
+    ), mock.patch(
+        "mlflow.pipelines.step.get_pipeline_name", return_value="fake_name"
     ), pytest.raises(
         MlflowException, match="Missing target_col config"
     ):
@@ -94,7 +92,5 @@ def test_from_pipeline_config_fails_without_target_col(tmp_path):
 def test_from_pipeline_config_works_with_target_col(tmp_path):
     with mock.patch.dict(
         os.environ, {_MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR: str(tmp_path)}
-    ), mock.patch("mlflow.pipelines.step.get_pipeline_name", return_value="fake_name"), mock.patch(
-        "mlflow.pipelines.step.get_hashed_pipeline_root", return_value="hashed_fake_name"
-    ):
+    ), mock.patch("mlflow.pipelines.step.get_pipeline_name", return_value="fake_name"):
         assert SplitStep.from_pipeline_config({"target_col": "fake_col"}, "fake_root") is not None

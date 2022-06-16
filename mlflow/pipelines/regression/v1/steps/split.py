@@ -176,7 +176,7 @@ class SplitStep(BaseStep):
 
         # read ingested dataset
         ingested_data_path = get_step_output_path(
-            pipeline_name=self.hashed_pipeline_root,
+            pipeline_root_path=self.pipeline_root,
             step_name="ingest",
             relative_path=_INPUT_FILE_NAME,
         )

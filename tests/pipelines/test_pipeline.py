@@ -9,8 +9,7 @@ from unittest import mock
 
 import mlflow
 from mlflow.pipelines.pipeline import Pipeline
-from mlflow.pipelines.utils.execution import get_step_output_path
-from mlflow.pipelines.utils import get_hashed_pipeline_root
+from mlflow.pipelines.utils.execution import get_step_output_path, _get_execution_directory_basename
 from mlflow.exceptions import MlflowException
 from mlflow.tracking.client import MlflowClient
 from mlflow.tracking.context.registry import resolve_tags
@@ -66,7 +65,7 @@ def test_pipelines_execution_directory_is_managed_as_expected(
         else pathlib.Path.home()
         / ".mlflow"
         / "pipelines"
-        / get_hashed_pipeline_root(enter_pipeline_example_directory)
+        / _get_execution_directory_basename(enter_pipeline_example_directory)
     )
 
     # Run the full pipeline and verify that outputs for each step were written to the expected
@@ -155,7 +154,7 @@ def test_pipelines_run_throws_exception_and_produces_failure_card_when_step_fail
         pipeline.run(step="split")
 
     step_card_path = get_step_output_path(
-        pipeline_name=pipeline._hashed_pipeline_root,
+        pipeline_root_path=pipeline._pipeline_root_path,
         step_name="ingest",
         relative_path="card.html",
     )
@@ -175,7 +174,7 @@ def test_test_step_logs_step_cards_as_artifacts():
 
     tracking_uri = pipeline._get_step("train").tracking_config.tracking_uri
     local_run_id_path = get_step_output_path(
-        pipeline_name=pipeline._hashed_pipeline_root,
+        pipeline_root_path=pipeline._pipeline_root_path,
         step_name="train",
         relative_path="run_id",
     )
