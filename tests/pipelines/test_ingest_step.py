@@ -8,7 +8,7 @@ import pytest
 from pyspark.sql import SparkSession
 
 from mlflow.exceptions import MlflowException
-from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
+from mlflow.pipelines.steps.ingest import IngestStep
 from mlflow.store.artifact.s3_artifact_repo import S3ArtifactRepository
 
 from tests.helper_functions import mock_s3_bucket  # pylint: disable=unused-import
@@ -482,7 +482,7 @@ def test_ingest_throws_when_spark_unavailable_for_spark_based_dataset(spark_df, 
     spark_df.write.format("delta").save(str(dataset_path))
 
     with mock.patch(
-        "mlflow.pipelines.regression.v1.steps.ingest.datasets._get_active_spark_session",
+        "mlflow.pipelines.steps.ingest.datasets._get_active_spark_session",
         side_effect=Exception("Spark unavailable"),
     ), pytest.raises(
         MlflowException, match="Encountered an error while searching for an active Spark session"

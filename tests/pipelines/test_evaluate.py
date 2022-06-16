@@ -7,8 +7,8 @@ from sklearn.datasets import load_diabetes
 import mlflow
 from mlflow.utils.file_utils import read_yaml
 from mlflow.pipelines.utils import _PIPELINE_CONFIG_FILE_NAME
-from mlflow.pipelines.regression.v1.steps.split import _OUTPUT_TEST_FILE_NAME
-from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep
+from mlflow.pipelines.steps.split import _OUTPUT_TEST_FILE_NAME
+from mlflow.pipelines.steps.evaluate import EvaluateStep
 from mlflow.exceptions import MlflowException
 
 # pylint: disable=unused-import
@@ -301,9 +301,7 @@ def root_mean_squared_error(eval_df, builtin_metrics):
     pipeline_config = read_yaml(tmp_pipeline_root_path, _PIPELINE_CONFIG_FILE_NAME)
     evaluate_step = EvaluateStep.from_pipeline_config(pipeline_config, str(tmp_pipeline_root_path))
 
-    with mock.patch(
-        "mlflow.pipelines.regression.v1.steps.evaluate._logger.warning"
-    ) as mock_warning:
+    with mock.patch("mlflow.pipelines.steps.evaluate._logger.warning") as mock_warning:
         evaluate_step._run(str(evaluate_step_output_dir))
         mock_warning.assert_called_once_with(
             "Custom metrics overrode the following built-in metrics: %s",

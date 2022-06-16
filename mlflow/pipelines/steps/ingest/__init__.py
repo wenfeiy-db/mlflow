@@ -6,7 +6,7 @@ from mlflow.pipelines.cards import BaseCard
 from mlflow.pipelines.step import BaseStep
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 from mlflow.utils.file_utils import read_parquet_as_pandas_df
-from mlflow.pipelines.regression.v1.steps.ingest.datasets import (
+from mlflow.pipelines.steps.ingest.datasets import (
     ParquetDataset,
     DeltaTableDataset,
     SparkSqlDataset,

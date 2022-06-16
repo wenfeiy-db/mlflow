@@ -6,7 +6,7 @@ import pandas as pd
 
 from mlflow.exceptions import MlflowException
 from mlflow.pipelines.utils.execution import _MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR
-from mlflow.pipelines.regression.v1.steps.split import _get_split_df, _make_elem_hashable, SplitStep
+from mlflow.pipelines.steps.split import _get_split_df, _make_elem_hashable, SplitStep
 from unittest import mock
 
 
@@ -66,7 +66,7 @@ def test_make_elem_hashable():
 
 
 def test_get_split_df():
-    with mock.patch("mlflow.pipelines.regression.v1.steps.split._SPLIT_HASH_BUCKET_NUM", 6):
+    with mock.patch("mlflow.pipelines.steps.split._SPLIT_HASH_BUCKET_NUM", 6):
         split_ratios = [3, 2, 1]
         hash_buckets = pd.Series([0.3, 0.9, 0.1, 0.7, 0.2, 0.6])
         dataset = pd.DataFrame({"v": [10, 20, 30, 40, 50, 60]})

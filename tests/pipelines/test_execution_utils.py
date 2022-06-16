@@ -8,9 +8,9 @@ import pandas as pd
 import pytest
 
 from mlflow.pipelines import Pipeline
-from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
-from mlflow.pipelines.regression.v1.steps.split import SplitStep
-from mlflow.pipelines.regression.v1.steps.transform import TransformStep
+from mlflow.pipelines.steps.ingest import IngestStep
+from mlflow.pipelines.steps.split import SplitStep
+from mlflow.pipelines.steps.transform import TransformStep
 from mlflow.pipelines.step import StepStatus
 from mlflow.pipelines.utils.execution import (
     _get_or_create_execution_directory,

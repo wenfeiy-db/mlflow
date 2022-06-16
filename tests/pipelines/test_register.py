@@ -5,8 +5,8 @@ import pytest
 import mlflow
 from mlflow.utils.file_utils import read_yaml
 from mlflow.pipelines.utils import _PIPELINE_CONFIG_FILE_NAME
-from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep
-from mlflow.pipelines.regression.v1.steps.register import RegisterStep
+from mlflow.pipelines.steps.evaluate import EvaluateStep
+from mlflow.pipelines.steps.register import RegisterStep
 
 # pylint: disable=unused-import
 from tests.pipelines.helper_functions import (
@@ -14,7 +14,6 @@ from tests.pipelines.helper_functions import (
     setup_model_and_evaluate,
     tmp_pipeline_exec_path,
     tmp_pipeline_root_path,
-    train_and_log_model,
 )  # pylint: enable=unused-import
 
 

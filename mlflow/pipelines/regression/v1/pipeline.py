@@ -6,17 +6,17 @@ import pandas as pd
 import mlflow.pyfunc
 from mlflow.tracking.client import MlflowClient
 from mlflow.pipelines.pipeline import _BasePipeline
-from mlflow.pipelines.regression.v1.steps.ingest import IngestStep
-from mlflow.pipelines.regression.v1.steps.split import (
+from mlflow.pipelines.steps.ingest import IngestStep
+from mlflow.pipelines.steps.split import (
     SplitStep,
     _OUTPUT_TRAIN_FILE_NAME,
     _OUTPUT_VALIDATION_FILE_NAME,
     _OUTPUT_TEST_FILE_NAME,
 )
-from mlflow.pipelines.regression.v1.steps.transform import TransformStep
-from mlflow.pipelines.regression.v1.steps.train import TrainStep
-from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep
-from mlflow.pipelines.regression.v1.steps.register import RegisterStep, RegisteredModelVersionInfo
+from mlflow.pipelines.steps.transform import TransformStep
+from mlflow.pipelines.steps.train import TrainStep
+from mlflow.pipelines.steps.evaluate import EvaluateStep
+from mlflow.pipelines.steps.register import RegisterStep, RegisteredModelVersionInfo
 from mlflow.pipelines.step import BaseStep
 from typing import List
 from mlflow.pipelines.utils import get_pipeline_root_path

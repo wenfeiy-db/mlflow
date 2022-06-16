@@ -6,7 +6,7 @@ import sys
 
 from contextlib import contextmanager
 from mlflow.pipelines.utils.execution import _MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR
-from mlflow.pipelines.regression.v1.steps.split import _OUTPUT_TEST_FILE_NAME
+from mlflow.pipelines.steps.split import _OUTPUT_TEST_FILE_NAME
 from mlflow.pipelines.step import BaseStep
 from mlflow.utils.file_utils import TempDir
 from pathlib import Path
