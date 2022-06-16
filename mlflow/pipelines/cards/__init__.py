@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import base64
 import html
 import os
@@ -17,6 +18,8 @@ CARD_HTML_NAME = "card.html"
 
 # TODO: Make card save / load including card_resources directory
 _CARD_RESOURCE_DIR_NAME = f"{CARD_HTML_NAME}.resources"
+_PP_VARIABLE_LINK_REGEX = re.compile(r'<a\s+href="?(?P<href>#pp_var_[-0-9]+)"?\s*>')
+
 
 _logger = logging.getLogger(__name__)
 
@@ -98,9 +101,15 @@ class CardTab:
         :return: the updated card instance
         """
         try:
+            # Add "anchor" class to variable links to override their click behaviors using
+            # this jQuery code in pandas-profiling:
+            # https://github.com/ydataai/pandas-profiling/blob/v3.2.0/src/pandas_profiling/report/presentation/flavours/html/templates/wrapper/assets/script.js#L5-L23
+            profile_html = _PP_VARIABLE_LINK_REGEX.sub(
+                r'<a class="anchor" href="\g<href>">', profile.to_html()
+            )
             profile_iframe = (
                 "<iframe srcdoc='{src}' width='100%' height='500' frameborder='0'></iframe>"
-            ).format(src=html.escape(profile.to_html()))
+            ).format(src=html.escape(profile_html))
         except Exception as e:
             profile_iframe = f"Unable to create data profile. Error found:\n{e}"
         self.add_html(name, profile_iframe)
