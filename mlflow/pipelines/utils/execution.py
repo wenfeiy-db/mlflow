@@ -434,11 +434,11 @@ steps/%/outputs/metrics.json steps/%/outputs/artifacts steps/%/outputs/model_val
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.evaluate import EvaluateStep; EvaluateStep.from_step_config_path(step_config_path='{path:exe/steps/evaluate/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/evaluate/outputs}')"
 
-register_objects = steps/register/outputs/card.html
+register_objects = steps/register/outputs/registered_model_version.json
 
 register: $(register_objects)
 
-steps/register/outputs/card.html: steps/train/outputs/run_id steps/register/conf.yaml steps/evaluate/outputs/model_validation_status
+steps/%/outputs/registered_model_version.json: steps/train/outputs/run_id steps/register/conf.yaml steps/evaluate/outputs/model_validation_status
 	cd {path:prp/} && \
         python -c "from mlflow.pipelines.regression.v1.steps.register import RegisterStep; RegisterStep.from_step_config_path(step_config_path='{path:exe/steps/register/conf.yaml}', pipeline_root='{path:prp/}').run(output_directory='{path:exe/steps/register/outputs}')"
 
