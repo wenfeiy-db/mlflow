@@ -38,6 +38,8 @@ class RegisterStep(BaseStep):
         self.allow_non_validated_model = self.step_config.get("allow_non_validated_model", False)
 
     def _run(self, output_directory):
+        apply_pipeline_tracking_config(self.tracking_config)
+
         run_id_path = get_step_output_path(
             pipeline_root_path=self.pipeline_root,
             step_name="train",
@@ -55,7 +57,6 @@ class RegisterStep(BaseStep):
         if model_validation == "VALIDATED" or (
             model_validation == "UNKNOWN" and self.allow_non_validated_model
         ):
-            apply_pipeline_tracking_config(self.tracking_config)
             self.model_uri = "runs:/{run_id}/{artifact_path}".format(
                 run_id=run_id, artifact_path=artifact_path
             )
