@@ -1,6 +1,8 @@
 import json
 import logging
 import pathlib
+import tempfile
+import shutil
 from typing import Dict, Any, TypeVar
 
 import mlflow
@@ -202,3 +204,29 @@ def get_run_tags_env_vars() -> Dict[str, str]:
     :return: A dictionary of environment variable names and values.
     """
     return {MLFLOW_RUN_CONTEXT_ENV_VAR: json.dumps(resolve_tags())}
+
+
+def log_code_snapshot(pipeline_root: str, run_id: str, artifact_path: str = "snapshots") -> None:
+    """
+    Logs a pipeline code snapshot as mlflow artifacts.
+
+    :param pipeline_root_path: String file path to the directory where the pipeline is defined.
+    :param run_id: Run ID to which the code snapshot is logged.
+    :param artifact_path: Directory within the run's artifact director (default: "snapshots").
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = pathlib.Path(tmpdir)
+        pipeline_root = pathlib.Path(pipeline_root)
+        for file_path in (
+            # TODO: Log a filled pipeline.yaml created in `Pipeline._resolve_pipeline_steps`
+            #       instead of a raw pipeline.yaml.
+            pipeline_root.joinpath("pipeline.yaml"),
+            pipeline_root.joinpath("requirements.txt"),
+            *pipeline_root.glob("profiles/*.yaml"),
+            *pipeline_root.glob("steps/*.py"),
+        ):
+            if file_path.exists():
+                tmp_path = tmpdir.joinpath(file_path.relative_to(pipeline_root))
+                tmp_path.parent.mkdir(exist_ok=True, parents=True)
+                shutil.copyfile(file_path, tmp_path)
+        MlflowClient().log_artifacts(run_id, tmpdir, artifact_path=artifact_path)

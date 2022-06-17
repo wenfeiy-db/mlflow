@@ -5,14 +5,16 @@ from unittest import mock
 
 import pytest
 
+import mlflow
 from mlflow.pipelines.utils import get_pipeline_config
-from mlflow.pipelines.utils.tracking import get_pipeline_tracking_config
+from mlflow.pipelines.utils.tracking import get_pipeline_tracking_config, log_code_snapshot
 from mlflow.utils.file_utils import path_to_local_file_uri, path_to_local_sqlite_uri
 
 # pylint: disable=unused-import
 from tests.pipelines.helper_functions import (
     enter_pipeline_example_directory,
     enter_test_pipeline_directory,
+    list_all_artifacts,
 )  # pylint: enable=unused-import
 
 
@@ -114,3 +116,24 @@ def test_get_pipeline_tracking_config_returns_expected_config_on_databricks(
             assert pipeline_tracking_config.experiment_id == experiment_id
         elif experiment_id is None and experiment_name is None:
             assert pipeline_tracking_config.experiment_name == default_experiment_name
+
+
+def test_log_code_snapshot(tmp_path: pathlib.Path):
+    files = [
+        "pipeline.yaml",
+        "requirements.txt",
+        "profiles/local.yaml",
+        "steps/train.py",
+    ]
+    for f in files:
+        path = tmp_path.joinpath(f)
+        path.parent.mkdir(exist_ok=True, parents=True)
+        path.write_text("")
+
+    mlflow.set_experiment(experiment_id="0")
+    with mlflow.start_run() as run:
+        log_code_snapshot(tmp_path, run.info.run_id)
+        tracking_uri = mlflow.get_tracking_uri()
+
+    artifacts = set(list_all_artifacts(tracking_uri, run.info.run_id))
+    assert artifacts.issuperset(f"snapshots/{f}" for f in files)

@@ -3,6 +3,7 @@ import os
 import pathlib
 import shutil
 import sys
+from typing import Generator
 
 from contextlib import contextmanager
 from mlflow.pipelines.utils.execution import _MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR
@@ -122,3 +123,14 @@ class BaseStepImplemented(BaseStep):
     @property
     def name(self):
         pass
+
+
+def list_all_artifacts(
+    tracking_uri: str, run_id: str, path: str = None
+) -> Generator[str, None, None]:
+    artifacts = mlflow.tracking.MlflowClient(tracking_uri).list_artifacts(run_id, path)
+    for artifact in artifacts:
+        if artifact.is_dir:
+            yield from list_all_artifacts(tracking_uri, run_id, artifact.path)
+        else:
+            yield artifact.path

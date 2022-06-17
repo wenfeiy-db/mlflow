@@ -18,6 +18,7 @@ from mlflow.pipelines.utils.tracking import (
     apply_pipeline_tracking_config,
     TrackingConfig,
     get_run_tags_env_vars,
+    log_code_snapshot,
 )
 from mlflow.projects.utils import get_databricks_env_vars
 from mlflow.types import ColSpec
@@ -127,6 +128,8 @@ class TrainStep(BaseStep):
 
             with open(os.path.join(output_directory, "run_id"), "w") as f:
                 f.write(run.info.run_id)
+
+            log_code_snapshot(self.pipeline_root, run.info.run_id)
 
         with open(os.path.join(output_directory, "model.pkl"), "wb") as f:
             cloudpickle.dump(model, f)

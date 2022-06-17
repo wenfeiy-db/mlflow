@@ -4,7 +4,6 @@ import pathlib
 import pandas as pd
 import pytest
 import yaml
-from typing import Generator
 from unittest import mock
 
 import mlflow
@@ -21,20 +20,10 @@ from mlflow.entities.model_registry import ModelVersion
 from tests.pipelines.helper_functions import (
     enter_pipeline_example_directory,
     enter_test_pipeline_directory,
+    list_all_artifacts,
 )  # pylint: enable=unused-import
 
 _STEP_NAMES = ["ingest", "split", "train", "transform", "evaluate"]
-
-
-def list_all_artifacts(
-    tracking_uri: str, run_id: str, path: str = None
-) -> Generator[str, None, None]:
-    artifacts = mlflow.tracking.MlflowClient(tracking_uri).list_artifacts(run_id, path)
-    for artifact in artifacts:
-        if artifact.is_dir:
-            yield from list_all_artifacts(tracking_uri, run_id, artifact.path)
-        else:
-            yield artifact.path
 
 
 @pytest.mark.usefixtures("enter_pipeline_example_directory")
