@@ -119,10 +119,16 @@ class TransformStep(BaseStep):
         from pandas_profiling import ProfileReport
 
         train_transformed_profile = ProfileReport(
-            train_transformed, title="Profile of Train Transformed Dataset", minimal=True
+            train_transformed,
+            title="Profile of Train Transformed Dataset",
+            minimal=True,
+            progress_bar=False,
         )
         validation_transformed_profile = ProfileReport(
-            validation_transformed, title="Profile of Validation Transformed Dataset", minimal=True
+            validation_transformed,
+            title="Profile of Validation Transformed Dataset",
+            minimal=True,
+            progress_bar=False,
         )
         card.add_tab("Data Profile (Train Transformed)", "{{PROFILE}}").add_pandas_profile(
             "PROFILE", train_transformed_profile

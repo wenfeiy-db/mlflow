@@ -276,7 +276,10 @@ class EvaluateStep(BaseStep):
             }
         )
         pred_and_error_df_profile = ProfileReport(
-            pred_and_error_df, title="Profile of Predictions and Errors", minimal=True
+            pred_and_error_df,
+            title="Profile of Predictions and Errors",
+            minimal=True,
+            progress_bar=False,
         )
         card.add_tab("Profile of Predictions and Errors", "{{PROFILE}}").add_pandas_profile(
             "PROFILE", pred_and_error_df_profile

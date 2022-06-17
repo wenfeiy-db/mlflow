@@ -115,15 +115,22 @@ class SplitStep(BaseStep):
 
         # Build profiles for input dataset, and train / validation / test splits
         train_profile = ProfileReport(
-            train_df.reset_index(drop=True), title="Profile of Train Dataset", minimal=True
+            train_df.reset_index(drop=True),
+            title="Profile of Train Dataset",
+            minimal=True,
+            progress_bar=False,
         )
         validation_profile = ProfileReport(
             validation_df.reset_index(drop=True),
             title="Profile of Validation Dataset",
             minimal=True,
+            progress_bar=False,
         )
         test_profile = ProfileReport(
-            test_df.reset_index(drop=True), title="Profile of Test Dataset", minimal=True
+            test_df.reset_index(drop=True),
+            title="Profile of Test Dataset",
+            minimal=True,
+            progress_bar=False,
         )
 
         # Build card

@@ -73,7 +73,7 @@ class IngestStep(BaseStep):
         _logger.info("Profiling ingested dataset")
         ingested_df = read_parquet_as_pandas_df(data_parquet_path=dataset_dst_path)
         ingested_dataset_profile = ProfileReport(
-            ingested_df, title="Profile of Ingested Dataset", minimal=True
+            ingested_df, title="Profile of Ingested Dataset", minimal=True, progress_bar=False
         )
         schema = pd.io.json.build_table_schema(ingested_df, index=False)
         dataset_profile_path = os.path.join(

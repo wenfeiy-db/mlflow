@@ -184,6 +184,7 @@ class TrainStep(BaseStep):
             pred_and_error_df.reset_index(drop=True),
             title="Predictions and Errors (Validation Dataset)",
             minimal=True,
+            progress_bar=False,
         )
         card.add_tab("Profile of Predictions and Errors", "{{PROFILE}}").add_pandas_profile(
             "PROFILE", pred_and_error_df_profile
