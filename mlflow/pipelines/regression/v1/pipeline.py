@@ -191,7 +191,7 @@ class RegressionPipeline(_BasePipeline):
 
         elif artifact == "registered_model_version":
             register_output_dir = get_step_output_path(
-                self._hashed_pipeline_root, register_step.name, ""
+                self._pipeline_root_path, register_step.name, ""
             )
             registered_model_info_path = os.path.join(
                 register_output_dir, "registered_model_version.json"
