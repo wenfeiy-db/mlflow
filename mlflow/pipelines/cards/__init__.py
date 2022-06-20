@@ -11,6 +11,8 @@ import string
 from io import StringIO
 from typing import Union
 
+from packaging.version import Version
+
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 
 CARD_PICKLE_NAME = "card.pkl"
@@ -246,22 +248,24 @@ class BaseCard:
         if not isinstance(table, Styler):
             table = pd.DataFrame(table, columns=columns).style
 
+        pandas_version = Version(pd.__version__)
+
+        styler = table.set_table_attributes('style="border-collapse:collapse"').set_table_styles(
+            [
+                {
+                    "selector": "table, th, td",
+                    "props": [
+                        ("border", "1px solid grey"),
+                        ("text-align", "left"),
+                        ("padding", "5px"),
+                    ],
+                }
+            ]
+        )
         return (
-            table.set_table_attributes('style="border-collapse:collapse"')
-            .set_table_styles(
-                [
-                    {
-                        "selector": "table, th, td",
-                        "props": [
-                            ("border", "1px solid grey"),
-                            ("text-align", "left"),
-                            ("padding", "5px"),
-                        ],
-                    }
-                ]
-            )
-            .hide_index()
-            .render()
+            styler.hide(axis="index").to_html()
+            if pandas_version >= Version("1.4.0")
+            else styler.hide_index().render()
         )
 
 
