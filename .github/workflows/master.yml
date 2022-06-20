@@ -365,7 +365,8 @@ jobs:
         run: |
           source ./dev/install-common-deps.sh
           pip install -e .[pipeline]
-          pip install pyspark
+          # TODO: Unpin once Delta Lake supports Spark 3.3
+          pip install 'pyspark<3.3'
       - name: Run tests
         run: |
           export MLFLOW_HOME=$(pwd)
@@ -399,7 +400,8 @@ jobs:
           pip install --no-dependencies tests/resources/mlflow-test-plugin
           pip install -e .[extras]
           pip install -e .[pipeline]
-          pip install pyspark
+          # TODO: Unpin once Delta Lake supports Spark 3.3
+          pip install 'pyspark<3.3'
       - name: Download Hadoop winutils for Spark
         run: |
           git clone https://github.com/cdarlint/winutils
