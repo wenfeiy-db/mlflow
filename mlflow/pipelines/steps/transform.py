@@ -81,13 +81,13 @@ class TransformStep(BaseStep):
 
         def transform_dataset(dataset):
             features = dataset.drop(columns=[self.target_col])
-            labels = dataset[self.target_col]
-            transformed_feature_array = transformer.transform(features)
-            num_features = transformed_feature_array.shape[1]
-            columns = _get_output_feature_names(transformer, num_features, features.columns)
-            df = pd.DataFrame(transformed_feature_array, columns=columns)
-            df[self.target_col] = labels.values
-            return df
+            transformed_features = transformer.transform(features)
+            if not isinstance(transformed_features, pd.DataFrame):
+                num_features = transformed_features.shape[1]
+                columns = _get_output_feature_names(transformer, num_features, features.columns)
+                transformed_features = pd.DataFrame(transformed_features, columns=columns)
+            transformed_features[self.target_col] = dataset[self.target_col].values
+            return transformed_features
 
         train_transformed = transform_dataset(train_df)
         validation_transformed = transform_dataset(validation_df)
