@@ -3,6 +3,7 @@ import logging
 
 import pandas as pd
 
+import mlflow.pipelines.regression.v1.dag_help_strings as dag_help_strings
 import mlflow.pyfunc
 from mlflow.tracking.client import MlflowClient
 from mlflow.pipelines.pipeline import _BasePipeline
@@ -35,15 +36,96 @@ class RegressionPipeline(_BasePipeline):
         return self._PIPELINE_STEPS
 
     def _get_pipeline_dag_file(self) -> str:
-        # This is just a POC to show how the help strings would be dynamic.
-        # TODO: replace below code to read the help strings instead.
-        pipeline_yaml = "initial config for the pipeline"
-
         import jinja2
 
         j2_env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
         pipeline_dag_template = j2_env.get_template("resources/pipeline_dag_template.html").render(
-            {"pipeline_yaml": pipeline_yaml}
+            {
+                "pipeline_yaml_help": {
+                    "help_string_type": "yaml",
+                    "help_string": dag_help_strings.PIPELINE_YAML,
+                },
+                "ingest_step_help": {
+                    "help_string": dag_help_strings.INGEST_STEP,
+                    "help_string_type": "text",
+                },
+                "ingest_user_code_help": {
+                    "help_string": dag_help_strings.INGEST_USER_CODE,
+                    "help_string_type": "python",
+                },
+                "ingested_data_help": {
+                    "help_string": dag_help_strings.INGESTED_DATA,
+                    "help_string_type": "text",
+                },
+                "split_step_help": {
+                    "help_string": dag_help_strings.SPLIT_STEP,
+                    "help_string_type": "text",
+                },
+                "split_user_code_help": {
+                    "help_string": dag_help_strings.SPLIT_USER_CODE,
+                    "help_string_type": "python",
+                },
+                "training_and_validation_data_help": {
+                    "help_string": dag_help_strings.TRAINING_AND_VALIDATION_DATA,
+                    "help_string_type": "text",
+                },
+                "test_data_help": {
+                    "help_string": dag_help_strings.TEST_DATA,
+                    "help_string_type": "text",
+                },
+                "transform_step_help": {
+                    "help_string": dag_help_strings.TRANSFORM_STEP,
+                    "help_string_type": "text",
+                },
+                "transform_user_code_help": {
+                    "help_string": dag_help_strings.TRANSFORM_USER_CODE,
+                    "help_string_type": "python",
+                },
+                "fitted_transformer_help": {
+                    "help_string": dag_help_strings.FITTED_TRANSFORMER,
+                    "help_string_type": "text",
+                },
+                "transformed_training_and_validation_data_help": {
+                    "help_string": dag_help_strings.TRANSFORMED_TRAINING_AND_VALIDATION_DATA,
+                    "help_string_type": "text",
+                },
+                "train_step_help": {
+                    "help_string": dag_help_strings.TRAIN_STEP,
+                    "help_string_type": "text",
+                },
+                "train_user_code_help": {
+                    "help_string": dag_help_strings.TRAIN_USER_CODE,
+                    "help_string_type": "python",
+                },
+                "fitted_model_help": {
+                    "help_string": dag_help_strings.FITTED_MODEL,
+                    "help_string_type": "text",
+                },
+                "mlflow_run_help": {
+                    "help_string": dag_help_strings.MLFLOW_RUN,
+                    "help_string_type": "text",
+                },
+                "custom_metrics_user_code_help": {
+                    "help_string": dag_help_strings.CUSTOM_METRICS_USER_CODE,
+                    "help_string_type": "python",
+                },
+                "evaluate_step_help": {
+                    "help_string": dag_help_strings.EVALUATE_STEP,
+                    "help_string_type": "text",
+                },
+                "model_validation_status_help": {
+                    "help_string": dag_help_strings.MODEL_VALIDATION_STATUS,
+                    "help_string_type": "text",
+                },
+                "register_step_help": {
+                    "help_string": dag_help_strings.REGISTER_STEP,
+                    "help_string_type": "text",
+                },
+                "registered_model_version_help": {
+                    "help_string": dag_help_strings.REGISTERED_MODEL_VERSION,
+                    "help_string_type": "text",
+                },
+            }
         )
 
         pipeline_dag_file = os.path.join(
@@ -87,6 +169,9 @@ class RegressionPipeline(_BasePipeline):
          - `transformer`: returns the sklearn transformer from transform step output.
 
          - `run`: returns an MLflow run object.
+
+         - `registered_model_version`: returns the MLflow Model Registry ModelVersion created by
+                                       register step.
         """
         ingest_step, split_step, transform_step, train_step, _, register_step = self._steps
 

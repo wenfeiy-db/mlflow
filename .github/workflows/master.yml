@@ -364,7 +364,7 @@ jobs:
           INSTALL_LARGE_PYTHON_DEPS: false
         run: |
           source ./dev/install-common-deps.sh
-          pip install -e .[pipeline]
+          pip install -e .[pipelines]
           # TODO: Unpin once Delta Lake supports Spark 3.3
           pip install 'pyspark<3.3'
       - name: Run tests
@@ -399,7 +399,7 @@ jobs:
           pip install -r requirements/small-requirements.txt
           pip install --no-dependencies tests/resources/mlflow-test-plugin
           pip install -e .[extras]
-          pip install -e .[pipeline]
+          pip install -e .[pipelines]
           # TODO: Unpin once Delta Lake supports Spark 3.3
           pip install 'pyspark<3.3'
       - name: Download Hadoop winutils for Spark
