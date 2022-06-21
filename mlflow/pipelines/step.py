@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import traceback
+
 import yaml
 import importlib
 
@@ -316,3 +317,29 @@ class BaseStep(metaclass=abc.ABCMeta):
                 message="Failed to load custom metric functions",
                 error_code=BAD_REQUEST,
             ) from e
+
+    @staticmethod
+    def _generate_worst_examples_dataframe(
+        dataframe,
+        predictions,
+        target_col,
+        worst_k=10,
+    ):
+        """
+        Generate dataframe containing worst k examples with largest prediction error.
+        Dataframe contains columns of all features, prediction, error, and target_col column.
+        The prediction error is defined as absolute error between target value and
+        prediction value.
+        """
+        import numpy as np
+
+        predictions = np.array(predictions)
+        abs_error = np.absolute(predictions - dataframe[target_col].to_numpy())
+        worst_k_indexes = np.argsort(abs_error)[::-1][:worst_k]
+        result_df = dataframe.iloc[worst_k_indexes].assign(
+            prediction=predictions[worst_k_indexes],
+            absolute_error=abs_error[worst_k_indexes],
+        )
+        front_columns = ["absolute_error", "prediction", target_col]
+        reordered_columns = front_columns + result_df.columns.drop(front_columns).tolist()
+        return result_df[reordered_columns].reset_index(drop=True)

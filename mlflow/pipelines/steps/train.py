@@ -146,6 +146,9 @@ class TrainStep(BaseStep):
                 "error": prediction_result - target_data,
             }
         )
+        worst_examples_df = BaseStep._generate_worst_examples_dataframe(
+            raw_validation_df, prediction_result, self.target_col
+        )
 
         card = self._build_step_card(
             eval_result=eval_result,
@@ -154,6 +157,7 @@ class TrainStep(BaseStep):
             model_schema=model_schema,
             run_id=run.info.run_id,
             model_uri=model_info.model_uri,
+            worst_examples_df=worst_examples_df,
         )
         card.save_as_html(output_directory)
         for step_name in ("ingest", "split", "transform", "train"):
@@ -162,7 +166,14 @@ class TrainStep(BaseStep):
         return card
 
     def _build_step_card(
-        self, eval_result, pred_and_error_df, model, model_schema, run_id, model_uri
+        self,
+        eval_result,
+        pred_and_error_df,
+        model,
+        model_schema,
+        run_id,
+        model_uri,
+        worst_examples_df,
     ):
         from pandas_profiling import ProfileReport
         from sklearn.utils import estimator_html_repr
@@ -217,7 +228,15 @@ class TrainStep(BaseStep):
             "MODEL_SCHEMA",
             '<div style="display: flex">{tables}</div>'.format(tables="\n".join(schema_tables)),
         )
-        # Tab 4: Run summary.
+
+        # Tab 4: Examples with Largest Prediction Error
+        (
+            card.add_tab(
+                "Examples with Largest Prediction Error", "{{ WORST_EXAMPLES_TABLE }}"
+            ).add_html("WORST_EXAMPLES_TABLE", BaseCard.render_table(worst_examples_df))
+        )
+
+        # Tab 5: Run summary.
         (
             card.add_tab(
                 "Run Summary",

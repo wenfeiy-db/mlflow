@@ -8,6 +8,7 @@ from unittest import mock
 
 import mlflow
 from mlflow.pipelines.pipeline import Pipeline
+from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path, _get_execution_directory_basename
 from mlflow.exceptions import MlflowException
 from mlflow.tracking.client import MlflowClient
@@ -213,3 +214,34 @@ def test_pipeline_get_artifacts():
         mock_warning.assert_called_once_with(
             "ingested_data is not found. Re-run the ingest step to generate."
         )
+
+
+def test_generate_worst_examples_dataframe():
+    test_df = pd.DataFrame(
+        {
+            "a": [3, 2, 5],
+            "b": [6, 9, 1],
+        }
+    )
+    target_col = "b"
+    predictions = [5, 3, 4]
+
+    result_df = BaseStep._generate_worst_examples_dataframe(
+        test_df, predictions, target_col, worst_k=2
+    )
+
+    def assert_result_correct(df):
+        assert df.columns.tolist() == ["absolute_error", "prediction", "b", "a"]
+        assert df.absolute_error.tolist() == [6, 3]
+        assert df.prediction.tolist() == [3, 4]
+        assert df.b.tolist() == [9, 1]
+        assert df.a.tolist() == [2, 5]
+        assert df.index.tolist() == [0, 1]
+
+    assert_result_correct(result_df)
+
+    test_df2 = test_df.set_axis([2, 1, 0], axis="index")
+    result_df2 = BaseStep._generate_worst_examples_dataframe(
+        test_df2, predictions, target_col, worst_k=2
+    )
+    assert_result_correct(result_df2)
