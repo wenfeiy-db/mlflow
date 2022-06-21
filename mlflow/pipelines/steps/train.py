@@ -11,7 +11,6 @@ from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 from mlflow.models.signature import infer_signature
 from mlflow.pipelines.cards import BaseCard
 from mlflow.pipelines.step import BaseStep
-from mlflow.pipelines.utils import get_pipeline_root_path
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.pipelines.utils.tracking import (
     get_pipeline_tracking_config,
@@ -94,7 +93,7 @@ class TrainStep(BaseStep):
             with open(transformer_path, "rb") as f:
                 transformer = cloudpickle.load(f)
 
-            code_paths = [os.path.join(get_pipeline_root_path(), "steps")]
+            code_paths = [os.path.join(self.pipeline_root, "steps")]
 
             # TODO: log this as a pyfunc model
             estimator_schema = infer_signature(X_train, estimator.predict(X_train.copy()))
