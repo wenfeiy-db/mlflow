@@ -136,4 +136,4 @@ def test_log_code_snapshot(tmp_path: pathlib.Path):
         tracking_uri = mlflow.get_tracking_uri()
 
     artifacts = set(list_all_artifacts(tracking_uri, run.info.run_id))
-    assert artifacts.issuperset(f"snapshots/{f}" for f in files)
+    assert artifacts.issuperset(f"pipeline_snapshot/{f}" for f in files)

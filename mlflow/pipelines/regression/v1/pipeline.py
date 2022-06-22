@@ -65,8 +65,12 @@ class RegressionPipeline(_BasePipeline):
                     "help_string": dag_help_strings.SPLIT_USER_CODE,
                     "help_string_type": "python",
                 },
-                "training_and_validation_data_help": {
-                    "help_string": dag_help_strings.TRAINING_AND_VALIDATION_DATA,
+                "training_data_help": {
+                    "help_string": dag_help_strings.TRAINING_DATA,
+                    "help_string_type": "text",
+                },
+                "validation_data_help": {
+                    "help_string": dag_help_strings.VALIDATION_DATA,
                     "help_string_type": "text",
                 },
                 "test_data_help": {

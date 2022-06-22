@@ -1,13 +1,15 @@
 from unittest import mock
 from pathlib import Path
 
+import os
 import pytest
+import shutil
 from sklearn.datasets import load_diabetes
 
 import mlflow
 from mlflow.utils.file_utils import read_yaml
 from mlflow.pipelines.utils import _PIPELINE_CONFIG_FILE_NAME
-from mlflow.pipelines.steps.split import _OUTPUT_TEST_FILE_NAME
+from mlflow.pipelines.steps.split import _OUTPUT_TEST_FILE_NAME, _OUTPUT_VALIDATION_FILE_NAME
 from mlflow.pipelines.steps.evaluate import EvaluateStep
 from mlflow.exceptions import MlflowException
 
@@ -28,13 +30,19 @@ def test_evaluate_step_run(
     split_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "split", "outputs")
     split_step_output_dir.mkdir(parents=True)
     X, y = load_diabetes(as_frame=True, return_X_y=True)
+    validation_df = X.assign(y=y).sample(n=50, random_state=9)
+    validation_df.to_parquet(split_step_output_dir.joinpath(_OUTPUT_VALIDATION_FILE_NAME))
     test_df = X.assign(y=y).sample(n=100, random_state=42)
     test_df.to_parquet(split_step_output_dir.joinpath(_OUTPUT_TEST_FILE_NAME))
 
-    run_id = train_and_log_model()
+    run_id, model = train_and_log_model()
     train_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "train", "outputs")
     train_step_output_dir.mkdir(parents=True)
     train_step_output_dir.joinpath("run_id").write_text(run_id)
+    output_model_path = train_step_output_dir.joinpath("model")
+    if os.path.exists(output_model_path) and os.path.isdir(output_model_path):
+        shutil.rmtree(output_model_path)
+    mlflow.sklearn.save_model(model, output_model_path)
 
     evaluate_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "evaluate", "outputs")
     evaluate_step_output_dir.mkdir(parents=True)
@@ -99,13 +107,19 @@ def test_no_validation_criteria(tmp_pipeline_root_path: Path, tmp_pipeline_exec_
     split_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "split", "outputs")
     split_step_output_dir.mkdir(parents=True)
     X, y = load_diabetes(as_frame=True, return_X_y=True)
+    validation_df = X.assign(y=y).sample(n=50, random_state=9)
+    validation_df.to_parquet(split_step_output_dir.joinpath(_OUTPUT_VALIDATION_FILE_NAME))
     test_df = X.assign(y=y).sample(n=100, random_state=42)
     test_df.to_parquet(split_step_output_dir.joinpath(_OUTPUT_TEST_FILE_NAME))
 
-    run_id = train_and_log_model()
+    run_id, model = train_and_log_model()
     train_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "train", "outputs")
     train_step_output_dir.mkdir(parents=True)
     train_step_output_dir.joinpath("run_id").write_text(run_id)
+    output_model_path = train_step_output_dir.joinpath("model")
+    if os.path.exists(output_model_path) and os.path.isdir(output_model_path):
+        shutil.rmtree(output_model_path)
+    mlflow.sklearn.save_model(model, output_model_path)
 
     evaluate_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "evaluate", "outputs")
     evaluate_step_output_dir.mkdir(parents=True)
@@ -250,13 +264,19 @@ def test_custom_metrics_override_builtin_metrics(
     split_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "split", "outputs")
     split_step_output_dir.mkdir(parents=True)
     X, y = load_diabetes(as_frame=True, return_X_y=True)
+    validation_df = X.assign(y=y).sample(n=50, random_state=9)
+    validation_df.to_parquet(split_step_output_dir.joinpath(_OUTPUT_VALIDATION_FILE_NAME))
     test_df = X.assign(y=y).sample(n=100, random_state=42)
     test_df.to_parquet(split_step_output_dir.joinpath(_OUTPUT_TEST_FILE_NAME))
 
-    run_id = train_and_log_model()
+    run_id, model = train_and_log_model()
     train_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "train", "outputs")
     train_step_output_dir.mkdir(parents=True)
     train_step_output_dir.joinpath("run_id").write_text(run_id)
+    output_model_path = train_step_output_dir.joinpath("model")
+    if os.path.exists(output_model_path) and os.path.isdir(output_model_path):
+        shutil.rmtree(output_model_path)
+    mlflow.sklearn.save_model(model, output_model_path)
 
     evaluate_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "evaluate", "outputs")
     evaluate_step_output_dir.mkdir(parents=True)
@@ -308,11 +328,11 @@ def root_mean_squared_error(eval_df, builtin_metrics):
             ["mean_absolute_error", "root_mean_squared_error"],
         )
     logged_metrics = mlflow.tracking.MlflowClient().get_run(run_id).data.metrics
-    logged_metrics = {k.replace("_on_data_test", ""): v for k, v in logged_metrics.items()}
-    assert "root_mean_squared_error" in logged_metrics
-    assert logged_metrics["root_mean_squared_error"] == 1
-    assert "mean_absolute_error" in logged_metrics
-    assert logged_metrics["mean_absolute_error"] == 1
+    for dataset in ["validation", "test"]:
+        assert f"root_mean_squared_error_on_data_{dataset}" in logged_metrics
+        assert logged_metrics[f"root_mean_squared_error_on_data_{dataset}"] == 1
+        assert f"mean_absolute_error_on_data_{dataset}" in logged_metrics
+        assert logged_metrics[f"mean_absolute_error_on_data_{dataset}"] == 1
     model_validation_status_path = evaluate_step_output_dir.joinpath("model_validation_status")
     assert model_validation_status_path.exists()
     assert model_validation_status_path.read_text() == "VALIDATED"

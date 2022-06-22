@@ -11,6 +11,7 @@ from mlflow.tracking.fluent import _get_experiment_id, _set_experiment_primary_m
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
+from mlflow.pipelines.utils.step import get_merged_eval_metrics
 from mlflow.pipelines.utils.tracking import (
     get_pipeline_tracking_config,
     apply_pipeline_tracking_config,
@@ -108,12 +109,19 @@ class EvaluateStep(BaseStep):
     def _run(self, output_directory):
         self._validate_validation_criteria()
 
-        test_data_path = get_step_output_path(
+        test_df_path = get_step_output_path(
             pipeline_root_path=self.pipeline_root,
             step_name="split",
             relative_path="test.parquet",
         )
-        test_data = pd.read_parquet(test_data_path)
+        test_df = pd.read_parquet(test_df_path)
+
+        validation_df_path = get_step_output_path(
+            pipeline_root_path=self.pipeline_root,
+            step_name="split",
+            relative_path="validation.parquet",
+        )
+        validation_df = pd.read_parquet(validation_df_path)
 
         run_id_path = get_step_output_path(
             pipeline_root_path=self.pipeline_root,
@@ -121,6 +129,12 @@ class EvaluateStep(BaseStep):
             relative_path="run_id",
         )
         run_id = Path(run_id_path).read_text()
+
+        model_uri = get_step_output_path(
+            pipeline_root_path=self.pipeline_root,
+            step_name="train",
+            relative_path="model",
+        )
 
         apply_pipeline_tracking_config(self.tracking_config)
         exp_id = _get_experiment_id()
@@ -141,36 +155,41 @@ class EvaluateStep(BaseStep):
         )
 
         with mlflow.start_run(run_id=run_id):
-            model_uri = mlflow.get_artifact_uri("train/model")
-            eval_result = mlflow.evaluate(
-                model_uri,
-                test_data,
-                targets=self.target_col,
-                model_type="regressor",
-                evaluators="default",
-                dataset_name="test",
-                custom_metrics=self._load_custom_metric_functions(),
-                evaluator_config={
-                    "explainability_algorithm": "kernel",
-                    "explainability_nsamples": 10,
-                },
-            )
-            eval_result.save(output_directory)
-            validation_results = self._validate_model(eval_result, output_directory)
+            eval_metrics = {}
+            for dataset_name, dataset, evaluator_config in (
+                (
+                    "validation",
+                    validation_df,
+                    {"explainability_algorithm": "kernel", "explainability_nsamples": 10},
+                ),
+                ("test", test_df, {"log_model_explainability": False}),
+            ):
+                eval_result = mlflow.evaluate(
+                    model=model_uri,
+                    data=dataset,
+                    targets=self.target_col,
+                    model_type="regressor",
+                    evaluators="default",
+                    dataset_name=dataset_name,
+                    custom_metrics=self._load_custom_metric_functions(),
+                    evaluator_config=evaluator_config,
+                )
+                eval_result.save(os.path.join(output_directory, f"eval_{dataset_name}"))
+                eval_metrics[dataset_name] = eval_result.metrics
 
-        card = self._build_profiles_and_card(
-            model_uri, test_data, eval_result, validation_results, output_directory
-        )
+            validation_results = self._validate_model(eval_metrics, output_directory)
+
+        card = self._build_profiles_and_card(eval_metrics, validation_results, output_directory)
         card.save_as_html(output_directory)
         self._log_step_card(run_id, self.name)
         return card
 
-    def _validate_model(self, eval_result, output_directory):
+    def _validate_model(self, eval_metrics, output_directory):
         validation_criteria = self.step_config.get("validation_criteria")
         validation_results = None
         if validation_criteria:
             validation_results = self._check_validation_criteria(
-                eval_result.metrics, validation_criteria
+                eval_metrics["test"], validation_criteria
             )
             self.model_validation_status = (
                 "VALIDATED" if all(cr.validated for cr in validation_results) else "REJECTED"
@@ -180,51 +199,47 @@ class EvaluateStep(BaseStep):
         Path(output_directory, "model_validation_status").write_text(self.model_validation_status)
         return validation_results
 
-    def _build_profiles_and_card(
-        self, model_uri, test_data, eval_result, validation_results, output_directory
-    ):
+    def _build_profiles_and_card(self, eval_metrics, validation_results, output_directory):
         """
         Constructs data profiles of predictions and errors and a step card instance corresponding
         to the current evaluate step state.
 
-        :param model_uri: the uri of the model being evaluated.
-        :param test_data: the test split dataset used to evaluate the model.
-        :param eval_result: the evaluation result on test dataset returned by `mlflow.evalaute`
+        :param eval_metrics: the evaluation result keyed by dataset name from `mlflow.evaluate`.
         :param validation_results: a list of `MetricValidationResult` instances
         :param output_directory: output directory used by the evaluate step.
         """
         from mlflow.pipelines.cards import BaseCard
-        from pandas_profiling import ProfileReport
 
         # Build card
         card = BaseCard(self.pipeline_name, self.name)
-
-        metrics = eval_result.metrics.copy()
-        primary_metric_value = metrics.pop(self.primary_metric)
-        metric_items = [(self.primary_metric, primary_metric_value)] + list(metrics.items())
-
-        metric_df = pd.DataFrame.from_records(metric_items, columns=["metric", "value"])
+        # Tab 0: model performance summary.
+        metric_df = (
+            get_merged_eval_metrics(eval_metrics, ordered_metric_names=[self.primary_metric])
+            .reset_index()
+            .rename(columns={"index": "Metric"})
+        )
 
         def row_style(row):
-            if row.metric == self.primary_metric:
+            if row.Metric == self.primary_metric:
                 return pd.Series("font-weight: bold", row.index)
             else:
                 return pd.Series("", row.index)
 
         metric_table_html = BaseCard.render_table(
-            metric_df.style.format({"value": "{:.6g}"}).apply(row_style, axis=1)
+            metric_df.style.format({"training": "{:.6g}", "validation": "{:.6g}"}).apply(
+                row_style, axis=1
+            )
         )
 
-        summary_tab = card.add_tab(
+        card.add_tab(
             "Model Performance Summary Metrics",
-            "<h3 class='section-title'>Summary Metrics (Test Dataset)</h3>"
+            "<h3 class='section-title'>Summary Metrics</h3>"
             "<b>NOTE</b>: Use evaluation metrics over test dataset with care. "
-            "Fine-tuning model over test dataset is not advised."
-            "{{ METRICS }} "
-            "{{ METRIC_VALIDATION_RESULTS }}",
-        )
-        summary_tab.add_html("METRICS", metric_table_html)
+            "Fine-tuning model over the test dataset is not advised."
+            "{{ METRICS }} ",
+        ).add_html("METRICS", metric_table_html)
 
+        # Tab 1: model validation results, if exists.
         if validation_results is not None:
 
             def get_icon(validated):
@@ -243,16 +258,17 @@ class EvaluateStep(BaseStep):
             criteria_html = BaseCard.render_table(
                 result_df.style.format({"value": "{:.6g}", "threshold": "{:.6g}"})
             )
-            summary_tab.add_html(
+            card.add_tab("Model Validation Results", "{{ METRIC_VALIDATION_RESULTS }}").add_html(
                 "METRIC_VALIDATION_RESULTS",
                 "<h3 class='section-title'>Model Validation Results (Test Dataset)</h3> "
                 + criteria_html,
             )
 
+        # Tab 2: SHAP plots.
         shap_plot_tab = card.add_tab(
-            "Feature Importance (Raw Features)",
-            '<h3 class="section-title">Shap bar plot</h3>{{SHAP_BAR_PLOT}}'
-            '<h3 class="section-title">Shap beeswarm plot</h3>{{SHAP_BEESWARM_PLOT}}',
+            "Feature Importance (Validation Dataset)",
+            '<h3 class="section-title">SHAP Bar Plot</h3>{{SHAP_BAR_PLOT}}'
+            '<h3 class="section-title">SHAP Beeswarm Plot</h3>{{SHAP_BEESWARM_PLOT}}',
         )
 
         shap_bar_plot_path = os.path.join(
@@ -264,30 +280,7 @@ class EvaluateStep(BaseStep):
         shap_plot_tab.add_image("SHAP_BAR_PLOT", shap_bar_plot_path, width=800)
         shap_plot_tab.add_image("SHAP_BEESWARM_PLOT", shap_beeswarm_plot_path, width=800)
 
-        # Constructs data profiles of predictions and errors
-        model = mlflow.pyfunc.load_model(model_uri)
-        target_data = test_data[self.target_col]
-        prediction_result = model.predict(test_data.drop(self.target_col, axis=1))
-        pred_and_error_df = pd.DataFrame(
-            {
-                "target": target_data,
-                "prediction": prediction_result,
-                "error": prediction_result - target_data,
-            }
-        )
-        pred_and_error_df_profile = ProfileReport(
-            pred_and_error_df,
-            title="Profile of Predictions and Errors",
-            minimal=True,
-            progress_bar=False,
-        )
-        card.add_tab("Profile of Predictions and Errors", "{{PROFILE}}").add_pandas_profile(
-            "PROFILE", pred_and_error_df_profile
-        )
-        pred_and_error_df_profile.to_file(
-            output_file=os.path.join(output_directory, "pred_and_error_profile.html")
-        )
-
+        # Tab 3: Run summary.
         (
             card.add_tab(
                 "Run Summary",

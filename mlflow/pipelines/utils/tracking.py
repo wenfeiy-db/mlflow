@@ -206,7 +206,9 @@ def get_run_tags_env_vars() -> Dict[str, str]:
     return {MLFLOW_RUN_CONTEXT_ENV_VAR: json.dumps(resolve_tags())}
 
 
-def log_code_snapshot(pipeline_root: str, run_id: str, artifact_path: str = "snapshots") -> None:
+def log_code_snapshot(
+    pipeline_root: str, run_id: str, artifact_path: str = "pipeline_snapshot"
+) -> None:
     """
     Logs a pipeline code snapshot as mlflow artifacts.
 

@@ -116,12 +116,16 @@ def process_splits(
 """
 )
 
-TRAINING_AND_VALIDATION_DATA = format_help_string(
-    "1. The training dataset used to train the model. Subsequent steps fit a transformer using this training data, create transformed features, and use the transformed features to fit an estimator, producing a model pipeline consisting of the fitted transformer and the fitted estimator.\n\n2. The validation dataset used to evaluate model performance and tune the model pipeline."
+TRAINING_DATA = format_help_string(
+    "The training dataset used to train the model. Subsequent steps fit a transformer using this training data, create transformed features, and use the transformed features to fit an estimator, producing a model pipeline consisting of the fitted transformer and the fitted estimator."
+)
+
+VALIDATION_DATA = format_help_string(
+    "The validation dataset used to evaluate model performance and tune the model pipeline in the train step. It is also used in evaluate step to compute model explanations such as feature importances."
 )
 
 TEST_DATA = format_help_string(
-    "The test dataset used to evaluate the performance of the model. The 'evaluate' step uses the test dataset to compute a variety of performance metrics and model explanations."
+    "The test dataset used to evaluate the performance of the model. The 'evaluate' step uses the test dataset to compute a variety of performance metrics."
 )
 
 TRANSFORM_STEP = format_help_string(

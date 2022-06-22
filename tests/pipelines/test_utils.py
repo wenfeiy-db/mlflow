@@ -10,7 +10,6 @@ from mlflow.pipelines.utils import (
     get_pipeline_name,
     get_pipeline_config,
     get_default_profile,
-    display_html,
 )
 from mlflow.utils.file_utils import write_yaml
 
@@ -111,26 +110,3 @@ def test_get_default_profile_works():
     ) as patched_is_in_databricks_runtime:
         assert get_default_profile() == "databricks"
         patched_is_in_databricks_runtime.assert_called_once()
-
-
-def test_display_html_raises_without_input():
-    with pytest.raises(MlflowException, match="At least one HTML source must be provided"):
-        display_html()
-
-
-def test_display_html_opens_html_data():
-    html_data = "<!DOCTYPE html><html><body><p>Hey</p></body></html>"
-    with mock.patch("mlflow.pipelines.utils.is_running_in_ipython_environment", return_value=True):
-        with mock.patch("IPython.display.display") as patched_display:
-            display_html(html_data=html_data)
-            patched_display.assert_called_once()
-
-
-def test_display_html_opens_html_file(tmp_path):
-    html_file = tmp_path / "test.html"
-    html_file.write_text("<!DOCTYPE html><html><body><p>Hey</p></body></html>")
-    with mock.patch("subprocess.run") as patched_subprocess, mock.patch(
-        "shutil.which", return_value=True
-    ):
-        display_html(html_file_path=html_file)
-        patched_subprocess.assert_called_once()

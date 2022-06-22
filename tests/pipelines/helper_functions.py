@@ -7,7 +7,7 @@ from typing import Generator
 
 from contextlib import contextmanager
 from mlflow.pipelines.utils.execution import _MLFLOW_PIPELINES_EXECUTION_DIRECTORY_ENV_VAR
-from mlflow.pipelines.steps.split import _OUTPUT_TEST_FILE_NAME
+from mlflow.pipelines.steps.split import _OUTPUT_TEST_FILE_NAME, _OUTPUT_VALIDATION_FILE_NAME
 from mlflow.pipelines.step import BaseStep
 from mlflow.utils.file_utils import TempDir
 from pathlib import Path
@@ -24,13 +24,19 @@ def setup_model_and_evaluate(tmp_pipeline_exec_path: Path):
     split_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "split", "outputs")
     split_step_output_dir.mkdir(parents=True)
     X, y = load_diabetes(as_frame=True, return_X_y=True)
+    validation_df = X.assign(y=y).sample(n=50, random_state=9)
+    validation_df.to_parquet(split_step_output_dir.joinpath(_OUTPUT_VALIDATION_FILE_NAME))
     test_df = X.assign(y=y).sample(n=100, random_state=42)
     test_df.to_parquet(split_step_output_dir.joinpath(_OUTPUT_TEST_FILE_NAME))
 
-    run_id = train_and_log_model()
+    run_id, model = train_and_log_model()
     train_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "train", "outputs")
     train_step_output_dir.mkdir(parents=True)
     train_step_output_dir.joinpath("run_id").write_text(run_id)
+    output_model_path = train_step_output_dir.joinpath("model")
+    if os.path.exists(output_model_path) and os.path.isdir(output_model_path):
+        shutil.rmtree(output_model_path)
+    mlflow.sklearn.save_model(model, output_model_path)
 
     evaluate_step_output_dir = tmp_pipeline_exec_path.joinpath("steps", "evaluate", "outputs")
     evaluate_step_output_dir.mkdir(parents=True)
@@ -46,7 +52,7 @@ def train_and_log_model():
         X, y = load_diabetes(as_frame=True, return_X_y=True)
         model = LinearRegression().fit(X, y)
         mlflow.sklearn.log_model(model, artifact_path="train/model")
-    return run.info.run_id
+        return run.info.run_id, model
 
 
 ## Fixtures

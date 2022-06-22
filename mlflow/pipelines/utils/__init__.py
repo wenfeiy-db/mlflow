@@ -3,11 +3,8 @@ import os
 import pathlib
 from typing import Dict, Any
 
-from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
-from mlflow.utils.databricks_utils import (
-    is_running_in_ipython_environment,
-    is_in_databricks_runtime,
-)
+from mlflow.exceptions import MlflowException
+from mlflow.utils.databricks_utils import is_in_databricks_runtime
 from mlflow.utils.file_utils import read_yaml, render_and_merge_yaml
 
 _PIPELINE_CONFIG_FILE_NAME = "pipeline.yaml"
@@ -110,28 +107,3 @@ def _verify_is_pipeline_root_directory(pipeline_root_path: str) -> str:
         raise MlflowException(
             f"Failed to find {_PIPELINE_CONFIG_FILE_NAME} in {pipeline_yaml_path}!"
         )
-
-
-def display_html(html_data: str = None, html_file_path: str = None):
-    if html_file_path is None and html_data is None:
-        raise MlflowException(
-            "At least one HTML source must be provided. html_data and html_file_path are empty.",
-            error_code=INVALID_PARAMETER_VALUE,
-        )
-
-    if is_in_databricks_runtime():
-        # Patch IPython display with Databricks display
-        import IPython.core.display as icd
-
-        icd.display = display  # pylint: disable=undefined-variable
-    if is_running_in_ipython_environment():
-        from IPython.display import display as ip_display, HTML
-
-        ip_display(HTML(data=html_data, filename=html_file_path))
-    else:
-        import shutil
-        import subprocess
-
-        if os.path.exists(html_file_path) and shutil.which("open") is not None:
-            _logger.info(f"Opening HTML file at: '{html_file_path}'")
-            subprocess.run(["open", html_file_path], check=True)

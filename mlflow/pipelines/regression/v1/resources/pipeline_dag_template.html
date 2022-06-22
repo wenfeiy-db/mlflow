@@ -51,8 +51,10 @@
 
           data[(ingested_data)] --> splitStep[["<font>split</font>"]]
           splitUserCode([steps/split.py]) --> splitStep
-          splitStep --> splitData1[(training_data, <br> validation_data)]
+          splitStep --> splitData0[(training_data)]
+          splitStep --> splitData1[(validation_data)]
           splitStep --> splitData2[(test_data)]
+          splitData0 --> transformMLPStep[["<font>transform</font>"]]
           splitData1 --> transformMLPStep[["<font>transform</font>"]]
 
           transformUserCode([steps/transform.py]) --> transformMLPStep
@@ -67,7 +69,7 @@
           trainMLPStep --> model{{model}}
 
           model --> evaluateMLPStep[["<font>evaluate</font>"]]
-          transformer --> evaluateMLPStep
+          splitData1 --> evaluateMLPStep
           splitData2 --> evaluateMLPStep
           customMetricsUserCode --> evaluateMLPStep
           evaluateMLPStep --> model_validation_status{{model_validation_status}}
@@ -92,7 +94,8 @@
           click pipeline renderMoreInformation "{{pipeline_yaml_help}}"
           click dataParquet renderMoreInformation "{{ingested_data_help}}"
           click data renderMoreInformation "{{ingested_data_help}}"
-          click splitData1 renderMoreInformation "{{training_and_validation_data_help}}"
+          click splitData0 renderMoreInformation "{{training_data_help}}"
+          click splitData1 renderMoreInformation "{{validation_data_help}}"
           click splitData2 renderMoreInformation "{{test_data_help}}"
           click transformedParquet renderMoreInformation "{{transformed_training_and_validation_data_help}}"
           click run renderMoreInformation "{{mlflow_run_help}}"

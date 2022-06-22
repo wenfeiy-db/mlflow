@@ -12,7 +12,8 @@ import importlib
 from enum import Enum
 from typing import TypeVar, Dict, Any
 from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME, FailureCard, CARD_HTML_NAME
-from mlflow.pipelines.utils import get_pipeline_name, display_html
+from mlflow.pipelines.utils import get_pipeline_name
+from mlflow.pipelines.utils.step import display_html
 from mlflow.tracking import MlflowClient
 from mlflow.utils.databricks_utils import is_in_databricks_runtime
 from mlflow.exceptions import MlflowException, BAD_REQUEST

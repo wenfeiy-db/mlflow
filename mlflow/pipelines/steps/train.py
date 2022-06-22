@@ -12,6 +12,7 @@ from mlflow.models.signature import infer_signature
 from mlflow.pipelines.cards import BaseCard
 from mlflow.pipelines.step import BaseStep
 from mlflow.pipelines.utils.execution import get_step_output_path
+from mlflow.pipelines.utils.step import get_merged_eval_metrics
 from mlflow.pipelines.utils.tracking import (
     get_pipeline_tracking_config,
     apply_pipeline_tracking_config,
@@ -33,9 +34,13 @@ class TrainStep(BaseStep):
         self.train_module_name, self.train_method_name = self.step_config["train_method"].rsplit(
             ".", 1
         )
+        self.primary_metric = (self.step_config.get("metrics") or {}).get(
+            "primary", "root_mean_squared_error"
+        )
 
     def _run(self, output_directory):
         from sklearn.pipeline import make_pipeline
+        import shutil
 
         apply_pipeline_tracking_config(self.tracking_config)
 
@@ -85,17 +90,11 @@ class TrainStep(BaseStep):
 
             if hasattr(estimator, "best_score_"):
                 mlflow.log_metric("best_cv_score", estimator.best_score_)
-
             if hasattr(estimator, "best_params_"):
                 mlflow.log_params(estimator.best_params_)
 
-            # Create a pipeline consisting of the transformer+model for test data evaluation
-            with open(transformer_path, "rb") as f:
-                transformer = cloudpickle.load(f)
-
-            code_paths = [os.path.join(self.pipeline_root, "steps")]
-
             # TODO: log this as a pyfunc model
+            code_paths = [os.path.join(self.pipeline_root, "steps")]
             estimator_schema = infer_signature(X_train, estimator.predict(X_train.copy()))
             logged_estimator = mlflow.sklearn.log_model(
                 estimator,
@@ -103,38 +102,47 @@ class TrainStep(BaseStep):
                 signature=estimator_schema,
                 code_paths=code_paths,
             )
+            # Create a pipeline consisting of the transformer+model for test data evaluation
+            with open(transformer_path, "rb") as f:
+                transformer = cloudpickle.load(f)
             mlflow.sklearn.log_model(transformer, "transform/transformer", code_paths=code_paths)
-
-            eval_result = mlflow.evaluate(
-                model=logged_estimator.model_uri,
-                data=validation_df,
-                targets=self.target_col,
-                model_type="regressor",
-                evaluators="default",
-                dataset_name="validation",
-                custom_metrics=self._load_custom_metric_functions(),
-                evaluator_config={
-                    "log_model_explainability": False,
-                },
-            )
-            eval_result.save(output_directory)
-
             model = make_pipeline(transformer, estimator)
             model_schema = infer_signature(raw_X_train, model.predict(raw_X_train.copy()))
             model_info = mlflow.sklearn.log_model(
                 model, f"{self.name}/model", signature=model_schema, code_paths=code_paths
             )
+            output_model_path = get_step_output_path(
+                pipeline_root_path=self.pipeline_root,
+                step_name=self.name,
+                relative_path="model",
+            )
+            if os.path.exists(output_model_path) and os.path.isdir(output_model_path):
+                shutil.rmtree(output_model_path)
+            mlflow.sklearn.save_model(model, output_model_path)
 
             with open(os.path.join(output_directory, "run_id"), "w") as f:
                 f.write(run.info.run_id)
-
             log_code_snapshot(self.pipeline_root, run.info.run_id)
 
-        with open(os.path.join(output_directory, "model.pkl"), "wb") as f:
-            cloudpickle.dump(model, f)
-
-            # Do step-specific code to execute the train step
-            _logger.info("train run code %s", output_directory)
+            eval_metrics = {}
+            for dataset_name, dataset in {
+                "training": train_df,
+                "validation": validation_df,
+            }.items():
+                eval_result = mlflow.evaluate(
+                    model=logged_estimator.model_uri,
+                    data=dataset,
+                    targets=self.target_col,
+                    model_type="regressor",
+                    evaluators="default",
+                    dataset_name=dataset_name,
+                    custom_metrics=self._load_custom_metric_functions(),
+                    evaluator_config={
+                        "log_model_explainability": False,
+                    },
+                )
+                eval_result.save(os.path.join(output_directory, f"eval_{dataset_name}"))
+                eval_metrics[dataset_name] = eval_result.metrics
 
         target_data = raw_validation_df[self.target_col]
         prediction_result = model.predict(raw_validation_df.drop(self.target_col, axis=1))
@@ -150,7 +158,7 @@ class TrainStep(BaseStep):
         )
 
         card = self._build_step_card(
-            eval_result=eval_result,
+            eval_metrics=eval_metrics,
             pred_and_error_df=pred_and_error_df,
             model=model,
             model_schema=model_schema,
@@ -166,7 +174,7 @@ class TrainStep(BaseStep):
 
     def _build_step_card(
         self,
-        eval_result,
+        eval_metrics,
         pred_and_error_df,
         model,
         model_schema,
@@ -180,13 +188,26 @@ class TrainStep(BaseStep):
 
         card = BaseCard(self.pipeline_name, self.name)
         # Tab 0: model performance summary.
-        metric_df = pd.DataFrame.from_records(
-            list(eval_result.metrics.items()), columns=["metric", "value"]
+        metric_df = (
+            get_merged_eval_metrics(eval_metrics, ordered_metric_names=[self.primary_metric])
+            .reset_index()
+            .rename(columns={"index": "Metric"})
         )
-        metric_table_html = BaseCard.render_table(metric_df.style.format({"value": "{:.6g}"}))
+
+        def row_style(row):
+            if row.Metric == self.primary_metric:
+                return pd.Series("font-weight: bold", row.index)
+            else:
+                return pd.Series("", row.index)
+
+        metric_table_html = BaseCard.render_table(
+            metric_df.style.format({"training": "{:.6g}", "validation": "{:.6g}"}).apply(
+                row_style, axis=1
+            )
+        )
         card.add_tab(
             "Model Performance Summary Metrics",
-            "<h3 class='section-title'>Summary Metrics (Validation Dataset)</h3> {{ METRICS }} ",
+            "<h3 class='section-title'>Summary Metrics</h3>{{ METRICS }} ",
         ).add_html("METRICS", metric_table_html)
 
         # Tab 1: Prediction and error data profile.

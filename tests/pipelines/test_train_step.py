@@ -78,7 +78,7 @@ def test_train_steps_writes_model_pkl_and_card(tmp_pipeline_root_path):
         train_step, train_step_output_dir = set_up_train_step(tmp_pipeline_root_path)
         train_step._run(str(train_step_output_dir))
 
-    assert (train_step_output_dir / "model.pkl").exists()
+    assert (train_step_output_dir / "model/model.pkl").exists()
     assert (train_step_output_dir / "card.html").exists()
 
 

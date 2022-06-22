@@ -7,13 +7,13 @@ from mlflow.pipelines.utils import (
     get_pipeline_config,
     get_pipeline_name,
     get_pipeline_root_path,
-    display_html,
 )
 from mlflow.pipelines.utils.execution import (
     clean_execution_state,
     run_pipeline_step,
     get_step_output_path,
 )
+from mlflow.pipelines.utils.step import display_html
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, INTERNAL_ERROR, BAD_REQUEST
 from mlflow.utils.class_utils import _get_class_from_string
 from typing import List
