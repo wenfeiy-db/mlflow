@@ -274,10 +274,12 @@ class EvaluateStep(BaseStep):
         shap_bar_plot_path = os.path.join(
             output_directory,
             "eval_validation/artifacts",
-            "shap_feature_importance_plot_on_data_test.png",
+            "shap_feature_importance_plot_on_data_validation.png",
         )
         shap_beeswarm_plot_path = os.path.join(
-            output_directory, "eval_validation/artifacts", "shap_beeswarm_plot_on_data_test.png"
+            output_directory,
+            "eval_validation/artifacts",
+            "shap_beeswarm_plot_on_data_validation.png",
         )
         shap_plot_tab.add_image("SHAP_BAR_PLOT", shap_bar_plot_path, width=800)
         shap_plot_tab.add_image("SHAP_BEESWARM_PLOT", shap_beeswarm_plot_path, width=800)
