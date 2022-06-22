@@ -15,13 +15,20 @@ from mlflow.pipelines.utils.execution import (
 )
 from mlflow.pipelines.utils.step import display_html
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE, INTERNAL_ERROR, BAD_REQUEST
+from mlflow.utils.annotations import experimental
 from mlflow.utils.class_utils import _get_class_from_string
 from typing import List
 
 _logger = logging.getLogger(__name__)
 
 
+@experimental
 class Pipeline:
+    """
+    Pipeline
+    """
+
+    @experimental
     def __new__(cls, profile: str = None):
         """
         A factory class to create an instance of MLflow Pipeline based on the template
@@ -68,7 +75,13 @@ class Pipeline:
         return pipeline_class_module(pipeline_root_path, profile)
 
 
+@experimental
 class _BasePipeline:
+    """
+    Base Pipeline
+    """
+
+    @experimental
     def __init__(self, pipeline_root_path: str, profile: str) -> None:
         """
         Pipeline base class.
@@ -85,11 +98,13 @@ class _BasePipeline:
         self._name = get_pipeline_name(pipeline_root_path)
         self._steps = self._resolve_pipeline_steps()
 
+    @experimental
     @property
     def name(self) -> str:
         """Returns the name of the pipeline."""
         return self._name
 
+    @experimental
     @property
     def profile(self) -> str:
         """
@@ -97,6 +112,7 @@ class _BasePipeline:
         """
         return self._profile
 
+    @experimental
     def run(self, step: str = None) -> None:
         """
         Runs a step in the pipeline, or the entire pipeline if a step specified.
@@ -139,6 +155,7 @@ class _BasePipeline:
                     error_code=BAD_REQUEST,
                 )
 
+    @experimental
     def inspect(self, step: str = None) -> None:
         """
         Displays main output from a step, or a pipeline DAG if no step is specified.
@@ -153,6 +170,7 @@ class _BasePipeline:
             output_directory = get_step_output_path(self._pipeline_root_path, step, "")
             self._get_step(step).inspect(output_directory)
 
+    @experimental
     def clean(self, step: str = None) -> None:
         """
         Cleans the output of a step in the execution directory. If not specified, remove output
@@ -175,6 +193,7 @@ class _BasePipeline:
             )
         return self._steps[step_names.index(step_name)]
 
+    @experimental
     @abc.abstractmethod
     def _get_step_classes(self) -> List[BaseStep]:
         """
@@ -184,6 +203,7 @@ class _BasePipeline:
         """
         pass
 
+    @experimental
     @abc.abstractmethod
     def _get_pipeline_dag_file(self) -> str:
         """
@@ -203,6 +223,7 @@ class _BasePipeline:
             for s in self._get_step_classes()
         ]
 
+    @experimental
     @abc.abstractmethod
     def get_artifact(self, artifact: str):
         """

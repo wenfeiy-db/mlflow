@@ -19,7 +19,6 @@ from mlflow.store.tracking import DEFAULT_LOCAL_FILE_AND_ARTIFACT_PATH, DEFAULT_
 from mlflow.store.artifact.artifact_repository_registry import get_artifact_repository
 from mlflow.tracking import _get_store
 from mlflow.utils import cli_args
-from mlflow.utils.annotations import experimental
 from mlflow.utils.logging_utils import eprint
 from mlflow.utils.process import ShellCommandException
 from mlflow.utils.uri import resolve_default_artifact_root
@@ -464,7 +463,6 @@ def server(
     " are not specified, data is removed for all runs in the `deleted`"
     " lifecycle stage.",
 )
-@experimental
 def gc(backend_store_uri, run_ids):
     """
     Permanently delete runs in the `deleted` lifecycle stage from the specified backend store.

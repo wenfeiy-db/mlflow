@@ -25,11 +25,17 @@ from mlflow.pipelines.utils.execution import get_or_create_base_execution_direct
 from mlflow.pipelines.utils.execution import get_step_output_path
 from mlflow.exceptions import MlflowException, INVALID_PARAMETER_VALUE
 from mlflow.tracking._tracking_service.utils import _use_tracking_uri
+from mlflow.utils.annotations import experimental
 
 _logger = logging.getLogger(__name__)
 
 
+@experimental
 class RegressionPipeline(_BasePipeline):
+    """
+    Regression Pipeline
+    """
+
     _PIPELINE_STEPS = (IngestStep, SplitStep, TransformStep, TrainStep, EvaluateStep, RegisterStep)
 
     def _get_step_classes(self) -> List[BaseStep]:
@@ -140,6 +146,7 @@ class RegressionPipeline(_BasePipeline):
 
         return pipeline_dag_file
 
+    @experimental
     def get_artifact(self, artifact: str):
         """
         Read an artifact from pipeline output. artifact names can be obtained from

@@ -15,6 +15,7 @@ from mlflow.pipelines.cards import BaseCard, CARD_PICKLE_NAME, FailureCard, CARD
 from mlflow.pipelines.utils import get_pipeline_name
 from mlflow.pipelines.utils.step import display_html
 from mlflow.tracking import MlflowClient
+from mlflow.utils.annotations import experimental
 from mlflow.utils.databricks_utils import is_in_databricks_runtime
 from mlflow.exceptions import MlflowException, BAD_REQUEST
 
@@ -81,9 +82,15 @@ class StepExecutionState:
 StepType = TypeVar("StepType", bound="BaseStep")
 
 
+@experimental
 class BaseStep(metaclass=abc.ABCMeta):
+    """
+    Base class representing a step in an MLflow Pipeline
+    """
+
     _EXECUTION_STATE_FILE_NAME = "execution_state.json"
 
+    @experimental
     def __init__(self, step_config: Dict[str, Any], pipeline_root: str):
         """
         :param step_config: dictionary of the config needed to
@@ -96,6 +103,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         self.pipeline_name = get_pipeline_name(pipeline_root_path=pipeline_root)
         self.step_card = None
 
+    @experimental
     def run(self, output_directory: str):
         """
         Executes the step by running common setup operations and invoking
@@ -122,6 +130,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         finally:
             self._serialize_card(start_timestamp, output_directory)
 
+    @experimental
     def inspect(self, output_directory: str):
         """
         Inspect the step output state by running the generic inspect information here and
@@ -143,6 +152,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         card_html_path = os.path.join(output_directory, CARD_HTML_NAME)
         display_html(html_data=card.to_html(), html_file_path=card_html_path)
 
+    @experimental
     @abc.abstractmethod
     def _run(self, output_directory: str) -> BaseCard:
         """
@@ -156,9 +166,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         pass
 
-    def clean(self) -> None:
-        pass
-
+    @experimental
     @classmethod
     @abc.abstractmethod
     def from_pipeline_config(cls, pipeline_config: Dict[str, Any], pipeline_root: str) -> StepType:
@@ -174,6 +182,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         pass
 
+    @experimental
     @classmethod
     def from_step_config_path(cls, step_config_path: str, pipeline_root: str) -> StepType:
         """
@@ -190,6 +199,7 @@ class BaseStep(metaclass=abc.ABCMeta):
             step_config = yaml.safe_load(f)
         return cls(step_config, pipeline_root)
 
+    @experimental
     @property
     @abc.abstractmethod
     def name(self) -> str:
@@ -199,6 +209,7 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         pass
 
+    @experimental
     @property
     def environment(self) -> Dict[str, str]:
         """
@@ -207,7 +218,17 @@ class BaseStep(metaclass=abc.ABCMeta):
         """
         return {}
 
+    @experimental
     def get_execution_state(self, output_directory: str) -> StepExecutionState:
+        """
+        Returns the execution state of the step, which provides information about its
+        status (succeeded, failed, unknown), last update time, and, if applicable, encountered
+        stacktraces.
+
+        :param output_directory: String file path to the directory where step
+                                 outputs are stored.
+        :return: A ``StepExecutionState`` instance containing the step execution state.
+        """
         execution_state_file_path = os.path.join(
             output_directory, BaseStep._EXECUTION_STATE_FILE_NAME
         )
